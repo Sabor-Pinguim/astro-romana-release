@@ -29,7 +29,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.4.3',
+        version: 'v1.4.4',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -217,6 +217,7 @@
           tabBrowse: 'Find a room',
           tabCreate: 'Host a room',
           createHint: 'You become the host. Others join from the room browser or with your code.',
+          confirmNameBtn: 'Confirm',
         },
       },
       crew: {

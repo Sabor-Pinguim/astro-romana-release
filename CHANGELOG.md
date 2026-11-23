@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.4] - 2026-11-23
+
+### Changed
+- **Astronaut name locked after first selection:** once a valid name (2–20 chars) is confirmed in `localStorage`, `ASTRO_NET.setPlayerName` ignores overwrites and the multiplayer lobby replaces the input with a read-only badge (with a one-time confirm prompt when joining directly via an invite link without a saved name).
+
 ## [1.4.3] - 2026-11-23
 
 ### Fixed

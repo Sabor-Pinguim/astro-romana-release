@@ -29,7 +29,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.4.3',
+        version: 'v1.4.4',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',
@@ -217,6 +217,7 @@
           tabBrowse: 'Procurar sala',
           tabCreate: 'Criar sala',
           createHint: 'Você vira o anfitrião. Os outros entram pelo navegador de salas ou com o seu código.',
+          confirmNameBtn: 'Confirmar',
         },
       },
       crew: {

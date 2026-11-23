@@ -132,7 +132,7 @@
     ['v1','50,30 62,22 88,22 100,30 98,52 75,60 52,52'],['v2','50,30 62,22 88,22 52,52'],['v3','55,31 63,26 77,26 59,37']
   ].map(([c,p])=>`<polygon class="${c}" points="${p}"/>`).join('')}</svg>`;
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
-  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
+  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,isPlayerNameLocked:()=>false,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
   const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner')renderPlanner();if(id==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser();net.setPhase(id);lockGuest();};
   let toastTimer;
@@ -242,17 +242,23 @@
   const ROBOT_ICON = `<svg viewBox="0 0 40 34" aria-hidden="true"><polygon points="18,0 22,0 21,7 19,7" fill="#F59E0B"/><polygon points="17,0 23,0 20,4" fill="#FCE8A6"/><polygon points="6,7 34,7 38,13 38,27 32,33 8,33 2,27 2,13" fill="#281147"/><polygon points="6,7 20,7 20,33 8,33 2,27 2,13" fill="#3a2163"/><polygon points="7,14 33,14 31,24 9,24" fill="#17183B"/><polygon points="11,17 17,17 16,21 12,21" fill="#7EDAC2"/><polygon points="23,17 29,17 28,21 24,21" fill="#7EDAC2"/><polygon points="14,27 26,27 25,30 15,30" fill="#9B5DE5"/></svg>`;
   const COOP_ICON = `<svg viewBox="0 0 44 34" aria-hidden="true"><polygon points="22,2 30,10 22,18 14,10" fill="#F59E0B"/><polygon points="22,2 26,10 22,18 14,10" fill="#FCE8A6"/><polygon points="8,16 16,24 8,32 0,24" fill="#7EDAC2"/><polygon points="36,16 44,24 36,32 28,24" fill="#1FA2FF"/><polygon points="14,13 18,16 12,22 9,19" fill="#9B5DE5"/><polygon points="30,13 35,19 32,22 26,16" fill="#9B5DE5"/></svg>`;
   const browserState = { status: 'idle', rooms: [], fetchedAt: 0 };
-  let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '';
+  let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '', draftPlayerName = '';
   let mpTab = 'browse'; // 'browse' | 'create'
 
   function ensurePlayerName() {
+    if (net.isPlayerNameLocked?.()) return net.getPlayerName();
     const input = $('#mp-player-name');
-    if (input && net.setPlayerName) net.setPlayerName(input.value);
-    const name = net.getPlayerName?.() || '';
-    if (name.length >= 2) return name;
-    toast(t('lobby.roomBrowser.nameRequired'));
-    input?.focus();
-    return null;
+    const raw = input ? input.value : draftPlayerName;
+    const clean = net.sanitizePlayerName ? net.sanitizePlayerName(raw) : String(raw || '').trim();
+    if (clean.length < 2) {
+      toast(t('lobby.roomBrowser.nameRequired'));
+      input?.focus();
+      return null;
+    }
+    const locked = net.setPlayerName?.(clean) || clean;
+    draftPlayerName = locked;
+    renderModeStep();
+    return locked;
   }
 
   function promptRoomPassword(code) {
@@ -376,7 +382,8 @@
 
     const netReady = net.enabled && net.available();
     const langCode = window.ASTRO_I18N?.language || 'en';
-    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}`;
+    const lockedName = net.isPlayerNameLocked?.() ? net.getPlayerName() : '';
+    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}|${lockedName}`;
 
     if(!netReady){
       mpVis.classList.remove('is-browser');
@@ -393,7 +400,8 @@
       mpVis.classList.add('is-browser');
       if(mpCta.dataset.viewKey !== viewKey){
         mpCta.dataset.viewKey = viewKey;
-        const savedName = net.getPlayerName?.() || '';
+        const nameLocked = !!net.isPlayerNameLocked?.();
+        const savedName = nameLocked ? net.getPlayerName() : draftPlayerName;
         const serverHost = (net.httpBase?.() || net.url || '').replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '');
         const header = `
           <div class="mp-server-bar">
@@ -402,8 +410,9 @@
             <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}">⚙</button>
           </div>
           <div class="mp-name-bar">
-            <label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label>
-            <input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">
+            ${nameLocked
+              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">🔒 ${esc(savedName)}</strong>`
+              : `<label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">`}
           </div>
           <div class="segmented mp-tabs" role="group">
             <button type="button" data-mp-tab="browse" aria-pressed="${mpTab === 'browse'}">${t('lobby.roomBrowser.tabBrowse')}</button>
@@ -430,8 +439,9 @@
         }
 
         $('#mp-server-settings').addEventListener('click', () => { window.ASTRO_SETTINGS?.syncUI(); showScreen('settings'); });
-        $('#mp-player-name').addEventListener('input', e => { net.setPlayerName?.(e.target.value); });
-        $('#mp-player-name').addEventListener('blur', e => { e.target.value = net.setPlayerName?.(e.target.value) ?? e.target.value; });
+        if (!nameLocked) {
+          $('#mp-player-name').addEventListener('input', e => { draftPlayerName = e.target.value; });
+        }
         $$('[data-mp-tab]', mpVis).forEach(btn => btn.addEventListener('click', () => {
           if(mpTab === btn.dataset.mpTab) return;
           mpTab = btn.dataset.mpTab;
@@ -527,22 +537,29 @@
     return {player:true,text:pName?`${pName} · ${roleText}`:roleText};
   }
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
-  // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus editable name if joined by link).
+  // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus one-time name entry if joined via invite link).
   function renderRoom(){
     const panel=$('#room-panel');if(!panel)return;
     if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';return;}
     if(panel.contains(document.activeElement)) return;
     panel.hidden=false;
     const lost=net.status!=='open';
-    const curName=net.getPlayerName?.()||'';
-    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button><div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" value="${esc(curName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    const nameLocked=!!net.isPlayerNameLocked?.();
+    const curName=nameLocked?net.getPlayerName():'';
+    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button>${nameLocked?`<span class="tag">🔒 ${esc(curName)}</span>`:`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`}<span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{net.leave();});
-    $('#room-player-name').addEventListener('change',e=>{
-      const clean=net.setPlayerName?.(e.target.value)??e.target.value;
-      e.target.value=clean;
-      renderLobby();
-    });
+    if(!nameLocked){
+      const saveOnce=()=>{
+        const input=$('#room-player-name');
+        const clean=net.sanitizePlayerName?.(input?.value)||'';
+        if(clean.length<2){toast(t('lobby.roomBrowser.nameRequired'));input?.focus();return;}
+        net.setPlayerName?.(clean);
+        renderLobby();
+      };
+      $('#room-name-confirm')?.addEventListener('click',saveOnce);
+      $('#room-player-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')saveOnce();});
+    }
   }
   async function enterRoom(go, onSuccess, rethrow = false){
     $$('#mode-mp-cta button, #mode-mp-foot button, #room-panel button, [data-join-room]').forEach(b=>{b.disabled=true;});
