@@ -8,6 +8,19 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.3.0] - 2026-11-23
+
+### Added
+- **3D cockpit controls for every flight minigame:** the three monitors, the navball, both joysticks and the throttle lever can be clicked, held and dragged to steer liftoff, cabin docking, orbital docking and the Mars landing. Holding near a control's centre applies a guidance assist.
+- **Mobile / touch controls:** cabin docking now has an on-screen D-pad plus Close In / Brake buttons (it was keyboard only); orbital docking has a D-pad and a draggable reticle; Mars landing has Deploy EDL Parachute and Trim buttons; the liftoff reticle accepts touch drag.
+- Multiplayer guests now also send the `forward` / `back` hold states.
+
+### Changed
+- `EDL_Arm_Switch` now arms the EDL parachute; `Stage_Sep_Switch` and `Controller_THC` act in every phase; `Controller_THC` tilts with the command.
+- `steer` / `stabilize` now correct the active minigame instead of only the cosmetic stick angle.
+- The held-input state is cleared on every phase change.
+- Compact 390 px layout for the control pads; touch-action disabled on the cockpit canvas and pads.
+
 ## [1.2.0] - 2026-11-23
 
 ### Added

@@ -490,8 +490,8 @@
     .flight-phase-copy small{font:700 .57rem/1 var(--heading);font-variant-numeric:tabular-nums;letter-spacing:.14em;color:var(--starlight-cream)}
     .flight-phase.active .flight-phase-copy small{color:#411315}
     .cockpit-layout{flex:1;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,420px);gap:14px;width:min(1600px,100%);margin:0 auto;padding:14px clamp(16px,3vw,44px) 22px}
-    .cockpit-viewport.slab{position:relative;min-height:540px;overflow:hidden;background:linear-gradient(180deg,#090616 0 46%,#17183B 46% 100%)}
-    .cockpit-viewport canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+    .cockpit-viewport.slab{position:relative;min-height:540px;overflow:hidden;background:linear-gradient(180deg,#090616 0 46%,#17183B 46% 100%);touch-action:none;user-select:none;-webkit-user-select:none}
+    .cockpit-viewport canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
     .cockpit-viewport.is-3d .cockpit-fallback{display:none}
     .cockpit-fallback{position:absolute;inset:14% 8% 12%;display:grid;place-items:center;padding:24px;text-align:center;background:linear-gradient(145deg,#1d1128 0 45%,#281147 45%);clip-path:var(--chamfer)}
     .cockpit-hud-top{position:absolute;top:14px;left:16px;right:16px;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
@@ -541,15 +541,17 @@
     .launchpad-fade.on{opacity:1}
     .kir-row{display:flex;gap:8px;align-items:stretch;margin:.3rem 0}
     .kir-ctrl{display:flex;flex-direction:column;gap:6px;width:150px}
-    .kir-ctrl .button{flex:1;flex-direction:column;gap:.35rem;min-height:0;padding:.55rem .5rem;line-height:1.15}
+    .kir-ctrl .button{flex:1;flex-direction:column;gap:.35rem;min-height:0;padding:.55rem .5rem;line-height:1.15;touch-action:none;user-select:none;-webkit-user-select:none}
     .kir-ctrl .button.on{--a:var(--solar-amber);--b:#d98a06;--fg:var(--bg-void)}
     .kir-ctrl kbd{padding:.12rem .4rem;font:600 .6rem var(--heading);letter-spacing:.08em;color:var(--starlight-cream);background:#11071f99}
-    .kir.kir-2d{aspect-ratio:1;height:auto;max-height:180px}
-    .kir-2d .kir-band{left:50%;top:50%;width:var(--band);height:auto;aspect-ratio:1;translate:-50% -50%;border:0;background:#7edac24d;clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%)}
-    .kir-2d .kir-mark{left:50%;right:auto;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;clip-path:var(--diamond)}
-    .kir-pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4px;width:168px}
-    .kir-pad .button{padding:.3rem .2rem;font-size:.9rem}
+    .kir.kir-2d{aspect-ratio:1;height:auto;max-height:180px;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none}
+    .kir-2d .kir-band{left:50%;top:50%;width:var(--band);height:auto;aspect-ratio:1;translate:-50% -50%;border:0;background:#7edac24d;clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);pointer-events:none}
+    .kir-2d .kir-mark{left:50%;right:auto;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;clip-path:var(--diamond);pointer-events:none}
+    .kir-pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4px;width:168px;touch-action:none}
+    .kir-pad .button{padding:.3rem .2rem;font-size:.9rem;min-height:42px}
     .kir-pad .up{grid-area:1/2}.kir-pad .left{grid-area:2/1}.kir-pad .right{grid-area:2/3}.kir-pad .down{grid-area:3/2}
+    .dock-controls-row{justify-content:space-between}
+    .dock-depth-ctrl{flex:1;min-width:118px}
     .kir{position:relative;flex:1;height:132px;margin:0;background:repeating-linear-gradient(0deg,var(--f1) 0 11px,var(--f2) 11px 12px);clip-path:var(--chamfer)}
     .kir-band{position:absolute;left:0;right:0;top:calc(50% - var(--band));height:calc(2 * var(--band));background:#7edac22e;border-top:2px solid var(--safe);border-bottom:2px solid var(--safe)}
     .kir-mark{position:absolute;left:12%;right:12%;top:50%;height:4px;margin-top:-2px;background:var(--starlight-cream);transition:background .2s}
@@ -908,6 +910,9 @@
       .dialog-inner{padding:18px 16px;gap:.55rem}
       .moxie-bars,.bio-tools{grid-template-columns:1fr}
       .bio-cell{min-height:32px;font-size:.54rem}
+      .kir-row{flex-wrap:wrap}
+      .kir-pad{width:148px}
+      .dock-depth-ctrl{min-width:100px}
       .settings-main{padding:18px 14px 22px}
       .settings-card{padding:20px 16px;gap:18px}
       .settings-server-actions{width:100%}

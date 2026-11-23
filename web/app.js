@@ -1309,6 +1309,7 @@
       flight.phaseTimedOut = false;
       if (nextStep !== 1) flight.separationAdvancing = false;
       flight.input = null;
+      flight.hold = null;
       triggerPhaseTransition();
       if (nextStep === 1) {
         const roughAscent = (flight.liftoffStars ?? 0) < 2;
@@ -1354,18 +1355,43 @@
       } else if (actionId === 'steer') {
         const [dx, dy] = arg || [0, 0];
         const gain = flight.design.hasCockpitUpgrade ? 0.32 : 0.24;
-        flight.pitchX = Math.max(-1, Math.min(1, flight.pitchX + dx * gain));
-        flight.pitchY = Math.max(-1, Math.min(1, flight.pitchY + dy * gain));
+        const g = flight.step === 0 ? flight.liftoff : flight.step === 2 && !flight.docked ? flight.docking : flight.step === 3 ? flight.marsBurn : null;
+        if (g && !g.done) {
+          g.value[1] = Math.max(-g.limit, Math.min(g.limit, g.value[1] + dx * g.band * 1.4));
+          g.value[0] = Math.max(-g.limit, Math.min(g.limit, g.value[0] + dy * g.band * 1.4));
+          g.rate[1] *= 0.45;
+          g.rate[0] *= 0.45;
+          g.error = Math.hypot(...g.value);
+        } else if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+          const d = flight.portDock;
+          d.x = Math.max(-2, Math.min(2, d.x + dx * 0.28));
+          d.y = Math.max(-2, Math.min(2, d.y + dy * 0.28));
+          d.fuel = Math.max(0, d.fuel - (Math.abs(dx) + Math.abs(dy)) * 0.65);
+        } else {
+          flight.pitchX = Math.max(-1, Math.min(1, flight.pitchX + dx * gain));
+          flight.pitchY = Math.max(-1, Math.min(1, flight.pitchY + dy * gain));
+        }
         radAudio.tone(440, 0.04, 'sine', 0.03);
       } else if (actionId === 'stabilize') {
-        if (flight.step === 2 && flight.docking && !flight.docked) {
-          flight.docking.value = flight.docking.value.map(v => v * 0.68);
-          flight.docking.rate = flight.docking.rate.map(v => v * 0.2);
-          flight.docking.error = Math.hypot(...flight.docking.value);
+        const g = flight.step === 0 ? flight.liftoff : flight.step === 2 && !flight.docked ? flight.docking : flight.step === 3 ? flight.marsBurn : null;
+        if (g && !g.done) {
+          g.value = g.value.map(v => v * 0.65);
+          g.rate = g.rate.map(v => v * 0.2);
+          g.error = Math.hypot(...g.value);
           flight.stability = Math.min(100, flight.stability + 8);
-          logFlight(t('cockpit.logs.trimFired'));
+          if (flight.step === 2) logFlight(t('cockpit.logs.trimFired'));
           radAudio.tone(540, 0.06, 'triangle', 0.04);
           renderFlightUI();
+          return;
+        }
+        if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+          const d = flight.portDock;
+          d.x *= 0.72;
+          d.y *= 0.72;
+          if (Math.hypot(d.x, d.y) < 0.24) d.z = Math.max(0.35, d.z - 0.32);
+          d.fuel = Math.max(0, d.fuel - 1.1);
+          radAudio.tone(540, 0.06, 'triangle', 0.04);
+          updateCockpitHUD();
           return;
         }
         flight.pitchX *= 0.25;
@@ -1380,6 +1406,16 @@
           radAudio.tone(780, 0.07, 'triangle', 0.05);
         }
       } else if (actionId === 'stage_sep') {
+        if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+          const d = flight.portDock;
+          d.x *= 0.65;
+          d.y *= 0.65;
+          if (Math.hypot(d.x, d.y) < 0.22) d.z = Math.max(0.35, d.z - 0.45);
+          d.fuel = Math.max(0, d.fuel - 1.4);
+          radAudio.tone(620, 0.08, 'triangle', 0.05);
+          updateCockpitHUD();
+          return;
+        }
         if (flight.step === 1 && !flight.portDock && !flight.breakers.some(Boolean) && !flight.stageSeparated) {
           flight.stageSeparated = true;
           flight.separationAdvancing = true;
@@ -1491,14 +1527,15 @@
           if (g.done) { finishLiftoff(g); }
         }
       } else if (flight.step === 1) {
-        const d = flight.portDock, k = keys;
+        const d = flight.portDock, { keys: k, hold } = inputOf(), h = hold || {};
         if (d && d.status === 'approach') {
           flight.phaseElapsed += dt;
           const hasAny = (...codes) => codes.some(c => k.has(c)) ? 1 : 0;
-          const x = hasAny('ArrowRight', 'KeyD') - hasAny('ArrowLeft', 'KeyA');
-          const y = hasAny('ArrowUp') - hasAny('ArrowDown');
-          const z = hasAny('KeyE', 'KeyW') - hasAny('KeyQ', 'KeyS');
+          const x = (hasAny('ArrowRight', 'KeyD') || h.right ? 1 : 0) - (hasAny('ArrowLeft', 'KeyA') || h.left ? 1 : 0);
+          const y = (hasAny('ArrowUp') || h.up ? 1 : 0) - (hasAny('ArrowDown') || h.down ? 1 : 0);
+          const z = (hasAny('KeyE', 'KeyW') || h.forward ? 1 : 0) - (hasAny('KeyQ', 'KeyS') || h.back ? 1 : 0);
           d.input = { left: x < 0, right: x > 0, up: y > 0, down: y < 0, forward: z > 0, back: z < 0 };
+          flight.input = d.input;
           const movement = Math.abs(x) + Math.abs(y) + Math.abs(z);
           const speed = .55; // game-balance: metres per second of relative translation
           d.x = Math.max(-2, Math.min(2, d.x + x * speed * dt));
@@ -1625,8 +1662,14 @@
         $('#kir-time').textContent = t(flight.step === 0 ? 'cockpit.cards.timeToMeco' : 'cockpit.cards.timeToTouchdown', { sec: Math.ceil(g.duration - g.t) });
         $('#kir-share').textContent = t('cockpit.cards.inBandPct', { pct: Math.round(g.share() * 100) });
         const st = g.stars(); $('#kir-stars').textContent = '★'.repeat(st) + '☆'.repeat(3 - st);
-        $$('[data-hold]').forEach(b => b.classList.toggle('on', !!flight.input?.[b.dataset.hold]));
       }
+      if (flight.step === 2 && flight.docking && !flight.docked && mark) {
+        mark.style.left = `${50 + (flight.docking.value[1] / flight.docking.limit) * 50}%`;
+        mark.style.top = `${50 - (flight.docking.value[0] / flight.docking.limit) * 50}%`;
+        mark.classList.toggle('out', flight.docking.error > flight.docking.band);
+      }
+      const activeInput = flight.step === 1 ? flight.portDock?.input : flight.input;
+      $$('[data-hold]').forEach(b => b.classList.toggle('on', !!activeInput?.[b.dataset.hold]));
       const pip = $('#cockpit-pip');
       if (pip) {
         pip.style.translate = `calc(-50% + ${Math.round(flight.pitchX * 48)}px) calc(-50% + ${Math.round(flight.pitchY * 48)}px)`;
@@ -1689,12 +1732,20 @@
           </div>
           <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToMeco', { sec: phaseDuration(0) })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
       } else if (flight.step === 1) {
+        const dockActive = flight.portDock?.status === 'approach';
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.helenaDockEyebrow')}</span>
           <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
           <p>${t('cockpit.cards.helenaDockDesc')}</p>
           <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
           <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(5.0, 1)}</strong></div>
+          <div class="kir-row dock-controls-row">
+            <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up" ${dockActive ? '' : 'disabled'}>▲<kbd>↑</kbd></button><button class="button secondary left" type="button" data-hold="left" ${dockActive ? '' : 'disabled'}>◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right" ${dockActive ? '' : 'disabled'}>▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down" ${dockActive ? '' : 'disabled'}>▼<kbd>↓</kbd></button></div>
+            <div class="kir-ctrl dock-depth-ctrl">
+              <button class="button primary" type="button" data-hold="forward" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockForwardBtn')}</button>
+              <button class="button secondary" type="button" data-hold="back" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockBackBtn')}</button>
+            </div>
+          </div>
           <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(0.36, 2) })}</p>`;
       } else if (flight.step === 2) {
         const g = flight.docking, aligned = g ? Math.round(g.share() * 100) : 0;
@@ -1703,6 +1754,10 @@
           <h4>${t('cockpit.cards.oscarMayaTitle')}</h4>
           <p>${flight.docked ? t('cockpit.cards.oscarMayaDockedDesc') : t('cockpit.cards.oscarMayaApproachDesc')}</p>
           <div class="docking-readout"><span>${flight.docked ? t('cockpit.cards.latchedReadout') : t('cockpit.cards.alignmentReadout', { pct: aligned })}</span><strong>${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : t('cockpit.cards.approachTime', { sec: Math.ceil((g?.duration ?? 0) - (g?.t ?? 0)) })}</strong></div>
+          ${!flight.docked ? `<div class="kir-row">
+            <div class="kir kir-2d" style="--band:${(DOCKING.band / DOCKING.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div></div>
+            <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button></div>
+          </div>` : ''}
           <div class="control-grid">
             <button class="button secondary" type="button" data-act="pump_fuel" ${flight.docked && flight.refuelDone < refuelTarget() ? '' : 'disabled'}>${t('cockpit.cards.transferBtn', { done: flight.refuelDone, target: refuelTarget() })}</button>
             <button class="button secondary" type="button" data-act="stabilize" ${flight.docked ? 'disabled' : ''}>${t('cockpit.cards.trimBtn')}</button>
@@ -1718,12 +1773,47 @@
             <div class="kir kir-2d" style="--band:${(MARS_BURN.band / MARS_BURN.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">${t('cockpit.cards.burnHigh')}</span><span class="kir-label bottom">${t('cockpit.cards.burnLow')}</span></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button></div>
           </div>
+          <div class="control-grid">
+            <button class="button secondary" type="button" data-act="edl_arm" ${flight.edlChuteDeployed ? 'disabled' : ''}>${t(flight.edlChuteDeployed ? 'cockpit.cards.edlDeployedBtn' : 'cockpit.cards.edlDeployBtn')}</button>
+            <button class="button secondary" type="button" data-act="stabilize">${t('cockpit.cards.trimBtn')}</button>
+          </div>
           <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToTouchdown', { sec: MARS_BURN.duration })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
       }
       $$('[data-hold]', box).forEach(btn => {
-        btn.addEventListener('pointerdown', () => { flight.hold = { [btn.dataset.hold]: true }; sendInput(); });
-        for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(ev, () => { flight.hold = null; sendInput(); });
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          try { btn.setPointerCapture(e.pointerId); } catch {}
+          flight.hold = { [btn.dataset.hold]: true };
+          sendInput();
+        });
+        for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+          btn.addEventListener(ev, () => { flight.hold = null; sendInput(); });
+        }
       });
+      const kirPad = $('.kir-2d', box);
+      if (kirPad) {
+        let kirDragging = false;
+        const steerFromKir = e => {
+          const r = kirPad.getBoundingClientRect();
+          const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+          const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
+          const h = {};
+          if (nx > 0.16) h.right = true; else if (nx < -0.16) h.left = true;
+          if (ny > 0.16) h.up = true; else if (ny < -0.16) h.down = true;
+          flight.hold = Object.keys(h).length ? h : null;
+          sendInput();
+        };
+        kirPad.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          kirDragging = true;
+          try { kirPad.setPointerCapture(e.pointerId); } catch {}
+          steerFromKir(e);
+        });
+        kirPad.addEventListener('pointermove', e => { if (kirDragging) steerFromKir(e); });
+        for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+          kirPad.addEventListener(ev, () => { if (kirDragging) { kirDragging = false; flight.hold = null; sendInput(); } });
+        }
+      }
       $$('[data-act]', box).forEach(btn => btn.addEventListener('click', () => {
         const idx = btn.dataset.idx !== undefined ? Number(btn.dataset.idx) : undefined;
         handleCockpitAction(btn.dataset.act, idx);
@@ -1997,8 +2087,17 @@
 
     // Steering: the keys and pad of whoever may fly the current step, here and on the guests' screens.
     const PILOT_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyQ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-    const HOLDS = ['up', 'down', 'left', 'right'];
+    const HOLDS = ['up', 'down', 'left', 'right', 'forward', 'back'];
     const remoteInput = new Map(); // seat → { keys: Set, hold }
+    function setPilotHold(nextHold) {
+      if (nextHold && typeof nextHold === 'object') {
+        const clean = Object.fromEntries(HOLDS.filter(h => nextHold[h]).map(h => [h, true]));
+        flight.hold = Object.keys(clean).length ? clean : null;
+      } else {
+        flight.hold = null;
+      }
+      sendInput();
+    }
     function inputOf() {
       const seats = STEP_CREW[flight.step] || [], mine = canAct(seats);
       const keys = new Set(mine ? flight.keys : []);
@@ -2041,7 +2140,7 @@
       net.setState('flight', flightSnapshot());
     }
     let guestFlight = false, shownLog = '';
-    const flightUiKey = () => JSON.stringify([flight.step, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
+    const flightUiKey = () => JSON.stringify([flight.step, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.edlChuteDeployed, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
     function applyFlight(o) {
       if (!net.isGuest || !o) return;
       const first = !guestFlight;
@@ -2198,7 +2297,7 @@
     // Guest: the host left the cockpit or the surface (another mission, or the room closed).
     function leaveMission() { guestFlight = false; guestSurface = false; flight.active = false; surf.active = false; radAudio.stopAll(); }
 
-    return { startFlight, failLaunch, handleCockpitAction, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
+    return { startFlight, failLaunch, handleCockpitAction, setPilotHold, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,
       refreshUI: () => { if (flight.active) renderFlightUI(); },
       get isMuted() { return radAudio.muted; },

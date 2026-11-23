@@ -330,40 +330,108 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const breakerBank = root.getObjectByName('Breaker_Bank');
     const stageSwitch = root.getObjectByName('Stage_Sep_Switch');
     const edlSwitch = root.getObjectByName('EDL_Arm_Switch');
+    const abortBtn = root.getObjectByName('Abort_Button');
     const alarmRedMats = cloneAlarmMaterials(root.getObjectByName('Alarm_Master_Red'));
     const alarmAmberMats = cloneAlarmMaterials(root.getObjectByName('Alarm_Caution_Amber'));
+
+    // Invisible 3D hit-plane over the left monitor (Navball display unit) for direct 3D touch/click steering
+    const leftScreenHit = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.36, 0.25),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    leftScreenHit.rotation.x = panelTilt;
+    leftScreenHit.position.set(0, 0.86, -0.7).add(new THREE.Vector3(-0.5, 0.065, 0.095).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
+    root.add(leftScreenHit);
 
     // Navball: the ball turns so its horizon line reaches the green brackets (20° on the ball) at the band edge.
     const navball = root.getObjectByName('Navball');
     const navBase = navball ? navball.quaternion.clone() : null, navQ = new THREE.Quaternion(), navGoal = new THREE.Quaternion(), navE = new THREE.Euler();
     const throttleBaseRot = throttlePivot ? throttlePivot.rotation.x : 0;
     const rhcBaseRot = stickRHC ? stickRHC.rotation.clone() : new THREE.Euler();
+    const thcBaseRot = stickTHC ? stickTHC.rotation.clone() : new THREE.Euler();
 
-    // Tag clickable meshes with their cockpit action
+    // Tag clickable & draggable 3D cockpit meshes (monitors, navball, sticks, levers, switches)
     const interactiveMeshes = [];
-    const tagPivot = (obj, actionFn) => {
+    const tagPivot = (obj, actionFn, role = null) => {
       if (!obj) return;
       obj.traverse(ch => {
         if (ch.isMesh) {
           ch.userData.onCockpitClick = actionFn;
+          if (role) ch.userData.cockpitRole = role;
           interactiveMeshes.push(ch);
         }
       });
     };
-    tagPivot(throttlePivot, () => window.ASTRO_SIM?.handleCockpitAction('throttle_up'));
-    tagPivot(stickRHC, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'));
+
+    const setHold = h => {
+      if (window.ASTRO_SIM?.setPilotHold) window.ASTRO_SIM.setPilotHold(h);
+      else if (window.ASTRO_SIM?.flight) window.ASTRO_SIM.flight.hold = h;
+    };
+
+    tagPivot(throttlePivot, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (!f) return;
+      if (f.step === 0) window.ASTRO_SIM?.handleCockpitAction('throttle_up');
+      else if (f.step === 1) window.ASTRO_SIM?.handleCockpitAction('stabilize');
+      else if (f.step === 2) {
+        if (f.docked && f.refuelDone >= (f.design?.refuelTarget ?? 100)) window.ASTRO_SIM?.handleCockpitAction('complete_step');
+        else if (f.docked) window.ASTRO_SIM?.handleCockpitAction('pump_fuel');
+        else window.ASTRO_SIM?.handleCockpitAction('stabilize');
+      } else if (f.step === 3) {
+        if (!f.edlChuteDeployed) window.ASTRO_SIM?.handleCockpitAction('edl_arm');
+        else window.ASTRO_SIM?.handleCockpitAction('stabilize');
+      }
+    }, 'throttle');
+
+    tagPivot(stickRHC, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'), 'stick_rhc');
     tagPivot(stickTHC, () => {
       const f = window.ASTRO_SIM?.flight;
-      if (f?.step === 2 && !f.docked) window.ASTRO_SIM?.handleCockpitAction('stabilize');
-      else window.ASTRO_SIM?.handleCockpitAction('pump_fuel');
-    });
+      if (f?.step === 2 && f.docked) {
+        if (f.refuelDone >= (f.design?.refuelTarget ?? 100)) window.ASTRO_SIM?.handleCockpitAction('complete_step');
+        else window.ASTRO_SIM?.handleCockpitAction('pump_fuel');
+      } else {
+        window.ASTRO_SIM?.handleCockpitAction('stabilize');
+      }
+    }, 'stick_thc');
+
     tagPivot(breakerBank, () => {
       const f = window.ASTRO_SIM?.flight;
       const tripped = f?.breakers ? f.breakers.findIndex(Boolean) : 0;
       window.ASTRO_SIM?.handleCockpitAction('breaker', tripped >= 0 ? tripped : 0);
     });
-    tagPivot(stageSwitch, () => window.ASTRO_SIM?.handleCockpitAction('stage_sep'));
-    tagPivot(edlSwitch, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'));
+    tagPivot(stageSwitch, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (f?.step === 2 && f.docked) window.ASTRO_SIM?.handleCockpitAction('complete_step');
+      else window.ASTRO_SIM?.handleCockpitAction('stage_sep');
+    });
+    tagPivot(edlSwitch, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (f?.step === 3 && !f.edlChuteDeployed) window.ASTRO_SIM?.handleCockpitAction('edl_arm');
+      else window.ASTRO_SIM?.handleCockpitAction('stabilize');
+    });
+    tagPivot(abortBtn, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'));
+
+    // Make all 3 display units + navball clickable and holdable in 3D to steer/operate their minigames
+    tagPivot(navball, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (f?.step === 0 && !f.liftoff) window.ASTRO_SIM?.handleCockpitAction('throttle_up');
+      else window.ASTRO_SIM?.handleCockpitAction('stabilize');
+    }, 'monitor_left');
+    tagPivot(leftScreenHit, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (f?.step === 0 && !f.liftoff) window.ASTRO_SIM?.handleCockpitAction('throttle_up');
+      else window.ASTRO_SIM?.handleCockpitAction('stabilize');
+    }, 'monitor_left');
+    tagPivot(centreScreen, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'), 'monitor_centre');
+    tagPivot(rightScreen.mesh, () => {
+      const f = window.ASTRO_SIM?.flight;
+      if (f?.step === 2 && f.docked) {
+        if (f.refuelDone >= (f.design?.refuelTarget ?? 100)) window.ASTRO_SIM?.handleCockpitAction('complete_step');
+        else window.ASTRO_SIM?.handleCockpitAction('pump_fuel');
+      } else {
+        window.ASTRO_SIM?.handleCockpitAction('stabilize');
+      }
+    }, 'monitor_right');
 
     // Spark particles for FX_Sparks_Left & FX_Sparks_Right
     const sparkAnchors = ['FX_Sparks_Left', 'FX_Sparks_Right']
@@ -390,37 +458,105 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     }
     for (let i = 0; i < sparkCount; i++) resetSpark(i);
 
-    // Raycast interaction + slight head-look on pointer move
+    // Raycast interaction + direct 3D hold/drag steering on monitors, joysticks and throttle
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let hoverOffset = new THREE.Vector2(0, 0);
+    let active3DControl = null;
 
-    renderer.domElement.addEventListener('pointermove', e => {
-      if (window.ASTRO_SIM?.flight?.step === 1) {
-        hoverOffset.set(0, 0);
-        renderer.domElement.style.cursor = 'default';
-        return;
+    function compute3DHold(ctrl, e, hit) {
+      const f = window.ASTRO_SIM?.flight;
+      if (!f) return null;
+      const role = ctrl.role;
+      let dx = 0, dy = 0;
+      if (role.startsWith('monitor_') && hit) {
+        const targetMesh = role === 'monitor_left' ? leftScreenHit : role === 'monitor_centre' ? centreScreen : rightScreen.mesh;
+        const local = targetMesh.worldToLocal(hit.point.clone());
+        dx = THREE.MathUtils.clamp(local.x / 0.14, -1, 1);
+        dy = THREE.MathUtils.clamp(local.y / 0.10, -1, 1);
+      } else {
+        const r = renderer.domElement.getBoundingClientRect();
+        dx = THREE.MathUtils.clamp(((e.clientX - ctrl.startX) / Math.max(1, r.width)) * 7.5, -1, 1);
+        dy = THREE.MathUtils.clamp((-(e.clientY - ctrl.startY) / Math.max(1, r.height)) * 7.5, -1, 1);
       }
+
+      // Auto-guidance assist when holding near the center of a 3D monitor or joystick without dragging
+      if (Math.hypot(dx, dy) < 0.22) {
+        if (f.step === 1 && f.portDock && f.portDock.status === 'approach') {
+          const d = f.portDock, h = {};
+          if (d.x > 0.07) h.left = true; else if (d.x < -0.07) h.right = true;
+          if (d.y > 0.07) h.down = true; else if (d.y < -0.07) h.up = true;
+          if (Math.hypot(d.x, d.y) < 0.22 || role === 'stick_thc' || role === 'throttle') h.forward = true;
+          return h;
+        }
+        const g = f.step === 0 ? f.liftoff : f.step === 2 && !f.docked ? f.docking : f.step === 3 ? f.marsBurn : null;
+        if (g && !g.done) {
+          const h = {};
+          if (g.value[0] > 0.18) h.down = true; else if (g.value[0] < -0.18) h.up = true;
+          if (g.value[1] > 0.18) h.left = true; else if (g.value[1] < -0.18) h.right = true;
+          return h;
+        }
+      }
+
+      const h = {};
+      if (dx > 0.18) h.right = true; else if (dx < -0.18) h.left = true;
+      if (dy > 0.18) h.up = true; else if (dy < -0.18) h.down = true;
+      if (f.step === 1 && (role === 'stick_thc' || role === 'throttle')) {
+        if (dy >= -0.18) h.forward = true; else h.back = true;
+      } else if (f.step === 1 && role === 'monitor_centre' && Math.hypot(f.portDock?.x ?? 1, f.portDock?.y ?? 1) < 0.2) {
+        h.forward = true;
+      }
+      return Object.keys(h).length ? h : null;
+    }
+
+    function raycastCockpit(e) {
       const r = renderer.domElement.getBoundingClientRect();
       pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-      hoverOffset.set(pointer.x * 0.04, pointer.y * 0.025);
       raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(interactiveMeshes, false);
+      return raycaster.intersectObjects(interactiveMeshes, false);
+    }
+
+    renderer.domElement.addEventListener('pointerdown', e => {
+      const hits = raycastCockpit(e);
+      if (!hits.length) return;
+      const hit = hits[0];
+      const obj = hit.object;
+      const role = obj.userData.cockpitRole;
+      if (obj.userData.onCockpitClick) obj.userData.onCockpitClick();
+      if (role) {
+        e.preventDefault();
+        try { renderer.domElement.setPointerCapture(e.pointerId); } catch {}
+        active3DControl = { role, startX: e.clientX, startY: e.clientY };
+        setHold(compute3DHold(active3DControl, e, hit));
+        renderer.domElement.style.cursor = 'grabbing';
+      }
+    });
+
+    renderer.domElement.addEventListener('pointermove', e => {
+      const hits = raycastCockpit(e);
+      if (window.ASTRO_SIM?.flight?.step === 1 && !active3DControl) {
+        hoverOffset.set(0, 0);
+      } else if (!active3DControl) {
+        hoverOffset.set(pointer.x * 0.04, pointer.y * 0.025);
+      }
+      if (active3DControl) {
+        setHold(compute3DHold(active3DControl, e, hits[0] || null));
+        renderer.domElement.style.cursor = 'grabbing';
+        return;
+      }
       renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
     });
 
-    renderer.domElement.addEventListener('click', e => {
-      if (window.ASTRO_SIM?.flight?.step === 1) return;
-      const r = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-      pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(interactiveMeshes, false);
-      if (hits.length && hits[0].object.userData.onCockpitClick) {
-        hits[0].object.userData.onCockpitClick();
-      }
-    });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      renderer.domElement.addEventListener(ev, () => {
+        if (active3DControl) {
+          active3DControl = null;
+          setHold(null);
+          renderer.domElement.style.cursor = 'default';
+        }
+      });
+    }
 
     let lastT = performance.now();
     function frame(now) {
@@ -466,8 +602,15 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
           }
         }
         if (stickRHC) {
-          stickRHC.rotation.z = THREE.MathUtils.lerp(stickRHC.rotation.z, rhcBaseRot.z - (f.pitchX || 0) * 0.014, 0.15);
-          stickRHC.rotation.x = THREE.MathUtils.lerp(stickRHC.rotation.x, rhcBaseRot.x + (f.pitchY || 0) * 0.014, 0.15);
+          stickRHC.rotation.z = THREE.MathUtils.lerp(stickRHC.rotation.z, rhcBaseRot.z - (f.pitchX || 0) * 0.18, 0.18);
+          stickRHC.rotation.x = THREE.MathUtils.lerp(stickRHC.rotation.x, rhcBaseRot.x + (f.pitchY || 0) * 0.18, 0.18);
+        }
+        if (stickTHC) {
+          const inp = (f.step === 1 ? f.portDock?.input : f.input) || {};
+          const tx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+          const ty = (inp.up || inp.forward ? 1 : 0) - (inp.down || inp.back ? 1 : 0);
+          stickTHC.rotation.z = THREE.MathUtils.lerp(stickTHC.rotation.z, thcBaseRot.z - tx * 0.16, 0.2);
+          stickTHC.rotation.x = THREE.MathUtils.lerp(stickTHC.rotation.x, thcBaseRot.x - ty * 0.16, 0.2);
         }
         if (stageSwitch) {
           stageSwitch.rotation.x = THREE.MathUtils.lerp(stageSwitch.rotation.x, f.stageSeparated ? -0.65 : 0.25, 0.16);
