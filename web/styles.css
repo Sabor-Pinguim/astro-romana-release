@@ -231,6 +231,9 @@
     .mp-input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .mp-name-bar .mp-input{flex:1 1 150px}
     .mp-name-locked{font:700 .78rem var(--heading);letter-spacing:.06em;color:var(--starlight-cream);padding:.26rem .6rem;background:#11071fe6;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+    .mp-name-edit-btn{min-height:28px;padding:.24rem .45rem}
+    .mp-name-edit-btn .pencil-icon{width:14px;height:14px;display:block}
+    .mp-name-save-btn{min-height:34px;padding:.32rem .7rem;font-size:.62rem}
     .mp-browser-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:4px;border-top:1px solid #ffffff14}
     .mp-browser-head .button{min-height:28px;padding:.28rem .65rem;font-size:.6rem}
     .room-browser-list{position:relative;z-index:1;flex:1 1 auto;min-height:76px;max-height:175px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}

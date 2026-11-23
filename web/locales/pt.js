@@ -29,7 +29,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.5.0',
+        version: 'v1.5.1',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',
@@ -218,6 +218,7 @@
           tabCreate: 'Criar sala',
           createHint: 'Você vira o anfitrião. Os outros entram pelo navegador de salas ou com o seu código.',
           confirmNameBtn: 'Confirmar',
+          editName: 'Alterar nome de astronauta',
         },
       },
       crew: {

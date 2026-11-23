@@ -29,7 +29,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.5.0',
+        version: 'v1.5.1',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -218,6 +218,7 @@
           tabCreate: 'Host a room',
           createHint: 'You become the host. Others join from the room browser or with your code.',
           confirmNameBtn: 'Confirm',
+          editName: 'Edit astronaut name',
         },
       },
       crew: {

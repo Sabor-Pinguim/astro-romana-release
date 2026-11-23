@@ -35,9 +35,9 @@
 
   const isPlayerNameLocked = () => getPlayerName().length >= 2;
 
-  function setPlayerName(raw) {
+  function setPlayerName(raw, allowOverwrite = false) {
     const existing = getPlayerName();
-    if (existing.length >= 2) return existing;
+    if (existing.length >= 2 && !allowOverwrite) return existing;
     const clean = sanitizePlayerName(raw);
     if (clean.length < 2) return '';
     try { localStorage.setItem(PLAYER_NAME_KEY, clean); } catch { /* blocked storage */ }

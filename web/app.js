@@ -247,12 +247,14 @@
   }
   const ROBOT_ICON = `<svg viewBox="0 0 40 34" aria-hidden="true"><polygon points="18,0 22,0 21,7 19,7" fill="#F59E0B"/><polygon points="17,0 23,0 20,4" fill="#FCE8A6"/><polygon points="6,7 34,7 38,13 38,27 32,33 8,33 2,27 2,13" fill="#281147"/><polygon points="6,7 20,7 20,33 8,33 2,27 2,13" fill="#3a2163"/><polygon points="7,14 33,14 31,24 9,24" fill="#17183B"/><polygon points="11,17 17,17 16,21 12,21" fill="#7EDAC2"/><polygon points="23,17 29,17 28,21 24,21" fill="#7EDAC2"/><polygon points="14,27 26,27 25,30 15,30" fill="#9B5DE5"/></svg>`;
   const COOP_ICON = `<svg viewBox="0 0 44 34" aria-hidden="true"><polygon points="22,2 30,10 22,18 14,10" fill="#F59E0B"/><polygon points="22,2 26,10 22,18 14,10" fill="#FCE8A6"/><polygon points="8,16 16,24 8,32 0,24" fill="#7EDAC2"/><polygon points="36,16 44,24 36,32 28,24" fill="#1FA2FF"/><polygon points="14,13 18,16 12,22 9,19" fill="#9B5DE5"/><polygon points="30,13 35,19 32,22 26,16" fill="#9B5DE5"/></svg>`;
+  const PENCIL_ICON = '<svg class="pencil-icon" viewBox="0 0 16 16" aria-hidden="true"><polygon points="11.5,1.5 14.5,4.5 5.5,13.5 2,14 2.5,10.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/><line x1="9.5" y1="3.5" x2="12.5" y2="6.5" stroke="currentColor" stroke-width="1.5"/></svg>';
   const browserState = { status: 'idle', rooms: [], fetchedAt: 0 };
   let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '', draftPlayerName = '';
+  let editingPlayerName = false;
   let mpTab = 'browse'; // 'browse' | 'create'
 
   function ensurePlayerName() {
-    if (net.isPlayerNameLocked?.()) return net.getPlayerName();
+    if (net.isPlayerNameLocked?.() && !editingPlayerName) return net.getPlayerName();
     const input = $('#mp-player-name');
     const raw = input ? input.value : draftPlayerName;
     const clean = net.sanitizePlayerName ? net.sanitizePlayerName(raw) : String(raw || '').trim();
@@ -261,10 +263,11 @@
       input?.focus();
       return null;
     }
-    const locked = net.setPlayerName?.(clean) || clean;
-    draftPlayerName = locked;
+    const saved = net.setPlayerName?.(clean, editingPlayerName) || clean;
+    editingPlayerName = false;
+    draftPlayerName = saved;
     renderModeStep();
-    return locked;
+    return saved;
   }
 
   function promptRoomPassword(code) {
@@ -388,8 +391,9 @@
 
     const netReady = net.enabled && net.available();
     const langCode = window.ASTRO_I18N?.language || 'en';
+    if (net.mode !== 'solo') editingPlayerName = false;
     const lockedName = net.isPlayerNameLocked?.() ? net.getPlayerName() : '';
-    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}|${lockedName}`;
+    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}|${lockedName}|${editingPlayerName}`;
 
     if(!netReady){
       mpVis.classList.remove('is-browser');
@@ -416,9 +420,9 @@
             <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}"><span class="settings-glyph" aria-hidden="true"></span></button>
           </div>
           <div class="mp-name-bar">
-            ${nameLocked
-              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">${esc(savedName)}</strong>`
-              : `<label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">`}
+            ${nameLocked && !editingPlayerName
+              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">${esc(savedName)}</strong><button class="button quiet mp-name-edit-btn" type="button" id="mp-name-edit" aria-label="${esc(t('lobby.roomBrowser.editName'))}" title="${esc(t('lobby.roomBrowser.editName'))}">${PENCIL_ICON}</button>`
+              : `<label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(editingPlayerName ? draftPlayerName : savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">${editingPlayerName ? `<button class="button secondary mp-name-save-btn" type="button" id="mp-name-save">${t('lobby.roomBrowser.confirmNameBtn')}</button>` : ''}`}
           </div>
           <div class="segmented mp-tabs" role="group">
             <button type="button" data-mp-tab="browse" aria-pressed="${mpTab === 'browse'}">${t('lobby.roomBrowser.tabBrowse')}</button>
@@ -445,8 +449,29 @@
         }
 
         $('#mp-server-settings').addEventListener('click', () => { window.ASTRO_SETTINGS?.syncUI(); showScreen('settings'); });
-        if (!nameLocked) {
-          $('#mp-player-name').addEventListener('input', e => { draftPlayerName = e.target.value; });
+        if (nameLocked && !editingPlayerName) {
+          $('#mp-name-edit').addEventListener('click', () => {
+            editingPlayerName = true;
+            draftPlayerName = net.getPlayerName();
+            renderModeStep();
+            const inp = $('#mp-player-name');
+            inp?.focus();
+            inp?.select();
+          });
+        } else {
+          const nameInput = $('#mp-player-name');
+          nameInput.addEventListener('input', e => { draftPlayerName = e.target.value; });
+          if (editingPlayerName) {
+            $('#mp-name-save').addEventListener('click', () => { ensurePlayerName(); });
+            nameInput.addEventListener('keydown', e => {
+              if (e.key === 'Enter') { e.preventDefault(); ensurePlayerName(); }
+              else if (e.key === 'Escape') {
+                editingPlayerName = false;
+                draftPlayerName = net.getPlayerName();
+                renderModeStep();
+              }
+            });
+          }
         }
         $$('[data-mp-tab]', mpVis).forEach(btn => btn.addEventListener('click', () => {
           if(mpTab === btn.dataset.mpTab) return;

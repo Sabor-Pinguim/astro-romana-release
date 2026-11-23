@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.5.1] - 2026-11-23
+
+### Changed
+- **Editable astronaut name on mode selection screen:** added a geometric SVG pencil button (`#mp-name-edit`) next to the saved astronaut name on `#lobby-step-mode` to allow editing (`Enter` / Confirm to save, `Escape` to cancel) while keeping the name locked on all other screens and inside active rooms (`web/app.js`, `web/net.js`, `web/styles.css`, `web/locales/en.js`, `web/locales/pt.js`).
+
 ## [1.5.0] - 2026-11-23
 
 ### Added
