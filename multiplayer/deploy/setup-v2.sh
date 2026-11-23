@@ -117,7 +117,7 @@ put() {
   if [ -f "$1" ] && cmp -s "$tmp" "$1"; then rm -f "$tmp"; return 1; fi
   install -m "${2:-0644}" "$tmp" "$1"; rm -f "$tmp"
 }
-if printf 'PORT=%s\nHOST=127.0.0.1\nDB_PATH=/var/lib/%s/astro.sqlite\nALLOWED_ORIGINS=https://%s,null%s\n' \
+if printf 'PORT=%s\nHOST=127.0.0.1\nDB_PATH=/var/lib/%s/astro.sqlite\nALLOWED_ORIGINS=https://%s,https://sabor-pinguim.github.io,null%s\n' \
   "$ROOMS_PORT" "$SERVICE_NAME" "$DOMAIN" "${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}" | put "$CONF_DIR/rooms.env"; then
   restart_rooms=1
 fi

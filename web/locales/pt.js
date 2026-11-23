@@ -29,7 +29,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.4.2',
+        version: 'v1.4.3',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',

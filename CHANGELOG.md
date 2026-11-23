@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.3] - 2026-11-23
+
+### Fixed
+- **GitHub Pages default CORS & WebSocket origin:** included `https://sabor-pinguim.github.io` in default `ALLOWED_ORIGINS` in `multiplayer/deploy/setup-v2.sh` and `multiplayer/deploy/setup.sh`.
+
 ## [1.4.2] - 2026-11-23
 
 ### Added

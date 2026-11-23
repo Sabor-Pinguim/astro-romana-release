@@ -121,7 +121,7 @@ put() {
   install -m "${2:-0644}" "$tmp" "$1"; rm -f "$tmp"
 }
 # "null" lets pages opened from file:// (local testing with ?server=) join too.
-if printf 'PORT=%s\nHOST=127.0.0.1\nDB_PATH=/var/lib/astro-romana/astro.sqlite\nALLOWED_ORIGINS=https://%s,null%s\n' "$ROOMS_PORT" "$DOMAIN" "${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}" \
+if printf 'PORT=%s\nHOST=127.0.0.1\nDB_PATH=/var/lib/astro-romana/astro.sqlite\nALLOWED_ORIGINS=https://%s,https://sabor-pinguim.github.io,null%s\n' "$ROOMS_PORT" "$DOMAIN" "${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}" \
   | put "$CONF_DIR/rooms.env"; then restart_rooms=1; fi
 if put /etc/systemd/system/astro-rooms.service < "$APP_DIR/multiplayer/deploy/astro-rooms.service"; then
   systemctl daemon-reload; restart_rooms=1
