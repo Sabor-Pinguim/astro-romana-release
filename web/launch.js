@@ -18,7 +18,11 @@ const COUNT = 10, IGNITION_HOLD = 1.6, FLY_IN = 2.2, PAD_BURN = 3, FAIL_HOLD = 4
 const STATUS = [[10, 'launch.pad.status10'], [7, 'launch.pad.status7'], [5, 'launch.pad.status5'], [2, 'launch.pad.status2'], [0, 'launch.pad.status0']];
 
 let renderer = null;
-try { renderer = new THREE.WebGLRenderer({ antialias: true }); } catch { renderer = null; }
+function ensureRenderer() {
+  if (renderer) return renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true }); } catch { renderer = null; }
+  return renderer;
+}
 const flat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .85, flatShading: true, ...extra });
 let view = null;
 
@@ -205,15 +209,27 @@ window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async re
   const onKey = e => { if (e.code === 'Escape') finish(); };
   addEventListener('keydown', onKey, { once: true });
 
-  if (!renderer || !window.ASTRO_BUILD_ROCKET) { // no 3D: the countdown alone
+  let stackGroup = null;
+  if (ensureRenderer() && window.ASTRO_BUILD_ROCKET) {
+    try {
+      view ||= initScene();
+      stackGroup = await Promise.race([
+        window.ASTRO_BUILD_ROCKET(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('ASTRO_BUILD_ROCKET timeout')), 2500)),
+      ]);
+    } catch (err) {
+      console.warn('Launch pad 3D stack fallback:', err);
+      stackGroup = null;
+    }
+  }
+  if (!renderer || !view || !stackGroup) { // no 3D: the countdown alone
     const t0 = performance.now();
-    const tick = () => { if (done) return; const t = (performance.now() - t0) / 1000; countdownText(t, lift); if (t >= COUNT + (lift.ok ? 0 : FAIL_HOLD)) finish(); else requestAnimationFrame(tick); };
+    const tick = () => { if (done) return; const elapsed = (performance.now() - t0) / 1000; countdownText(elapsed, lift); if (elapsed >= COUNT + (lift.ok ? 0 : FAIL_HOLD)) finish(); else requestAnimationFrame(tick); };
     tick(); return;
   }
-  view ||= initScene();
   const v = view, { camera } = v;
-  // The designed rocket, stacked without gaps (views.js), standing on the pad.
-  const stackGroup = await window.ASTRO_BUILD_ROCKET();
+  const w = host.clientWidth, h = host.clientHeight;
+  if (w && h) { v.width = w; v.h = h; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   // The engines hang below the booster's origin: lift the stack so the nozzles clear the pad top.
   const base = .62 - stackGroup.userData.minY + .08;
   v.rocket.clear(); v.rocket.add(stackGroup); v.rocket.position.set(0, base, 0);
@@ -224,18 +240,18 @@ window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async re
   const mid = new THREE.Vector3(), cabin = new THREE.Vector3(), look = new THREE.Vector3(), into = new THREE.Vector3();
   const R = v.height * 1.15 + 4;
   const lights = lift.ok || lift.reason === 'low-twr', accel = lift.ok ? Math.max(.05, lift.accel ?? 1) : 0;
-  let t = reduce ? COUNT : 0, last = performance.now(), flyFrom = null, lookFrom = null;
+  let tSec = reduce ? COUNT : 0, last = performance.now(), flyFrom = null, lookFrom = null;
   function frame(now) {
     if (done || !screen.classList.contains('active')) return;
     requestAnimationFrame(frame);
-    const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now; t += dt; // rAF time can precede performance.now()
-    if (window.ASTRO_LAUNCH_PAUSE) t -= dt; // tests: hold the moment
-    if (window.ASTRO_LAUNCH_JUMP != null) { t = window.ASTRO_LAUNCH_JUMP; window.ASTRO_LAUNCH_JUMP = null; } // tests: jump in time
-    countdownText(t, lift);
-    const zero = Math.max(0, t - COUNT), lit = lights ? zero : 0, climb = Math.max(0, lit - .8);
+    const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now; tSec += dt; // rAF time can precede performance.now()
+    if (window.ASTRO_LAUNCH_PAUSE) tSec -= dt; // tests: hold the moment
+    if (window.ASTRO_LAUNCH_JUMP != null) { tSec = window.ASTRO_LAUNCH_JUMP; window.ASTRO_LAUNCH_JUMP = null; } // tests: jump in time
+    countdownText(tSec, lift);
+    const zero = Math.max(0, tSec - COUNT), lit = lights ? zero : 0, climb = Math.max(0, lit - .8);
     v.rocket.position.y = base + climb * climb * .9 * accel; // slow at first, then faster; the net thrust sets the pace
     // Tower arm swings away at T−5.
-    v.arm.rotation.y = -Math.min(1, Math.max(0, (t - (COUNT - 5)) / 2)) * 1.4;
+    v.arm.rotation.y = -Math.min(1, Math.max(0, (tSec - (COUNT - 5)) / 2)) * 1.4;
     // Ignition: plume, glow, smoke. A rocket too heavy to lift strains on the pad until the engines shut down.
     const flame = Math.min(1, lit / .6) * (lift.ok ? 1 : Math.max(0, Math.min(1, (PAD_BURN - lit) / .6)));
     v.rocket.position.x = lift.ok || reduce ? 0 : (Math.random() - .5) * .05 * flame;
@@ -248,18 +264,18 @@ window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async re
     });
     stackGroup.userData.cabin.getWorldPosition(cabin);
     mid.set(0, v.rocket.position.y + v.height * .45, 0);
-    if (t < COUNT + IGNITION_HOLD || !lift.ok) {
+    if (tSec < COUNT + IGNITION_HOLD || !lift.ok) {
       // Orbit around the rocket; a little shake once the engines are lit (more when it strains on the pad).
       // At T−0 the camera drops and looks at the base, so the flame and the smoke (or their absence) are in frame.
-      const a = .6 + t * .32, shake = flame * (lift.ok ? .06 : .12), low = Math.min(1, zero / .8), baseY = v.rocket.position.y + stackGroup.userData.minY + 1.2;
+      const a = .6 + tSec * .32, shake = flame * (lift.ok ? .06 : .12), low = Math.min(1, zero / .8), baseY = v.rocket.position.y + stackGroup.userData.minY + 1.2;
       look.set(0, mid.y + (baseY - mid.y) * low * .85, 0);
-      camera.position.set(Math.sin(a) * R + (Math.random() - .5) * shake, look.y + Math.sin(t * .5) * 1.2 * (1 - low) + 1.5 * low + (Math.random() - .5) * shake, Math.cos(a) * R);
+      camera.position.set(Math.sin(a) * R + (Math.random() - .5) * shake, look.y + Math.sin(tSec * .5) * 1.2 * (1 - low) + 1.5 * low + (Math.random() - .5) * shake, Math.cos(a) * R);
       camera.lookAt(look);
       if (!lift.ok && zero >= FAIL_HOLD) finish();
     } else {
       // Fly up to the pilot's windows (+Z), following the climbing rocket; the fade covers the way in.
       if (!flyFrom) { flyFrom = camera.position.clone(); lookFrom = look.clone(); }
-      const k = Math.min(1, (t - COUNT - IGNITION_HOLD) / FLY_IN), e = k * k * (3 - 2 * k);
+      const k = Math.min(1, (tSec - COUNT - IGNITION_HOLD) / FLY_IN), e = k * k * (3 - 2 * k);
       $id('launchpad-count').style.opacity = String(1 - e);
       into.copy(cabin).add({ x: 0, y: .02, z: .14 });
       // Swing round the rocket to its front (+Z) and up to the windows by halfway, then close in.
@@ -369,42 +385,51 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
   const onKey = e => { if (e.code === 'Escape') finish(); };
   addEventListener('keydown', onKey, { once: true });
   const end = SPLASH.fall + SPLASH.hold;
-  if (!renderer || !window.ASTRO_BUILD_ROCKET) { // no 3D: the texts alone
+  let stackGroup;
+  if (ensureRenderer() && window.ASTRO_BUILD_ROCKET) {
+    try {
+      seaView ||= initSea();
+      stackGroup = await window.ASTRO_BUILD_ROCKET();
+    } catch (err) {
+      console.warn('Splashdown 3D stack fallback:', err);
+      stackGroup = null;
+    }
+  }
+  if (!renderer || !seaView || !stackGroup) { // no 3D: the texts alone
     const t0 = performance.now();
     const tick = () => { if (done) return; const elapsed = (performance.now() - t0) / 1000; if (elapsed >= SPLASH.fall) count.textContent = t('launch.pad.splashdown'); if (elapsed >= end) finish(); else requestAnimationFrame(tick); };
     tick(); return;
   }
-  seaView ||= initSea();
   const v = seaView, { camera } = v;
   if (!renderer.domElement.parentNode) { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); host.prepend(renderer.domElement); }
   renderer.localClippingEnabled = true;
   // The configured cabin: the top module of the stack the crew built (views.js), closed. Its materials are cloned so the
   // clipping plane that removes the abort tower only touches this copy.
-  const stackGroup = await window.ASTRO_BUILD_ROCKET(), cab = stackGroup.children[stackGroup.children.length - 1];
+  const cab = stackGroup.children[stackGroup.children.length - 1];
   if (v.cabin) v.craft.remove(v.cabin);
   cab.position.set(0, 0, 0); v.craft.position.set(0, 0, 0); v.craft.rotation.set(0, 0, 0); v.craft.add(cab); v.cabin = cab; v.towerY = towerBaseOf(cab);
   cab.traverse(o => { if (o.isMesh) { o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); [].concat(o.material).forEach(m => { m.clippingPlanes = [v.clip]; }); } });
   v.chutes.position.set(0, v.towerY, 0); v.chutes.rotation.set(0, 0, 0); v.lines.visible = true;
   const up = new THREE.Vector3(), top = new THREE.Vector3(), rim = new THREE.Vector3(), look = new THREE.Vector3();
   const pos = v.ocean.geometry.attributes.position, linePos = v.lines.geometry.attributes.position;
-  let t = reduce ? SPLASH.fall - 1 : 0, last = performance.now(), size = '';
+  let tSec = reduce ? SPLASH.fall - 1 : 0, last = performance.now(), size = '';
   function frame(now) {
     if (done || !screen.classList.contains('active')) return;
     requestAnimationFrame(frame);
-    const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now; t += dt;
-    if (window.ASTRO_LAUNCH_JUMP != null) { t = window.ASTRO_LAUNCH_JUMP; window.ASTRO_LAUNCH_JUMP = null; } // tests: jump in time
+    const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now; tSec += dt;
+    if (window.ASTRO_LAUNCH_JUMP != null) { tSec = window.ASTRO_LAUNCH_JUMP; window.ASTRO_LAUNCH_JUMP = null; } // tests: jump in time
     const w = host.clientWidth, h = host.clientHeight;
     if (w && h && size !== `${w}x${h}`) { size = `${w}x${h}`; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-    const wt = reduce ? 0 : t, fall = Math.min(1, t / SPLASH.fall), after = Math.max(0, t - SPLASH.fall), splashed = t >= SPLASH.fall;
+    const wt = reduce ? 0 : tSec, fall = Math.min(1, tSec / SPLASH.fall), after = Math.max(0, tSec - SPLASH.fall), splashed = tSec >= SPLASH.fall;
     for (let i = 0; i < pos.count; i++) pos.setY(i, wave(v.base[i * 3], v.base[i * 3 + 2], wt));
     pos.needsUpdate = true; v.ocean.geometry.computeVertexNormals();
     // Steady descent under the canopies, swinging a little; afloat after the splash, riding the waves.
     const water = wave(0, 0, wt) - .22, sway = reduce ? 0 : SPLASH.sway * Math.PI / 180;
     v.craft.position.y = splashed ? water : SPLASH.from + (water - SPLASH.from) * fall;
-    v.craft.rotation.z = Math.sin(t * 1.25) * sway * (splashed ? .4 : 1);
-    v.craft.rotation.x = Math.sin(t * .9 + 1) * sway * .5 * (splashed ? .4 : 1);
+    v.craft.rotation.z = Math.sin(tSec * 1.25) * sway * (splashed ? .4 : 1);
+    v.craft.rotation.x = Math.sin(tSec * .9 + 1) * sway * .5 * (splashed ? .4 : 1);
     // Canopies inflate in the first second; after the splash they come off, fall to the side and settle on the water.
-    const k = Math.min(1, t / .9), open = k < 1 ? .2 + .8 * (1 - (1 - k) * (1 - k)) : 1;
+    const k = Math.min(1, tSec / .9), open = k < 1 ? .2 + .8 * (1 - (1 - k) * (1 - k)) : 1;
     v.canopies.forEach(c => { c.position.copy(c.userData.at); c.scale.set(open, splashed ? Math.max(.12, 1 - after * .8) : .6 + .4 * k, open); });
     v.chutes.position.y = splashed ? v.towerY - Math.min(v.towerY + 1.6, after * 2.4) : v.towerY;
     v.chutes.rotation.z = splashed ? Math.min(1.25, after * 1.1) : 0;
@@ -429,11 +454,11 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
     v.clip.setFromNormalAndCoplanarPoint(up.negate(), top);
     count.textContent = splashed ? t('launch.pad.splashdown') : t('launch.pad.abort');
     // Camera: follows the capsule down with the canopies in frame, then settles low over the water.
-    const a = .7 + t * .05, dist = (splashed ? 7 : 9) / Math.min(1, camera.aspect * 1.4); // narrow screens: step back
+    const a = .7 + tSec * .05, dist = (splashed ? 7 : 9) / Math.min(1, camera.aspect * 1.4); // narrow screens: step back
     look.set(0, splashed ? .4 : v.craft.position.y + 2.4, 0);
     camera.position.set(Math.sin(a) * dist, splashed ? 1.3 : Math.max(1.3, v.craft.position.y + .6), Math.cos(a) * dist);
     camera.lookAt(look);
-    if (t >= end) finish();
+    if (tSec >= end) finish();
     renderer.render(v.scene, camera);
   }
   requestAnimationFrame(frame);

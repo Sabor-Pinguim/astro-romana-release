@@ -468,8 +468,11 @@
     .podium-viewport.is-3d .podium-fallback{display:none}
     .podium-fallback{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);align-items:end;gap:10px;padding:70px 24px 24px}
     .podium-col{display:flex;flex-direction:column;align-items:center;gap:6px}
+    .podium-col.is-ghost .astronaut{opacity:.44;filter:hue-rotate(155deg) saturate(.7) brightness(1.35);animation:drift 2.4s ease-in-out infinite alternate}
     .podium-step{width:100%;padding:10px 6px;text-align:center;font:700 .76rem var(--heading);color:var(--bg-void);background:var(--solar-amber);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
     .podium-step.is-empty{color:var(--muted);background:var(--f3)}
+    .podium-step.is-ghost{color:var(--starlight-cream);background:var(--f3);opacity:.78}
+    .is-ghost-tag{margin-left:6px;padding:.18rem .48rem;font-size:.54rem;color:#b8f0ff;background:#19384a}
     /* Launch failure debrief (failLaunch): crimson badge and rank, empty podium. */
     #results .header-side{flex-wrap:wrap}
     #results:not(.is-failed) #results-retry{display:none}
