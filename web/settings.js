@@ -2,20 +2,23 @@
 (() => {
   'use strict';
   const STORAGE_KEY = 'astro-romana-settings';
-  const DEFAULTS = { language: 'en', unitSystem: 'metric', hints: true, serverUrl: '' };
+  function defaultLanguage() {
+    return window.ASTRO_I18N?.language || 'en';
+  }
+  const DEFAULTS = { get language() { return defaultLanguage(); }, unitSystem: 'metric', hints: true, serverUrl: '' };
 
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
       return {
-        language: parsed.language || DEFAULTS.language,
+        language: parsed.language || defaultLanguage(),
         unitSystem: parsed.unitSystem === 'imperial' ? 'imperial' : DEFAULTS.unitSystem,
         hints: typeof parsed.hints === 'boolean' ? parsed.hints : DEFAULTS.hints,
         serverUrl: typeof parsed.serverUrl === 'string' ? parsed.serverUrl : DEFAULTS.serverUrl,
       };
     } catch {
-      return { ...DEFAULTS };
+      return { language: defaultLanguage(), unitSystem: 'metric', hints: true, serverUrl: '' };
     }
   }
 
@@ -38,16 +41,35 @@
     window.dispatchEvent(new CustomEvent('astro:settings', { detail: { ...current } }));
   }
 
+  // Geometric SVG flags (no emoji) for the quick menu switcher and settings.
+  const LANG_FLAGS = {
+    en: `<svg class="lang-flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#D7263D"/><rect y="2.3" width="24" height="2.3" fill="#FFFFFF"/><rect y="6.9" width="24" height="2.3" fill="#FFFFFF"/><rect y="11.5" width="24" height="2.3" fill="#FFFFFF"/><rect width="10.5" height="9.2" fill="#1D3A8A"/><polygon points="5.2,1.8 6.4,4.6 5.2,7.4 4,4.6" fill="#FFFFFF"/></svg>`,
+    pt: `<svg class="lang-flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#1E8E4A"/><polygon points="12,1.8 21.5,8 12,14.2 2.5,8" fill="#F5C518"/><polygon points="12,4.4 15.6,8 12,11.6 8.4,8" fill="#1D3A8A"/><polygon points="9.2,7.3 14.8,8.1 14.5,9.1 8.9,8.3" fill="#FFFFFF"/></svg>`,
+    es: `<svg class="lang-flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#C60B1E"/><rect y="4" width="24" height="8" fill="#FFC400"/><polygon points="6.5,5.6 9.5,5.6 9.5,10.2 8,11.2 6.5,10.2" fill="#C60B1E"/></svg>`,
+  };
+  const LANG_SHORT = { en: 'EN', pt: 'PT-BR', es: 'ES' };
+
   function renderLanguageButtons() {
     const container = document.getElementById('settings-lang');
-    if (!container || !i18n()) return;
-    const langs = i18n().languages;
-    container.innerHTML = langs.map(lang =>
-      `<button type="button" data-lang="${lang.code}" aria-pressed="${lang.code === current.language}">${lang.name}</button>`
-    ).join('');
-    container.querySelectorAll('[data-lang]').forEach(btn => {
-      btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
-    });
+    if (container && i18n()) {
+      const langs = i18n().languages;
+      container.innerHTML = langs.map(lang =>
+        `<button type="button" data-lang="${lang.code}" aria-pressed="${lang.code === current.language}">${LANG_FLAGS[lang.code] || ''}<span>${lang.name}</span></button>`
+      ).join('');
+      container.querySelectorAll('[data-lang]').forEach(btn => {
+        btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+      });
+    }
+    const menuBar = document.getElementById('menu-lang-bar');
+    if (menuBar && i18n()) {
+      const langs = i18n().languages;
+      menuBar.innerHTML = langs.map(lang =>
+        `<button type="button" class="menu-lang-btn" data-lang="${lang.code}" aria-pressed="${lang.code === current.language}" title="${lang.name}" aria-label="${lang.name}">${LANG_FLAGS[lang.code] || ''}<span>${LANG_SHORT[lang.code] || lang.code.toUpperCase()}</span></button>`
+      ).join('');
+      menuBar.querySelectorAll('[data-lang]').forEach(btn => {
+        btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+      });
+    }
   }
 
   function updateServerPreview(raw) {

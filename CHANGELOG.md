@@ -11,6 +11,20 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.6.0] - 2026-11-23
+
+### Added
+- **Full i18n support across English (`en`), Brazilian Portuguese (`pt-BR`), and Spanish (`es`):**
+  - Added complete Spanish locale pack ([web/locales/es.js](web/locales/es.js)) with 100% key and rocket-part parity.
+  - Added automatic browser language detection (`navigator.languages` / `navigator.language`) on first visit in `web/i18n.js`, respecting manual overrides saved in Settings.
+  - Added a quick flag language switcher (`#menu-lang-bar`) with geometric SVG flags (`EN`, `PT-BR`, `ES`) on the main menu and in Settings (`web/settings.js`, `web/styles.css`).
+  - Added `npm run i18n:check` (`tools/web/check-i18n.mjs`) to validate key parity, `{{placeholder}}` parity, and coverage of all 55 rocket parts across every locale pack.
+- **Translated all 55 rocket parts (`parts.*`)** in `web/locales/en.js`, `web/locales/pt.js`, and `web/locales/es.js`, wired into `web/app.js` via `partName()` / `partRole()`.
+
+### Changed
+- **Eliminated remaining hardcoded English UI strings:** added `data-i18n` / `data-i18n-aria` across the 5-step Lobby (`index.html`), migrated `LOBBY_STEP_META`, difficulty specs, mode badges, and cockpit docking readouts (`web/app.js`), and added an `astro:lang` listener to live-refresh every dynamic view on language change.
+- **Clearer mission-abort and ocean-landing terminology in PT-BR and ES:** replaced `"Aborto"` with `"Abortar missão"` / `"Abortar misión"` and `"Amerissagem"` / `"Amerizaje"` with `"Pouso no mar"` / `"Descenso en el mar"` in `web/locales/pt.js` and `web/locales/es.js`.
+
 ## [1.5.2] - 2026-11-23
 
 ### Changed

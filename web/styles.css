@@ -94,6 +94,13 @@
     .menu-footer{position:absolute;left:clamp(24px,5vw,80px);bottom:28px;display:flex;align-items:center;font:600 .7rem var(--heading);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
     .menu-footer span+span::before{content:"";display:inline-block;width:6px;height:8px;margin:0 .9rem;background:var(--mars-orange);clip-path:polygon(0 0,100% 50%,0 100%)}
     .coordinates{position:absolute;right:clamp(24px,5vw,80px);bottom:28px;font:500 .66rem var(--heading);letter-spacing:.16em;color:var(--muted)}
+    .menu-lang-bar{position:absolute;top:24px;right:clamp(24px,5vw,80px);z-index:3;display:flex;gap:4px}
+    .menu-lang-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .72rem;border:0;cursor:pointer;font:700 .64rem/1 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:#160b25e6;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);transition:background .12s,color .12s,translate .12s}
+    .menu-lang-btn:hover{color:var(--starlight-cream);background:var(--f4);translate:0 -1px}
+    .menu-lang-btn[aria-pressed="true"]{color:var(--bg-void);background:var(--solar-amber)}
+    .menu-lang-btn:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--starlight-cream)}
+    .lang-flag{width:18px;height:12px;flex:none;display:block;box-shadow:0 0 0 1px rgba(255,255,255,.22)}
+    #settings-lang button{display:inline-flex;align-items:center;gap:.45rem}
 
     /* Orbit: choose the destination */
     .orbit-layout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,360px);gap:16px;width:min(1600px,100%);margin:0 auto;padding:22px clamp(16px,3vw,44px) 26px}

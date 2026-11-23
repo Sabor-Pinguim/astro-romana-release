@@ -16,7 +16,8 @@
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.5.2</div></div>
+    <div class="menu-lang-bar" id="menu-lang-bar" role="group" data-i18n-aria="settings.languageLabel" aria-label="Language"></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.6.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -163,50 +164,50 @@
       </div>
       <div class="lobby-header-controls">
         <span class="badge" id="modifier-badge" aria-live="polite">NORMAL · $250M · 3:00 on Mars · Δv −20%</span>
-        <button class="button quiet lobby-change-diff" id="lobby-change-difficulty" type="button" hidden>Change difficulty</button>
+        <button class="button quiet lobby-change-diff" id="lobby-change-difficulty" type="button" data-i18n="lobby.setup.changeDifficulty" hidden>Change difficulty</button>
       </div>
     </header>
-    <nav class="lobby-stepper" id="lobby-stepper" aria-label="Mission setup steps">
-      <button class="lobby-step-tab active" type="button" data-lobby-step="mode" aria-current="step"><span class="lobby-step-num">01</span><span class="lobby-step-copy"><strong>Play mode</strong><small id="step-summary-mode">Singleplayer</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="difficulty"><span class="lobby-step-num">02</span><span class="lobby-step-copy"><strong>Difficulty</strong><small id="step-summary-difficulty">Normal</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="destination"><span class="lobby-step-num">03</span><span class="lobby-step-copy"><strong>Destination</strong><small id="step-summary-destination">Mars</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="site"><span class="lobby-step-num">04</span><span class="lobby-step-copy"><strong>Landing site</strong><small id="step-summary-site">Jezero Crater</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="crew"><span class="lobby-step-num">05</span><span class="lobby-step-copy"><strong>Crew</strong><small id="step-summary-crew">1/4 players</small></span></button>
+    <nav class="lobby-stepper" id="lobby-stepper" data-i18n-aria="lobby.setup.stepperAria" aria-label="Mission setup steps">
+      <button class="lobby-step-tab active" type="button" data-lobby-step="mode" aria-current="step"><span class="lobby-step-num">01</span><span class="lobby-step-copy"><strong data-i18n="lobby.setup.tabs.mode">Play mode</strong><small id="step-summary-mode">Singleplayer</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="difficulty"><span class="lobby-step-num">02</span><span class="lobby-step-copy"><strong data-i18n="lobby.setup.tabs.difficulty">Difficulty</strong><small id="step-summary-difficulty">Normal</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="destination"><span class="lobby-step-num">03</span><span class="lobby-step-copy"><strong data-i18n="lobby.setup.tabs.destination">Destination</strong><small id="step-summary-destination">Mars</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="site"><span class="lobby-step-num">04</span><span class="lobby-step-copy"><strong data-i18n="lobby.setup.tabs.site">Landing site</strong><small id="step-summary-site">Jezero Crater</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="crew"><span class="lobby-step-num">05</span><span class="lobby-step-copy"><strong data-i18n="lobby.setup.tabs.crew">Crew</strong><small id="step-summary-crew">1/4 players</small></span></button>
     </nav>
     <div class="lobby-main">
       <div class="dossier slab lobby-step" id="lobby-step-mode">
         <div class="dossier-title-wrap">
-          <span class="micro">Step 01 · Crew connection</span>
-          <h3 class="dossier-title">How will your crew fly?</h3>
-          <p class="setup-lead">Play solo with 3 AI specialists or open a co-op room for up to 4 players.</p>
+          <span class="micro" data-i18n="lobby.setup.modeKicker">Step 01 · Crew connection</span>
+          <h3 class="dossier-title" data-i18n="lobby.setup.modeHeading">How will your crew fly?</h3>
+          <p class="setup-lead" data-i18n="lobby.setup.modeLead">Play solo with 3 AI specialists or open a co-op room for up to 4 players.</p>
         </div>
         <div class="mode-grid" id="mode-grid">
           <article class="setup-card mode-card" data-mode-card="solo">
             <div class="mode-card-top">
               <div class="setup-card-head">
-                <span class="eyebrow">Solo mission</span>
-                <span class="tag">1 PLAYER · 3 AI</span>
+                <span class="eyebrow" data-i18n="lobby.setup.soloEyebrow">Solo mission</span>
+                <span class="tag" data-i18n="lobby.setup.soloTag">1 PLAYER · 3 AI</span>
               </div>
-              <h4>Singleplayer</h4>
-              <p class="muted">Play as Helena with 3 AI specialists backing you up.</p>
+              <h4 data-i18n="lobby.setup.soloTitle">Singleplayer</h4>
+              <p class="muted" data-i18n="lobby.setup.soloDesc">Play as Helena with 3 AI specialists backing you up.</p>
             </div>
             <div class="mode-visual" id="mode-solo-visual" aria-hidden="true"></div>
             <div class="mode-cta-row">
               <button class="button primary" type="button" id="mode-solo-btn">Play Singleplayer <span aria-hidden="true">→</span></button>
             </div>
             <div class="mode-card-foot">
-              <span class="tag">OFFLINE READY</span>
-              <span class="mode-foot-note">All seats available · pauses in minigames</span>
+              <span class="tag" data-i18n="lobby.setup.offlineReady">OFFLINE READY</span>
+              <span class="mode-foot-note" data-i18n="lobby.setup.soloFootNote">All seats available · pauses in minigames</span>
             </div>
           </article>
           <article class="setup-card mode-card" data-mode-card="multiplayer">
             <div class="mode-card-top">
               <div class="setup-card-head">
-                <span class="eyebrow">Online co-op</span>
-                <span class="tag">1–4 PLAYERS</span>
+                <span class="eyebrow" data-i18n="lobby.setup.mpEyebrow">Online co-op</span>
+                <span class="tag" data-i18n="lobby.setup.mpTag">1–4 PLAYERS</span>
               </div>
-              <h4>Multiplayer</h4>
-              <p class="muted">Invite up to 3 friends to share assembly, flight, and Mars EVA.</p>
+              <h4 data-i18n="lobby.setup.mpTitle">Multiplayer</h4>
+              <p class="muted" data-i18n="lobby.setup.mpDesc">Invite up to 3 friends to share assembly, flight, and Mars EVA.</p>
             </div>
             <div class="mode-visual" id="mode-mp-visual" aria-hidden="true"></div>
             <div class="mode-cta-row" id="mode-mp-cta"></div>
@@ -217,9 +218,9 @@
 
       <div class="dossier slab lobby-step" id="lobby-step-difficulty" hidden>
         <div class="dossier-title-wrap">
-          <span class="micro">Step 02 · Host control</span>
-          <h3 class="dossier-title">Choose mission difficulty</h3>
-          <p class="setup-lead">Difficulty sets your mission budget, Mars surface window, and how strictly engineering telemetry is enforced.</p>
+          <span class="micro" data-i18n="lobby.setup.diffKicker">Step 02 · Host control</span>
+          <h3 class="dossier-title" data-i18n="lobby.setup.diffHeading">Choose mission difficulty</h3>
+          <p class="setup-lead" data-i18n="lobby.setup.diffLead">Difficulty sets your mission budget, Mars surface window, and how strictly engineering telemetry is enforced.</p>
         </div>
         <div class="difficulty-grid" id="difficulty-buttons" role="radiogroup" data-i18n-aria="lobby.difficultyLegend" aria-label="Mission difficulty"></div>
       </div>
@@ -256,27 +257,27 @@
 
       <div class="dossier slab lobby-step" id="lobby-step-site" hidden>
         <div class="dossier-title-wrap">
-          <span class="micro">Step 04 · Target coordinates</span>
+          <span class="micro" data-i18n="lobby.setup.siteKicker">Step 04 · Target coordinates</span>
           <h3 class="dossier-title" id="site-step-mission">Biosignature Hunters</h3>
-          <p class="setup-lead">Select a crater below or click directly on a landing site marker on the 3D Mars globe.</p>
+          <p class="setup-lead" data-i18n="lobby.setup.siteLead">Select a crater below or click directly on a landing site marker on the 3D Mars globe.</p>
         </div>
         <div class="site-select-grid">
           <div class="site-select-left">
-            <div class="site-cards" id="site-cards" role="radiogroup" aria-label="Mars landing sites"></div>
-            <span class="site-preview-credit">Satellite view · HiRISE (MRO) · 1.5 km · north up · NASA/JPL/UArizona, USGS (CC0)</span>
+            <div class="site-cards" id="site-cards" role="radiogroup" data-i18n-aria="lobby.setup.sitesAria" aria-label="Mars landing sites"></div>
+            <span class="site-preview-credit" data-i18n="lobby.setup.siteCreditLine">Satellite view · HiRISE (MRO) · 1.5 km · north up · NASA/JPL/UArizona, USGS (CC0)</span>
           </div>
-          <div class="mars-globe-stage" id="mars-globe-view" aria-label="Interactive 3D Mars globe">
+          <div class="mars-globe-stage" id="mars-globe-view" data-i18n-aria="lobby.setup.globeAria" aria-label="Interactive 3D Mars globe">
             <div class="mars-globe-hud-top">
-              <span class="tag">PLANET MARS · 3D ORBITAL SURVEY</span>
+              <span class="tag" data-i18n="lobby.setup.globeTopTag">PLANET MARS · 3D ORBITAL SURVEY</span>
               <span class="tag" id="mars-globe-coords">18.4° N, 77.5° E</span>
             </div>
             <div class="mars-globe-fallback" id="mars-globe-fallback" aria-hidden="true"></div>
             <div class="mars-pins" id="mars-pins">
-              <button class="mars-pin selected" type="button" data-mars-pin="jezero" aria-pressed="true"><span class="mars-pin-dot"></span><span class="mars-pin-label">Jezero Crater</span></button>
-              <button class="mars-pin" type="button" data-mars-pin="gale" aria-pressed="false"><span class="mars-pin-dot"></span><span class="mars-pin-label">Gale Crater</span></button>
+              <button class="mars-pin selected" type="button" data-mars-pin="jezero" aria-pressed="true"><span class="mars-pin-dot"></span><span class="mars-pin-label" data-i18n="sites.jezero.name">Jezero Crater</span></button>
+              <button class="mars-pin" type="button" data-mars-pin="gale" aria-pressed="false"><span class="mars-pin-dot"></span><span class="mars-pin-label" data-i18n="sites.gale.name">Gale Crater</span></button>
             </div>
             <div class="mars-globe-hud-bottom">
-              <span class="tag">Click a crater marker to select · Drag to rotate</span>
+              <span class="tag" data-i18n="lobby.setup.globeBottomTag">Click a crater marker to select · Drag to rotate</span>
             </div>
           </div>
         </div>
@@ -286,7 +287,7 @@
         <div class="dossier-title-wrap"><span class="micro" data-i18n="lobby.missionNameLabel">Mission name</span><h3 class="dossier-title" id="mission-name">Biosignature Hunters</h3></div>
         <div class="dossier-grid">
           <div class="dossier-left">
-            <div class="dossier-row"><span class="micro">Destination</span><strong id="crew-site-readout">Mars · Jezero Crater</strong></div>
+            <div class="dossier-row"><span class="micro" data-i18n="lobby.setup.tabs.destination">Destination</span><strong id="crew-site-readout">Mars · Jezero Crater</strong></div>
             <div class="dossier-block"><div class="block-label"><span class="micro" data-i18n="lobby.crewLabel">Crew</span><span class="tag" id="crew-count">1/4 PLAYERS</span></div><div class="crew-grid" id="crew-grid"></div><div class="room-panel" id="room-panel" aria-live="polite" hidden></div></div>
           </div>
           <div class="dossier-right">
@@ -459,7 +460,7 @@
           <div class="metric-box"><span data-i18n="cockpit.progress">Progress</span><strong id="flight-progress-val">0%</strong></div>
           <div class="metric-box"><span data-i18n="cockpit.altitude">Altitude</span><strong id="flight-alt-val">0.0 km</strong></div>
           <div class="metric-box"><span data-i18n="cockpit.velocity">Velocity</span><strong id="flight-vel-val">0 m/s</strong></div>
-          <div class="metric-box"><span>Propellant / Hull</span><strong id="flight-hull-val">100% / 100%</strong></div>
+          <div class="metric-box"><span data-i18n="cockpit.propHull">Propellant / Hull</span><strong id="flight-hull-val">100% / 100%</strong></div>
         </div>
         <div class="meter">
           <div class="meter-head"><span class="meter-label" id="flight-goal-label">Ascent Corridor Alignment</span><strong class="meter-value" id="flight-goal-val">100%</strong></div>
@@ -611,6 +612,7 @@
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>
 <script src="web/locales/en.js"></script>
 <script src="web/locales/pt.js"></script>
+<script src="web/locales/es.js"></script>
 <script src="web/i18n.js"></script>
 <script src="web/units.js"></script>
 <script src="index.models.js"></script>

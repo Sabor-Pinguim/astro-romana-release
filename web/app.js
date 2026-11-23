@@ -39,11 +39,11 @@
   // a power deficit and overspending cost points and add trouble in flight. dvTolerance: share of the orbit and
   // Mars-transfer Δv the rocket may lack and still make it. The badge and the button tooltips show all of it.
   const difficulty = {
-    easy:{get label(){return t('difficulty.easy.label');},tagline:'Training & exploration',accent:'var(--safe)',factor:1.2,surfaceS:210,fuelTypes:false,failures:false,penalties:false,dvTolerance:0,get rules(){return t('difficulty.easy.rules');},
+    easy:{get label(){return t('difficulty.easy.label');},get tagline(){return t('difficulty.easy.tagline');},accent:'var(--safe)',factor:1.2,surfaceS:210,fuelTypes:false,failures:false,penalties:false,dvTolerance:0,get rules(){return t('difficulty.easy.rules');},
       get about(){return t('difficulty.easy.about');}},
-    normal:{get label(){return t('difficulty.normal.label');},tagline:'Balanced mission',accent:'var(--solar-amber)',factor:1,surfaceS:180,fuelTypes:false,failures:true,penalties:true,dvTolerance:.2,get rules(){return t('difficulty.normal.rules');},
+    normal:{get label(){return t('difficulty.normal.label');},get tagline(){return t('difficulty.normal.tagline');},accent:'var(--solar-amber)',factor:1,surfaceS:180,fuelTypes:false,failures:true,penalties:true,dvTolerance:.2,get rules(){return t('difficulty.normal.rules');},
       get about(){return t('difficulty.normal.about');}},
-    hard:{get label(){return t('difficulty.hard.label');},tagline:'Full aerospace realism',accent:'#D7263D',factor:.8,surfaceS:140,fuelTypes:true,failures:true,penalties:true,dvTolerance:0,get rules(){return t('difficulty.hard.rules');},
+    hard:{get label(){return t('difficulty.hard.label');},get tagline(){return t('difficulty.hard.tagline');},accent:'#D7263D',factor:.8,surfaceS:140,fuelTypes:true,failures:true,penalties:true,dvTolerance:0,get rules(){return t('difficulty.hard.rules');},
       get about(){return t('difficulty.hard.about');}},
   };
   const LV = () => difficulty[state.difficulty];
@@ -105,7 +105,9 @@
   const part = id => DATA?.parts[id];
   const spec = id => part(id)?.specs || {};
   const warn = (id,key) => String(spec(id).sources?.[key]||'').includes('⚠')?` <span class="warn" title="${t('planner.metrics.sourcesDisagree')}">⚠</span>`:'';
-  const shortName = id => (part(id)?.name||id).replace(/\s*\(.*\)\s*$/,'');
+  const partName = id => { const p = part(id); return p ? t(`parts.${id}.name`, { defaultValue: p.name }) : id; };
+  const partRole = id => { const p = part(id); return p ? t(`parts.${id}.role`, { defaultValue: p.role || '' }) : ''; };
+  const shortName = id => partName(id).replace(/\s*\(.*\)\s*$/,'');
   // Low-poly astronaut: flat polygons; s* = suit tones, c* = crew colour, v* = visor, d1 = dark gear.
   // When isGhost = true (left behind on Mars), backpack/chest equipment and legs/boots are removed and replaced by a translucent legless wavy ghost tail (👻).
   const astronaut = (person, isGhost = false) => `<svg class="astronaut${isGhost ? ' is-ghost' : ''}" style="--crew:${person.color}" viewBox="0 0 150 215" aria-hidden="true">${[
@@ -141,13 +143,13 @@
   // Lobby: 5-step setup (01 Play mode → 02 Difficulty → 03 Destination → 04 Landing site → 05 Crew).
   // Guests skip steps 1–4 (host controls) and land straight on step 5 to pick a crew seat.
   const LOBBY_STEPS = ['mode', 'difficulty', 'destination', 'site', 'crew'];
-  const LOBBY_STEP_META = {
-    mode: { eyebrow: 'Mission setup / 01', title: 'Play mode', back: '← Menu', next: null, hint: 'Choose solo play or start a co-op room before configuring mission rules.' },
-    difficulty: { eyebrow: 'Mission setup / 02', title: 'Difficulty', back: '← Play mode', next: 'Continue to destination →', hint: 'Review the budget, Mars surface window, and telemetry rules before choosing a destination.' },
-    destination: { eyebrow: 'Mission setup / 03', title: 'Choose your destination', back: '← Difficulty', next: 'Continue to landing site →', hint: 'Select Mars on the solar system map to plan your crewed surface expedition.' },
-    site: { eyebrow: 'Mission setup / 04', title: 'Landing site', back: '← Destination', next: 'Continue to crew →', hint: 'Click a crater on the 3D Mars globe or pick a landing site card on the left.' },
-    crew: { eyebrow: 'Mission dossier / 05', title: 'Crew selection', back: '← Landing site', next: 'Proceed to rocket assembly →', hint: 'Mission design works best when every specialty has a voice.' },
-  };
+  const lobbyStepMeta = step => ({
+    eyebrow: t(`lobby.setup.steps.${step}.eyebrow`),
+    title: t(`lobby.setup.steps.${step}.title`),
+    back: t(`lobby.setup.steps.${step}.back`),
+    next: step === 'mode' ? null : t(`lobby.setup.steps.${step}.next`),
+    hint: t(`lobby.setup.steps.${step}.hint`),
+  });
   const formatSurfaceClock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   function setLobbyStep(step){
     const next = net.isGuest ? 'crew' : (LOBBY_STEPS.includes(step) ? step : 'mode');
@@ -160,10 +162,10 @@
   function renderLobbyStepper(){
     const step = net.isGuest ? 'crew' : state.lobbyStep;
     const idx = LOBBY_STEPS.indexOf(step);
-    const meta = LOBBY_STEP_META[step];
+    const meta = lobbyStepMeta(step);
     $('#lobby-eyebrow').textContent = meta.eyebrow;
     $('#lobby-title').textContent = meta.title;
-    $('#lobby-hint').textContent = net.isGuest ? 'The host controls destination, difficulty, and landing site. Pick a free crew seat below.' : meta.hint;
+    $('#lobby-hint').textContent = net.isGuest ? t('lobby.setup.guestHint') : meta.hint;
     const back = $('#lobby-back');
     if(back && !net.isGuest){ back.textContent = meta.back; }
     LOBBY_STEPS.forEach(id => {
@@ -179,11 +181,11 @@
       if(isActive) tab.setAttribute('aria-current', 'step');
       tab.disabled = net.isGuest && tStep !== 'crew';
     });
-    $('#step-summary-mode').textContent = net.mode === 'solo' ? 'Singleplayer' : `Co-op · ${net.code}`;
+    $('#step-summary-mode').textContent = net.mode === 'solo' ? t('lobby.setup.soloTitle') : `${t('lobby.room.coop')} · ${net.code}`;
     $('#step-summary-difficulty').textContent = difficulty[state.difficulty].label;
     $('#step-summary-destination').textContent = worldName(state.world || 'mars');
     $('#step-summary-site').textContent = SITES_INFO[state.site].name;
-    $('#step-summary-crew').textContent = `${playerCount()}/4 players`;
+    $('#step-summary-crew').textContent = t('lobby.setup.crewSummary', { count: playerCount() });
     const nextBtn = $('#lobby-next');
     if(nextBtn){
       const showNext = !!meta.next;
@@ -191,10 +193,10 @@
       if(showNext){
         if(net.isGuest){
           nextBtn.disabled = true;
-          nextBtn.textContent = 'Waiting for host';
+          nextBtn.textContent = t('common.waitingForHost');
         }else if(step === 'destination' && state.world !== 'mars'){
           nextBtn.disabled = true;
-          nextBtn.textContent = 'Unavailable';
+          nextBtn.textContent = t('common.unavailable');
         }else{
           nextBtn.disabled = false;
           nextBtn.textContent = meta.next;
@@ -238,7 +240,7 @@
     }
     const title = $('#site-step-mission'); if(title) title.textContent = site.mission;
     const coords = $('#mars-globe-coords'); if(coords) coords.textContent = `${site.name.toUpperCase()} · ${site.coords}`;
-    const readout = $('#crew-site-readout'); if(readout) readout.textContent = `Mars · ${site.name}`;
+    const readout = $('#crew-site-readout'); if(readout) readout.textContent = `${worldName('mars')} · ${site.name}`;
     $$('#mars-pins [data-mars-pin]').forEach(pin => {
       const on = pin.dataset.marsPin === state.site;
       pin.classList.toggle('selected', on);
@@ -380,8 +382,10 @@
   function renderModeStep(){
     const soloVis = $('#mode-solo-visual'), mpVis = $('#mode-mp-visual'), mpCta = $('#mode-mp-cta'), mpFoot = $('#mode-mp-foot');
     if(!mpCta || !mpFoot || !mpVis) return;
-    if(soloVis && !soloVis.childElementCount){
-      soloVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top is-player">Helena · You</span><div class="mode-avatar is-hero" style="--crew:${crew[0].color}">${astronaut(crew[0])}</div></div><span class="mode-plus">+</span><div class="mode-figure-group"><span class="mode-badge-top is-ai">${ROBOT_ICON} 3 AI Crew</span><div class="mode-trio">${crew.slice(1).map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
+    const langCode = window.ASTRO_I18N?.language || 'en';
+    if(soloVis && soloVis.dataset.lang !== langCode){
+      soloVis.dataset.lang = langCode;
+      soloVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top is-player">${esc(t('lobby.setup.helenaYou'))}</span><div class="mode-avatar is-hero" style="--crew:${crew[0].color}">${astronaut(crew[0])}</div></div><span class="mode-plus">+</span><div class="mode-figure-group"><span class="mode-badge-top is-ai">${ROBOT_ICON} ${esc(t('lobby.setup.aiCrewBadge'))}</span><div class="mode-trio">${crew.slice(1).map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
     }
     const soloCard = $('[data-mode-card="solo"]'), mpCard = $('[data-mode-card="multiplayer"]');
     soloCard?.classList.toggle('selected', net.mode === 'solo');
@@ -390,7 +394,6 @@
     if(soloBtn) soloBtn.innerHTML = net.isHost ? t('lobby.roomBrowser.switchSoloBtn') : t('lobby.roomBrowser.playSoloBtn');
 
     const netReady = net.enabled && net.available();
-    const langCode = window.ASTRO_I18N?.language || 'en';
     if (net.mode !== 'solo') editingPlayerName = false;
     const lockedName = net.isPlayerNameLocked?.() ? net.getPlayerName() : '';
     const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}|${lockedName}|${editingPlayerName}`;
@@ -399,7 +402,7 @@
       mpVis.classList.remove('is-browser');
       if(mpCta.dataset.viewKey !== viewKey){
         mpCta.dataset.viewKey = viewKey;
-        mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} Co-op Squad</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
+        mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} ${esc(t('lobby.setup.coopSquadBadge'))}</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
         mpCta.innerHTML = `<button class="button amber" type="button" disabled>${t('lobby.roomBrowser.createBtn')}</button>`;
         mpFoot.innerHTML = `<span class="mode-foot-note">${t('lobby.room.noServer')}</span>`;
       }
@@ -507,7 +510,7 @@
     mpVis.classList.remove('is-browser');
     if(mpCta.dataset.viewKey !== viewKey){
       mpCta.dataset.viewKey = viewKey;
-      mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} Co-op Squad</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
+      mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} ${esc(t('lobby.setup.coopSquadBadge'))}</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
       mpCta.innerHTML = `<button class="button amber" type="button" id="mode-continue-room">${t('lobby.roomBrowser.continueHostBtn')}</button>`;
       mpFoot.innerHTML = `<div class="mode-room-active">
         <span class="micro">${t('lobby.room.label')}</span>
@@ -528,14 +531,14 @@
     if(!grid) return;
     grid.innerHTML = ['easy', 'normal', 'hard'].map(id => {
       const lv = difficulty[id], selected = state.difficulty === id;
-      const rulesLabel = id === 'easy' ? 'Warnings only' : id === 'normal' ? 'Δv −20% tolerance' : 'Full Δv & propellant match';
+      const rulesLabel = t(`difficulty.${id}.rulesLong`);
       return `<button type="button" class="difficulty-card" data-difficulty="${id}" role="radio" aria-checked="${selected}" aria-pressed="${selected}" title="${lv.about}" style="--diff-accent:${lv.accent}" ${net.isGuest?'aria-disabled="true"':''}>
-        <div class="difficulty-card-head"><span class="tag">${lv.tagline}</span><span class="diff-check">${selected?'Selected':'Choose'}</span></div>
+        <div class="difficulty-card-head"><span class="tag">${lv.tagline}</span><span class="diff-check">${selected?t('lobby.setup.selected'):t('lobby.setup.choose')}</span></div>
         <h4>${lv.label}</h4>
         <ul class="setup-specs">
-          <li><span>Mission budget</span><strong>${money(budgetOf(id))}</strong></li>
-          <li><span>Mars EVA window</span><strong>${formatSurfaceClock(lv.surfaceS)}</strong></li>
-          <li><span>Engineering rules</span><strong>${rulesLabel}</strong></li>
+          <li><span>${t('lobby.setup.specBudget')}</span><strong>${money(budgetOf(id))}</strong></li>
+          <li><span>${t('lobby.setup.specEvaWindow')}</span><strong>${formatSurfaceClock(lv.surfaceS)}</strong></li>
+          <li><span>${t('lobby.setup.specRules')}</span><strong>${rulesLabel}</strong></li>
         </ul>
         <p class="diff-about">${lv.about}</p>
       </button>`;
@@ -871,7 +874,7 @@
     if(sel.kind==='stage'){const control=$('#stage-type');control.value=state.rocket.stages[sel.index].type||'bay';control.addEventListener('change',()=>{state.tab=control.value==='booster'?'engine':'power';plan('stageType',sel.index,control.value);});}
     const inst=installedIn(sel),current=isBooster(sel)?(sel.kind==='booster'?state.rocket.booster:state.rocket.stages[sel.index])[state.tab]:sel.kind==='stage'?inst[0]:null;
     $('#parts-list').innerHTML=partsFor(sel,state.tab).map(id=>{const p=part(id),on=inst.includes(id);
-      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${p.name}</span><span class="part-slot">${t('planner.tier',{n:p.tier})}</span></div><p>${(p.role||'').replace(/`/g,'')}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?t('planner.btnRemove'):current?t('planner.btnSwap'):t('planner.btnInstall')}</button></article>`;}).join('');
+      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${esc(partName(id))}</span><span class="part-slot">${t('planner.tier',{n:p.tier})}</span></div><p>${esc(partRole(id).replace(/`/g,''))}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?t('planner.btnRemove'):current?t('planner.btnSwap'):t('planner.btnInstall')}</button></article>`;}).join('');
     $$('#parts-list [data-part]').forEach(b=>b.addEventListener('click',()=>togglePart(b.dataset.part)));
     window.dispatchEvent(new Event('astro:catalog'));
   }
@@ -2240,7 +2243,7 @@
       const dockReadout = $('#docking-monitor-readout'), docking = flight.docking;
       if (dockReadout && flight.step === 2 && docking) {
         const align = Math.round(Math.max(0, 100 - (docking.error / docking.limit) * 100));
-        dockReadout.textContent = flight.docked ? 'HARD-DOCK' : `ALIGN ${align}%`;
+        dockReadout.textContent = flight.docked ? t('cockpit.hardDock') : t('cockpit.alignPct', { pct: align });
         $('#docking-monitor').style.setProperty('--dock-x', `${docking.value[1] * 28}px`);
         $('#docking-monitor').style.setProperty('--dock-y', `${-docking.value[0] * 18}px`);
       }
@@ -3141,6 +3144,14 @@
   $('#lb-filter-difficulty')?.addEventListener('change', e => { lbState.difficulty = e.target.value; loadLeaderboardScreen(); });
   $('#lb-filter-site')?.addEventListener('change', e => { lbState.site = e.target.value; loadLeaderboardScreen(); });
 
+  window.addEventListener('astro:lang', () => {
+    selectWorld(state.world);
+    renderLobby();
+    renderBadge();
+    renderPlanner();
+    SIM.refreshUI?.();
+    if (state.screen === 'leaderboard') loadLeaderboardScreen();
+  });
   selectWorld(state.world);paintArt();renderLobby();renderBadge();renderPlanner();setupStars();lockGuest();net.start();
   if(!DATA)fetch('assets/models/parts/manifest.json').then(r=>r.json()).then(m=>{useData(m);renderBadge();renderDifficultyStep();renderPlanner();}).catch(()=>toast(t('planner.loadPartsError')));
 })();
