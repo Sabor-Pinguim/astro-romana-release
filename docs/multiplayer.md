@@ -34,6 +34,7 @@ Players can only **join** the room up to the `planner`. After the launch, only s
   - Finished co-op missions are submitted once by the host via `POST /api/leaderboard` and persisted in **SQLite** (`node:sqlite` in `multiplayer/db.mjs`, `WAL` mode, stored at `DB_PATH=/var/lib/astro-romana/astro.sqlite` via `StateDirectory=astro-romana` in `astro-rooms.service`). `GET /api/leaderboard` serves Top Missions and Top Astronauts filtered by difficulty and site.
   - Solo runs stay local in `localStorage` (`astro-romana-solo-leaderboard`) and appear in the **Local · Solo** view of the `#leaderboard` screen and on `#results`.
   - Caddy (`multiplayer/deploy/Caddyfile.site`) reverse-proxies `/ws`, `/health`, and `/api/*` to the Node room server on `127.0.0.1:8787`, with CORS controlled by `ALLOWED_ORIGINS`.
+  - Side-by-side v2 deploy: [setup-v2.sh](../multiplayer/deploy/setup-v2.sh) installs `/srv/astro-romana-v2` on `127.0.0.1:8788` (`astro-rooms-v2.service` + `/var/lib/astro-romana-v2/astro.sqlite`) and appends `/etc/astro-romana-v2/Caddyfile.v2` (`v2.<ip>.sslip.io`) without altering the existing `/srv/astro-romana` v1 deployment.
 
 ### 1. Loading the client: `index.html` and `web/net.js` ✅
 - `index.html` loads `multiplayer/client/room-client.js` and then `web/net.js`, both **before** `web/app.js`. They are classic scripts and work on `file://`.
@@ -45,9 +46,9 @@ Players can only **join** the room up to the `planner`. After the launch, only s
 - **Server address:**
   - a page served by the site (the VM with Caddy) uses the page's own address, `wss://<host>/ws`;
   - on `localhost`, it uses `ws://localhost:8787/ws`;
-  - on GitHub Pages and on `file://`, it uses the `NET_SERVER` constant in `web/net.js`: today the VM, `wss://v2.35-193-156-110.sslip.io/ws` (IP 35.193.156.110, keep it static; the address `setup.sh` prints). Empty, `file://` falls back to the local server;
+  - on GitHub Pages and on `file://`, it uses the `NET_SERVER` constant in `web/net.js`: today the v2 VM endpoint, `wss://v2.35-193-156-110.sslip.io/ws` (IP 35.193.156.110, keep it static; the address `setup-v2.sh` prints). Empty, `file://` falls back to the local server;
   - any page accepts `?server=`.
-- **GitHub Pages (`*.github.io`):** multiplayer turns on once `NET_SERVER` is filled in (or with `?server=wss://<VM domain>/ws`); while it is empty, multiplayer is off and the room panel disappears from the lobby. The VM must allow the Pages origin: `sudo EXTRA_ORIGINS=https://<user>.github.io bash setup.sh` ([setup.sh](../multiplayer/deploy/setup.sh)). Give the VM a static IP, or the `sslip.io` name in `NET_SERVER` changes when the VM restarts.
+- **GitHub Pages (`*.github.io`):** multiplayer turns on once `NET_SERVER` is filled in (or with `?server=wss://<VM domain>/ws`); while it is empty, multiplayer is off and the room panel disappears from the lobby. The VM must allow the Pages origin: `sudo EXTRA_ORIGINS=https://<user>.github.io bash /srv/astro-romana-v2/multiplayer/deploy/setup-v2.sh` ([setup-v2.sh](../multiplayer/deploy/setup-v2.sh)). Give the VM a static IP, or the `sslip.io` name in `NET_SERVER` changes when the VM restarts.
 - **Without a server,** "Create room" shows a toast, and the game stays solo.
 - **On opening the page:** with a saved session, it returns to the room (`rejoin`); with `?room=CODE`, it joins that room; with neither, it stays solo.
 

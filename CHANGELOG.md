@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.2] - 2026-11-23
+
+### Added
+- **Side-by-side VM deploy script (`multiplayer/deploy/setup-v2.sh`):** clones/updates `/srv/astro-romana-v2`, runs `astro-rooms-v2.service` on `127.0.0.1:8788` with its own SQLite database (`/var/lib/astro-romana-v2/astro.sqlite`), and appends an isolated `v2.<ip>.sslip.io` Caddy import without altering `/etc/caddy/Caddyfile`'s existing v1 server or `/srv/astro-romana`.
+
 ## [1.4.1] - 2026-11-23
 
 ### Added
