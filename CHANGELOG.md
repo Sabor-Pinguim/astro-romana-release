@@ -11,6 +11,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.6] - 2026-11-23
+
+### Added
+- **2D cabin docking scope:** added a simplified `.kir.kir-2d` docking scope (`#port-dock-ring`, `#kir-mark`) beside the directional pad, a Z-approach progress bar (`#port-dock-z-fill`), and side-by-side depth buttons (`.dock-depth-grid`) to the right cockpit panel during Phase 05B (`web/app.js`, `web/styles.css`).
+
+### Changed
+- **Repository documentation:** updated the exclusive repository reference in `AGENTS.md` to `Sabor-Pinguim/astro-romana-release`.
+
 ## [1.4.5] - 2026-11-23
 
 ### Removed

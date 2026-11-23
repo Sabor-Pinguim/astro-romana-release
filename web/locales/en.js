@@ -29,7 +29,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.4.5',
+        version: 'v1.4.6',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',

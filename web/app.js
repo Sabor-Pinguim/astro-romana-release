@@ -1444,6 +1444,7 @@
     // Gusts grow at Max-Q and with a low TWR; fins damp them (design.finsDrift). All numbers are game-balance.
     // The climb lasts phaseDuration(0), set by the liftoff TWR; maxQ is the share of it where the gusts peak.
     const LIFTOFF = { band: 3, limit: 12, authority: 8, maxQ: [0.4, 0.67], throttle: 0.7 };
+    const PORT_DOCK = { band: 0.18, scope: 1.0, zStart: 5.0, zLatch: 0.36 }; // game-balance: cabin docking capture radius (m), 2D scope half-range (m), initial and latch distances (m)
     function startLiftoff() {
       const d = flight.design, s1 = Math.random() * 100, s2 = Math.random() * 100, duration = phaseDuration(0);
       const gust = (d.overweight ? 1.6 : 1) * (d.finsDrift ?? 1); // low TWR: the stack wallows more
@@ -1869,18 +1870,40 @@
       $('#flight-progress-val').textContent = Math.round(flight.progress) + '%';
       const dockFuel = $('#port-dock-fuel');
       if (dockFuel && flight.portDock) {
-        const fuel = Math.max(0, flight.portDock.fuel);
+        const d = flight.portDock;
+        const fuel = Math.max(0, d.fuel);
         dockFuel.style.width = `${fuel}%`;
         dockFuel.classList.toggle('amber', fuel <= 45 && fuel > 20);
         dockFuel.classList.toggle('danger', fuel <= 20);
         $('#port-dock-fuel-value').textContent = `${Math.ceil(fuel)}%`;
-        $('#port-dock-distance').textContent = U.distanceM(flight.portDock.z, 1);
+        $('#port-dock-distance').textContent = U.distanceM(d.z, 1);
+        const err = Math.hypot(d.x, d.y);
+        const aligned = err < PORT_DOCK.band;
         const offsetEl = $('#port-dock-offset');
         if (offsetEl) {
-          const err = Math.hypot(flight.portDock.x, flight.portDock.y);
-          offsetEl.textContent = err < 0.18
+          offsetEl.textContent = aligned
             ? t('cockpit.cards.dockLocked', { dist: U.distanceM(err, 2) })
             : t('cockpit.cards.dockOffset', { dist: U.distanceM(err, 2) });
+        }
+        const dockMark = $('#kir-mark');
+        if (dockMark && flight.step === 1) {
+          const nx = Math.max(-1, Math.min(1, d.x / PORT_DOCK.scope));
+          const ny = Math.max(-1, Math.min(1, d.y / PORT_DOCK.scope));
+          dockMark.style.left = `${50 + nx * 50}%`;
+          dockMark.style.top = `${50 - ny * 50}%`;
+          dockMark.classList.toggle('out', !aligned);
+        }
+        const zProg = Math.max(0, Math.min(1, (PORT_DOCK.zStart - d.z) / (PORT_DOCK.zStart - PORT_DOCK.zLatch)));
+        const ringEl = $('#port-dock-ring');
+        if (ringEl) {
+          const minPct = (PORT_DOCK.band / PORT_DOCK.scope) * 100;
+          ringEl.style.width = `${(88 - (88 - minPct) * zProg).toFixed(1)}%`;
+          ringEl.classList.toggle('aligned', aligned);
+        }
+        const zFill = $('#port-dock-z-fill');
+        if (zFill) {
+          zFill.style.width = `${(zProg * 100).toFixed(1)}%`;
+          zFill.classList.toggle('aligned', aligned);
         }
       }
       $('#flight-alt-val').textContent = U.altitudeKm(flight.altKm);
@@ -1981,15 +2004,17 @@
           <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
           <p>${t('cockpit.cards.helenaDockDesc')}</p>
           <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
-          <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(5.0, 1)}</strong></div>
-          <div class="kir-row dock-controls-row">
+          <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(PORT_DOCK.zStart, 1)}</strong></div>
+          <div class="kir-row">
+            <div class="kir kir-2d dock-kir${dockActive ? '' : ' is-disabled'}" style="--band:${(PORT_DOCK.band / PORT_DOCK.scope) * 100}%"><span class="dock-kir-axis x" aria-hidden="true"></span><span class="dock-kir-axis y" aria-hidden="true"></span><div class="dock-kir-ring" id="port-dock-ring" aria-hidden="true"></div><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up" ${dockActive ? '' : 'disabled'}>▲<kbd>↑</kbd></button><button class="button secondary left" type="button" data-hold="left" ${dockActive ? '' : 'disabled'}>◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right" ${dockActive ? '' : 'disabled'}>▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down" ${dockActive ? '' : 'disabled'}>▼<kbd>↓</kbd></button></div>
-            <div class="kir-ctrl dock-depth-ctrl">
-              <button class="button primary" type="button" data-hold="forward" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockForwardBtn')}</button>
-              <button class="button secondary" type="button" data-hold="back" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockBackBtn')}</button>
-            </div>
           </div>
-          <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(0.36, 2) })}</p>`;
+          <div class="dock-z-track" aria-hidden="true"><div class="dock-z-fill" id="port-dock-z-fill"></div></div>
+          <div class="control-grid dock-depth-grid">
+            <button class="button primary" type="button" data-hold="forward" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockForwardBtn')}</button>
+            <button class="button secondary" type="button" data-hold="back" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockBackBtn')}</button>
+          </div>
+          <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(PORT_DOCK.zLatch, 2) })}</p>`;
       } else if (flight.step === 2) {
         const g = flight.docking, aligned = g ? Math.round(g.share() * 100) : 0;
         box.innerHTML = `
@@ -2036,7 +2061,9 @@
       const kirPad = $('.kir-2d', box);
       if (kirPad) {
         let kirDragging = false;
+        const canDragKir = () => (flight.step !== 1 || flight.portDock?.status === 'approach') && (net.mode === 'solo' || canAct(STEP_CREW[flight.step] || []));
         const steerFromKir = e => {
+          if (!canDragKir()) return;
           const r = kirPad.getBoundingClientRect();
           const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
           const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -2047,6 +2074,7 @@
           sendInput();
         };
         kirPad.addEventListener('pointerdown', e => {
+          if (!canDragKir()) return;
           e.preventDefault();
           kirDragging = true;
           try { kirPad.setPointerCapture(e.pointerId); } catch {}
