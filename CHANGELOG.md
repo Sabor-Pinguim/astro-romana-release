@@ -3,10 +3,18 @@
 All notable changes to **Astro Romana** (`astro-romana-v2`) are documented in this file.
 
 Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
-- Every commit increments the **minor** version (`1.0.0` → `1.1.0` → `1.2.0` → …) unless a **major** bump is explicitly requested.
+- Every commit bumps the version (`MAJOR.MINOR.PATCH`):
+  - **Patch (`X.Y.Z`):** small changes, bug fixes, tweaks, docs, chores (`1.3.0` → `1.3.1`).
+  - **Minor (`X.Y.0`):** major/significant features; resets the patch to `0` (`1.3.1` → `1.4.0`).
+  - **Major (`X.0.0`):** only when explicitly requested by the user/team.
 - Keep `package.json`, `index.html`, `web/locales/en.js`, `web/locales/pt.js`, and this `CHANGELOG.md` synchronized on every commit.
 
 ---
+
+## [1.3.1] - 2026-11-23
+
+### Changed
+- Versioning policy is now `MAJOR.MINOR.PATCH`: patch for small changes and fixes, minor for big features, major only on request (`AGENTS.md` §10–11 and this file's header).
 
 ## [1.3.0] - 2026-11-23
 

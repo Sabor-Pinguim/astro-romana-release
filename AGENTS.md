@@ -241,16 +241,18 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 ## 10. Git, versionamento e changelog
 
 - **Repositório exclusivo (`astro-romana-v2`):** Nunca, jamais toque em outro repositório que não seja o `astro-romana-v2` (`Sabor-Pinguim/astro-romana-v2`). O repositório antigo (`astro-romana` sem `-v2`) **não pode ser tocado em hipótese alguma** (nem `push`, nem `pull`, nem `fetch`, nem leitura/edição local).
-- **Bump automático de versão a cada commit (`MAJOR.MINOR.0`):**
-  - A partir da versão **`1.0.0`**, **todo novo commit** feito por qualquer pessoa ou agente deve incrementar automaticamente a versão **minor** (`1.0.0` → `1.1.0` → `1.2.0` → …).
-  - Só incremente a versão **major** (`2.0.0`, `3.0.0`…) quando o usuário/time pedir explicitamente um bump major.
+- **Bump automático de versão a cada commit (`MAJOR.MINOR.PATCH`, ou seja `X.Y.Z`):**
+  - A partir da versão **`1.0.0`**, **todo novo commit** feito por qualquer pessoa ou agente deve incrementar automaticamente a versão:
+    - **Patch (`X.Y.Z`, o "minor minor"):** padrão para pequenas alterações, correções (`fix:`), ajustes, refatorações, docs e manutenção (`docs:`, `chore:`). Ex.: `1.3.0` → `1.3.1` → `1.3.2`.
+    - **Minor (`X.Y.0`):** reservado para **features grandes** / entregas significativas; zera o patch. Ex.: `1.3.2` → `1.4.0`.
+    - **Major (`X.0.0`):** só quando o usuário/time pedir explicitamente um bump major.
   - Mantenha a versão sincronizada nos 4 lugares do projeto no mesmo commit:
-    1. `package.json` (`"version": "X.Y.0"`)
-    2. `index.html` (`<div class="coordinates" data-i18n="menu.version">vX.Y.0</div>`)
-    3. `web/locales/en.js` (`menu.version: 'vX.Y.0'`)
-    4. `web/locales/pt.js` (`menu.version: 'vX.Y.0'`)
+    1. `package.json` (`"version": "X.Y.Z"`)
+    2. `index.html` (`<div class="coordinates" data-i18n="menu.version">vX.Y.Z</div>`)
+    3. `web/locales/en.js` (`menu.version: 'vX.Y.Z'`)
+    4. `web/locales/pt.js` (`menu.version: 'vX.Y.Z'`)
 - **Changelog obrigatório (`CHANGELOG.md`):**
-  - Todo commit deve adicionar no topo do [CHANGELOG.md](CHANGELOG.md) a seção da nova versão (`## [X.Y.0] - YYYY-MM-DD`) listando de forma clara o que foi adicionado, alterado ou corrigido.
+  - Todo commit deve adicionar no topo do [CHANGELOG.md](CHANGELOG.md) a seção da nova versão (`## [X.Y.Z] - YYYY-MM-DD`) listando de forma clara o que foi adicionado, alterado ou corrigido.
 - **Commits:** no padrão já usado pelo time (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), em inglês.
 - **Fazer commit de:** assets gerados e pacotes da página (`index.models.js`, `index.terrain.*.js`), assim quem não tem Node consegue abrir o jogo.
 - **Nunca fazer commit de:**
@@ -268,7 +270,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 - [ ] O `index.html` abre sem erros no console em 1440 e 390 px (se tocou na página).
 - [ ] O visualizador abre sem erros no console.
 - [ ] Nenhum número apresentado como real ficou sem fonte.
-- [ ] Versão incrementada (minor por padrão, major só se pedido) em `package.json`, `index.html`, `web/locales/en.js` e `web/locales/pt.js`, e entrada adicionada em `CHANGELOG.md`.
+- [ ] Versão incrementada (patch para pequenas alterações/correções, minor para features grandes, major só se pedido) em `package.json`, `index.html`, `web/locales/en.js` e `web/locales/pt.js`, e entrada adicionada em `CHANGELOG.md`.
 - [ ] Docs e este arquivo atualizados, se alguma convenção mudou.
 
 ---
