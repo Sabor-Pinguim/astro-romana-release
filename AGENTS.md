@@ -61,7 +61,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 |---|---|---|
 | Entrega executável (MVP Hackathon) | **Web / JavaScript + Three.js (`0.186.1`)** em `index.html` + `index.models.js` | Reaproveita 100% das telas 3D/2D já prontas, os GLBs e os WAVs gerados; roda direto no navegador (`file://` ou hospedado) sem fricção de export |
 | Assets | `assets/` (models, audio, terrain), saída dos geradores offline | Um só lugar para o jogo, o visualizador e os pacotes da página |
-| Linguagem (código do jogo MVP) | **HTML / CSS / JS (ES modules CDN)** sem etapa de build | Edição imediata, zero dependências de runtime além do Three.js 0.186.1 |
+| Linguagem (código do jogo MVP) | **HTML / CSS / JS (ES modules CDN)** sem etapa de build | Edição imediata, zero dependências de runtime além do Three.js 0.186.1 e `i18next` 23.16.8 (com fallback offline em `web/i18n.js`) |
 | Godot | Não é mais usado (removido em 2026-11) | O MVP é só web |
 | Multiplayer | Servidor de salas em `multiplayer/` (WebSocket; VM no GCP com Caddy, que também serve o jogo) que só repassa mensagens; o host (Helena) roda as regras. No jogo, `web/net.js` (`window.ASTRO_NET`); plano e estado da integração: [docs/multiplayer.md](docs/multiplayer.md) | O fluxo e o game loop atuais seguem no navegador; vaga sem jogador fica com a IA |
 | Ferramentas | Node ≥ 20; `three` fixado em **0.186.1** (mesma versão nos import maps do visualizador e do `index.html`) | Builds reprodutíveis |
@@ -231,7 +231,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 | O quê | Idioma |
 |---|---|
 | Docs de design do time (`docs/`) | PT-BR |
-| Textos vistos pelo jogador (telas, nomes e descrições das peças) | Inglês |
+| Textos vistos pelo jogador (telas, nomes e descrições das peças) | Inglês (padrão) e Português (`web/locales/`, via `i18next`) |
 | Enunciado do desafio e `references/` | Inglês |
 | Código, identificadores, nomes de nós, arquivos e commits | Inglês |
 

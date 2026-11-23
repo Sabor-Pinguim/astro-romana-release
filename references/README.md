@@ -243,7 +243,8 @@ Listed in `assets/models/manifest.json`; not stored.
 | Link Text | Link URL | Used for | License |
 |---|---|---|---|
 | three.js 0.186.1 | https://threejs.org | 3D rendering in the game; model generator (GLTFExporter) | MIT |
-| jsDelivr CDN | https://www.jsdelivr.com | Serves three.js to the game page | Free CDN |
+| i18next 23.16.8 | https://www.i18next.com | Game internationalization (`web/i18n.js`, `web/locales/`) | MIT |
+| jsDelivr CDN | https://www.jsdelivr.com | Serves three.js and i18next to the game page | Free CDN |
 | geotiff.js 3.0.5 | https://github.com/geotiffjs/geotiff.js | Reads the Mars DTM GeoTIFFs in the terrain build | MIT |
 | Khronos glTF Validator 2.0.0-dev.3.10 | https://github.com/KhronosGroup/glTF-Validator | Validates the generated GLB models | Apache-2.0 |
 | ws 8.22.1 | https://github.com/websockets/ws | WebSocket room server for multiplayer | MIT |

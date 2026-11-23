@@ -6,6 +6,13 @@
   const $ = id => document.getElementById(id);
   const dialog = $('minigame-dialog');
   if (!dialog) return;
+  const t = (key, opts) => window.ASTRO_I18N?.t(key, opts) ?? key;
+  const U = window.ASTRO_UNITS || {
+    decimal: (n, d = 1) => Number(n).toFixed(d),
+    massGrams: (g, d = 1) => `${Number(g).toFixed(d)} g`,
+    tempC: c => `${Math.round(c)} °C`,
+    tempRangeC: (a, b) => `${a}–${b} °C`,
+  };
 
   // ---------------------------------------------------------------------------
   // H-S1 · Surface escort (Helena): 5×5 route planning around sand hazards
@@ -17,11 +24,11 @@
     const HAZARDS = [[1, 1], [2, 1], [2, 3], [3, 3]];
     // Waypoints are labelled with the most abundant elements in the Martian crust (by weight), in order.
     const ELEMENTS = [
-      { symbol: 'O', name: 'Oxygen' },
-      { symbol: 'Si', name: 'Silicon' },
-      { symbol: 'Fe', name: 'Iron' },
-      { symbol: 'Mg', name: 'Magnesium' },
-      { symbol: 'Ca', name: 'Calcium' },
+      { symbol: 'O', get name() { return t('minigames.scout.elements.O'); } },
+      { symbol: 'Si', get name() { return t('minigames.scout.elements.Si'); } },
+      { symbol: 'Fe', get name() { return t('minigames.scout.elements.Fe'); } },
+      { symbol: 'Mg', get name() { return t('minigames.scout.elements.Mg'); } },
+      { symbol: 'Ca', get name() { return t('minigames.scout.elements.Ca'); } },
     ];
     const ORDER_TEXT = ELEMENTS.map(el => el.symbol).join(' → ');
     const elementLabel = i => `${ELEMENTS[i].symbol} (${ELEMENTS[i].name})`;
@@ -45,8 +52,8 @@
         if (haz) {
           cell.classList.add('is-hazard');
           cell.textContent = '⚠';
-          cell.title = 'Sand hazard';
-          cell.setAttribute('aria-label', `Row ${y + 1}, column ${x + 1}, sand hazard, impassable`);
+          cell.title = t('minigames.scout.sandHazard');
+          cell.setAttribute('aria-label', t('minigames.scout.tileHazardAria', { row: y + 1, col: x + 1 }));
           return;
         }
         if (index !== undefined) {
@@ -66,17 +73,22 @@
         const el = n >= 0 ? ELEMENTS[n] : null;
         cell.textContent = el ? el.symbol : '';
         cell.title = el ? `${el.symbol} — ${el.name}` : '';
-        cell.setAttribute('aria-label', `Row ${y + 1}, column ${x + 1}${el ? `, element ${elementLabel(n)}` : ''}${index !== undefined ? ', on route' : ''}`);
+        cell.setAttribute('aria-label', t('minigames.scout.tileAria', {
+          row: y + 1,
+          col: x + 1,
+          el: el ? t('minigames.scout.tileEl', { el: elementLabel(n) }) : '',
+          onRoute: index !== undefined ? t('minigames.scout.tileOnRoute') : '',
+        }));
       });
       if (orderBox) {
-        orderBox.innerHTML = '<span class="scout-order-label">Order</span>' + ELEMENTS.map((el, i) => {
+        orderBox.innerHTML = `<span class="scout-order-label">${t('minigames.scout.orderLabel')}</span>` + ELEMENTS.map((el, i) => {
           const cls = i < reached ? 'done' : i === reached ? 'next' : '';
           return `<span class="scout-order-chip ${cls}" title="${el.name}">${el.symbol}</span>`;
         }).join('<span class="scout-order-arrow" aria-hidden="true">→</span>');
       }
 
-      $('scout-points').textContent = `WAYPOINT ${reached} / ${CHECKPOINTS.length}`;
-      $('scout-time').textContent = `AVOID ⚠ SAND · ${Math.max(0, path.length - 1)} STEPS`;
+      $('scout-points').textContent = t('minigames.scout.waypoint', { reached, total: CHECKPOINTS.length });
+      $('scout-time').textContent = t('minigames.scout.steps', { steps: Math.max(0, path.length - 1) });
     }
 
     function stop() { active = false; drawing = false; }
@@ -85,9 +97,9 @@
       stop();
       path = [CHECKPOINTS[0].slice()];
       active = true;
-      $('scout-status').textContent = `Connect the Mars crust elements in order (${ORDER_TEXT}) without touching ⚠ sand. Drag, click highlighted squares, or use arrows.`;
+      $('scout-status').textContent = t('minigames.scout.startStatus', { order: ORDER_TEXT });
       $('scout-start').hidden = false;
-      $('scout-start').textContent = 'Reset route';
+      $('scout-start').textContent = t('minigames.scout.resetBtn');
       game.querySelectorAll('[data-scout]').forEach(btn => { btn.disabled = false; });
       render();
     }
@@ -99,7 +111,7 @@
         if (!fromDrag && prior < path.length - 1) {
           path = path.slice(0, prior + 1);
           const nextIdx = path.filter(([cx, cy]) => checkpointAt(cx, cy) >= 0).length;
-          $('scout-status').textContent = `Rewound route. Next element: ${elementLabel(nextIdx)}.`;
+          $('scout-status').textContent = t('minigames.scout.rewound', { el: elementLabel(nextIdx) });
           render();
         } else if (fromDrag && prior === path.length - 2) {
           path.pop();
@@ -109,24 +121,24 @@
       }
       const [px, py] = path[path.length - 1];
       if (Math.abs(x - px) + Math.abs(y - py) !== 1) {
-        if (!fromDrag) $('scout-status').textContent = 'Step onto an adjacent highlighted square to extend the trail.';
+        if (!fromDrag) $('scout-status').textContent = t('minigames.scout.adjacentHint');
         return;
       }
       const checkpoint = checkpointAt(x, y);
       const reached = path.filter(([cx, cy]) => checkpointAt(cx, cy) >= 0).length;
       if (checkpoint >= 0 && checkpoint !== reached) {
-        $('scout-status').textContent = `Visit ${elementLabel(reached)} first (marked in pulsing amber).`;
+        $('scout-status').textContent = t('minigames.scout.orderHint', { el: elementLabel(reached) });
         return;
       }
       path.push([x, y]);
       if (checkpoint === CHECKPOINTS.length - 1 && reached === CHECKPOINTS.length - 1) {
         stop();
-        $('scout-status').textContent = `Escort route complete! ${ORDER_TEXT} connected safely around sand hazards.`;
+        $('scout-status').textContent = t('minigames.scout.doneStatus', { order: ORDER_TEXT });
         game.querySelectorAll('[data-scout]').forEach(btn => { btn.disabled = true; });
         dialog.dispatchEvent(new CustomEvent('astro:minigame-completed', { detail: { id: 'H-S1' } }));
       } else {
         const nextIdx = path.filter(([cx, cy]) => checkpointAt(cx, cy) >= 0).length;
-        $('scout-status').textContent = `Heading to ${elementLabel(nextIdx)} (avoid ⚠ sand traps).`;
+        $('scout-status').textContent = t('minigames.scout.headingTo', { el: elementLabel(nextIdx) });
       }
       render();
     }
@@ -177,7 +189,7 @@
       if (moves[event.code]) { event.preventDefault(); event.stopPropagation(); move(...moves[event.code]); }
     });
 
-    return { reset, stop };
+    return { reset, stop, render };
   })();
 
   // ---------------------------------------------------------------------------
@@ -204,9 +216,22 @@
 
     const pctOf = val => Math.max(0, Math.min(100, ((val - MIN_C) / (MAX_C - MIN_C)) * 100));
 
+    function syncLabels() {
+      const range = U.tempRangeC(GREEN_MIN_C, GREEN_MAX_C);
+      const target = U.tempC(800);
+      const goal = U.massGrams(GOAL_O2_G, 1);
+      if ($('moxie-target-readout')) $('moxie-target-readout').textContent = t('minigames.moxie.targetReadout', { range });
+      if ($('moxie-zone-cold')) $('moxie-zone-cold').textContent = t('minigames.moxie.zoneCold', { cold: U.tempC(COLD_C) });
+      if ($('moxie-zone-target')) $('moxie-zone-target').textContent = t('minigames.moxie.zoneTarget', { range });
+      if ($('moxie-zone-hot')) $('moxie-zone-hot').textContent = t('minigames.moxie.zoneHot', { hot: U.tempC(HOT_C) });
+      if ($('moxie-band-label')) $('moxie-band-label').textContent = `✓ ${target}`;
+      if ($('moxie-o2-label')) $('moxie-o2-label').textContent = t('minigames.moxie.o2Label', { goal });
+    }
+
     function render(statusText) {
-      $('moxie-temp').textContent = `${Math.round(temp)} °C`;
-      $('moxie-o2').textContent = `${o2.toFixed(1)} / ${GOAL_O2_G.toFixed(1)} g O₂`;
+      syncLabels();
+      $('moxie-temp').textContent = U.tempC(Math.round(temp));
+      $('moxie-o2').textContent = `${U.massGrams(o2, 1)} / ${U.massGrams(GOAL_O2_G, 1)} O₂`;
       $('moxie-health-text').textContent = `${Math.round(health)}%`;
       needle.style.left = `${pctOf(temp).toFixed(2)}%`;
 
@@ -215,18 +240,19 @@
       const isCold = temp < COLD_C;
       needle.className = 'moxie-needle' + (inGreen ? ' is-good' : isHot ? ' is-hot' : isCold ? ' is-cold' : '');
 
+      const target = U.tempC(800), range = U.tempRangeC(GREEN_MIN_C, GREEN_MAX_C);
       if (inGreen) {
         badge.className = 'moxie-zone-badge is-good';
-        badge.textContent = '✓ IN GREEN ZONE (800 °C) — PRODUCING O₂!';
+        badge.textContent = t('minigames.moxie.badgeGood', { target });
       } else if (isHot) {
         badge.className = 'moxie-zone-badge is-hot';
-        badge.textContent = '⚠ OVERHEATING (> 830 °C) — RELEASE HEAT!';
+        badge.textContent = t('minigames.moxie.badgeHot', { hot: U.tempC(HOT_C) });
       } else if (isCold) {
         badge.className = 'moxie-zone-badge is-cold';
-        badge.textContent = 'COLD (< 770 °C) — HOLD HEAT BUTTON';
+        badge.textContent = t('minigames.moxie.badgeCold', { cold: U.tempC(COLD_C) });
       } else {
         badge.className = 'moxie-zone-badge is-warm';
-        badge.textContent = '~ WARM MARGIN — AIM FOR 780–820 °C';
+        badge.textContent = t('minigames.moxie.badgeWarm', { range });
       }
 
       o2Bar.style.width = `${Math.min(100, (o2 / GOAL_O2_G) * 100).toFixed(1)}%`;
@@ -257,20 +283,21 @@
       temp = Math.max(MIN_C, Math.min(MAX_C, temp + ((heating ? HEAT_RATE_CS : 0) - COOL_RATE_CS + fluct) * dt));
 
       const eff = Math.max(0.35, health / 100);
+      const target = U.tempC(800), range = U.tempRangeC(GREEN_MIN_C, GREEN_MAX_C);
       let status = '';
       if (temp >= GREEN_MIN_C && temp <= GREEN_MAX_C) {
         o2 += PEAK_RATE_GS * eff * dt;
-        status = 'Steady ~800 °C — tap or briefly release Heat to hover inside the green band.';
+        status = t('minigames.moxie.statusGood', { target });
       } else if (temp >= COLD_C && temp <= HOT_C) {
         o2 += EDGE_RATE_GS * eff * dt;
         status = temp < GREEN_MIN_C
-          ? 'Almost there — nudge temperature into 780–820 °C for full O₂ output.'
-          : 'Upper margin — release Heat so the needle cools back into the green band.';
+          ? t('minigames.moxie.statusWarmLow', { range })
+          : t('minigames.moxie.statusWarmHigh');
       } else if (temp < COLD_C) {
-        status = 'Below 770 °C — hold the Heat reactor button (or Space / W / ↑) to warm up.';
+        status = t('minigames.moxie.statusCold', { cold: U.tempC(COLD_C) });
       } else {
         health = Math.max(0, health - DAMAGE_RATE * dt);
-        status = 'Over 830 °C! Release Heat immediately to protect the ceramic stack.';
+        status = t('minigames.moxie.statusHot', { hot: U.tempC(HOT_C) });
       }
 
       if (health <= 0) {
@@ -280,12 +307,12 @@
         pointerHeat = false;
         keyHeat = false;
         pulseUntil = 0;
-        render('Safety cutout cooled the stack (−1.0 g O₂). Hold Heat to bring it back up cleanly!');
+        render(t('minigames.moxie.statusCutout', { loss: U.massGrams(1.0, 1) }));
       } else if (o2 >= GOAL_O2_G) {
         o2 = GOAL_O2_G;
         stop();
         heatBtn.disabled = true;
-        render('6.0 g of breathable O₂ generated and vented cleanly at ~800 °C!');
+        render(t('minigames.moxie.statusDone', { goal: U.massGrams(GOAL_O2_G, 1), target }));
         dialog.dispatchEvent(new CustomEvent('astro:minigame-completed', { detail: { id: 'L-S1' } }));
         return;
       } else {
@@ -304,7 +331,7 @@
       lastTs = 0;
       active = true;
       heatBtn.disabled = false;
-      render('Hold Heat reactor (or Space / W / ↑) to keep the marker in the green zone until 6.0 g O₂.');
+      render(t('minigames.moxie.statusInitial', { goal: U.massGrams(GOAL_O2_G, 1) }));
       raf = requestAnimationFrame(tick);
     }
 
@@ -338,7 +365,7 @@
       if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') keyHeat = false;
     });
 
-    return { reset, stop };
+    return { reset, stop, render, syncLabels };
   })();
 
   // ---------------------------------------------------------------------------
@@ -354,13 +381,13 @@
     const WINDOW_S = 40;
     const SCORE_GOAL = 200;
     const PACKETS = [
-      { id: 'telemetry', name: 'Crew & station telemetry', sizeMb: 5.0, pts: 20, badge: '✓ AUTO-INCLUDED · REQUIRED', cls: 'is-req', required: true },
-      { id: 'sherloc', name: 'SHERLOC UV Raman map', sizeMb: 79.7, pts: 85, badge: '★ BEST SCIENCE', cls: 'is-high' },
-      { id: 'rimfax', name: 'RIMFAX subsurface radar', sizeMb: 60.0, pts: 55, badge: '★ HIGH VALUE', cls: 'is-high' },
-      { id: 'seis', name: 'SEIS daily seismic log', sizeMb: 38.0, pts: 45, badge: '★ HIGH VALUE', cls: 'is-high' },
-      { id: 'pixl', name: 'PIXL X-ray elemental map', sizeMb: 16.0, pts: 40, badge: '★ COMPACT', cls: 'is-good' },
-      { id: 'supercam', name: 'SuperCam LIBS spectrum', sizeMb: 15.5, pts: 35, badge: '★ COMPACT', cls: 'is-good' },
-      { id: 'mastcam', name: 'Mastcam-Z raw stereo mosaic', sizeMb: 148.0, pts: 60, badge: '⚠ HUGE RAW FILE', cls: 'is-warn' },
+      { id: 'telemetry', get name() { return t('minigames.relay.packets.telemetry.name'); }, sizeMb: 5.0, pts: 20, get badge() { return t('minigames.relay.packets.telemetry.badge'); }, cls: 'is-req', required: true },
+      { id: 'sherloc', get name() { return t('minigames.relay.packets.sherloc.name'); }, sizeMb: 79.7, pts: 85, get badge() { return t('minigames.relay.packets.sherloc.badge'); }, cls: 'is-high' },
+      { id: 'rimfax', get name() { return t('minigames.relay.packets.rimfax.name'); }, sizeMb: 60.0, pts: 55, get badge() { return t('minigames.relay.packets.rimfax.badge'); }, cls: 'is-high' },
+      { id: 'seis', get name() { return t('minigames.relay.packets.seis.name'); }, sizeMb: 38.0, pts: 45, get badge() { return t('minigames.relay.packets.seis.badge'); }, cls: 'is-high' },
+      { id: 'pixl', get name() { return t('minigames.relay.packets.pixl.name'); }, sizeMb: 16.0, pts: 40, get badge() { return t('minigames.relay.packets.pixl.badge'); }, cls: 'is-good' },
+      { id: 'supercam', get name() { return t('minigames.relay.packets.supercam.name'); }, sizeMb: 15.5, pts: 35, get badge() { return t('minigames.relay.packets.supercam.badge'); }, cls: 'is-good' },
+      { id: 'mastcam', get name() { return t('minigames.relay.packets.mastcam.name'); }, sizeMb: 148.0, pts: 60, get badge() { return t('minigames.relay.packets.mastcam.badge'); }, cls: 'is-warn' },
     ];
 
     const listEl = $('relay-list'), sendBtn = $('relay-send'), resetBtn = $('relay-reset');
@@ -382,10 +409,10 @@
       const rateMbps = 0.25 + 1.75 * Math.sin(Math.PI * progress);
       const valid = mb <= CAPACITY_MB && pts >= SCORE_GOAL && selected.has('telemetry');
 
-      $('relay-time').textContent = `${Math.max(0, timeLeft).toFixed(1)} s`;
-      $('relay-rate').textContent = `${rateMbps.toFixed(2)} Mbps`;
+      $('relay-time').textContent = `${U.decimal(Math.max(0, timeLeft), 1)} s`;
+      $('relay-rate').textContent = `${U.decimal(rateMbps, 2)} Mbps`;
       const usedEl = $('relay-used');
-      usedEl.textContent = `${mb.toFixed(1)} / ${CAPACITY_MB} Mb`;
+      usedEl.textContent = `${U.decimal(mb, 1)} / ${CAPACITY_MB} Mb`;
       usedEl.classList.toggle('is-danger', mb > CAPACITY_MB);
       const scoreEl = $('relay-score');
       scoreEl.textContent = `${pts} / ${SCORE_GOAL} pts`;
@@ -396,9 +423,9 @@
       capBar.classList.toggle('is-danger', mb > CAPACITY_MB);
 
       sendBtn.classList.toggle('is-ready', valid);
-      if (mb > CAPACITY_MB) sendBtn.textContent = 'Over 250 Mb limit — uncheck a large packet';
-      else if (pts < SCORE_GOAL) sendBtn.textContent = `Select more packets (${pts} / ${SCORE_GOAL} pts needed)`;
-      else sendBtn.textContent = `✓ Transmit now (${mb.toFixed(1)} Mb · ${pts} pts) →`;
+      if (mb > CAPACITY_MB) sendBtn.textContent = t('minigames.relay.overLimitBtn');
+      else if (pts < SCORE_GOAL) sendBtn.textContent = t('minigames.relay.needMoreBtn', { pts, goal: SCORE_GOAL });
+      else sendBtn.textContent = t('minigames.relay.transmitBtn', { mb: U.decimal(mb, 1), pts });
 
       listEl.querySelectorAll('.relay-packet').forEach(btn => {
         btn.setAttribute('aria-pressed', String(selected.has(btn.dataset.packet)));
@@ -423,10 +450,10 @@
         stop();
         sendBtn.disabled = true;
         if (mb <= CAPACITY_MB && pts >= SCORE_GOAL && selected.has('telemetry')) {
-          render(`Orbiter reached horizon — auto-transmitted ${mb.toFixed(1)} Mb (${pts} science pts)!`);
+          render(t('minigames.relay.autoTransmitted', { mb: U.decimal(mb, 1), pts }));
           dialog.dispatchEvent(new CustomEvent('astro:minigame-completed', { detail: { id: 'O-S1' } }));
         } else {
-          render('Orbiter dropped below horizon before hitting 200 pts inside 250 Mb. Press New orbiter pass to try again.');
+          render(t('minigames.relay.missedStatus'));
         }
         return;
       }
@@ -441,55 +468,60 @@
       lastTs = 0;
       active = true;
       sendBtn.disabled = false;
-      render('Tap packets to reach 200+ pts within 250 Mb — watch the bandwidth bar and avoid the huge 148 Mb file.');
+      render(t('minigames.relay.initialStatus'));
       raf = requestAnimationFrame(tick);
     }
 
-    PACKETS.forEach(p => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'relay-packet' + (p.required ? ' is-locked' : '');
-      btn.dataset.packet = p.id;
-      btn.disabled = Boolean(p.required);
-      const sharePct = Math.min(100, (p.sizeMb / CAPACITY_MB) * 100).toFixed(1);
-      btn.innerHTML = `<span class="relay-row"><span class="relay-name"><strong>${p.name}</strong><small class="relay-badge ${p.cls}">${p.badge}</small></span><span class="relay-meta"><strong>${p.sizeMb.toFixed(1)} Mb</strong><small>+${p.pts} pts</small></span></span><span class="relay-share" aria-hidden="true"><span style="width:${sharePct}%"></span></span>`;
-      if (!p.required) {
-        btn.addEventListener('click', () => {
-          if (!active) return;
-          if (selected.has(p.id)) selected.delete(p.id);
-          else selected.add(p.id);
-          const { mb, pts } = totals();
-          if (mb > CAPACITY_MB) {
-            render(`Buffer full (+${(mb - CAPACITY_MB).toFixed(1)} Mb over)! Uncheck a heavy packet.`);
-          } else if (pts >= SCORE_GOAL) {
-            render(`Ready to transmit (${mb.toFixed(1)} Mb · ${pts} pts)! Click the green button below.`);
-          } else {
-            render(`${selected.size} packets selected (${mb.toFixed(1)} Mb · ${pts} / ${SCORE_GOAL} pts).`);
-          }
-        });
-      }
-      listEl.append(btn);
-    });
+    function rebuildList() {
+      listEl.innerHTML = '';
+      PACKETS.forEach(p => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'relay-packet' + (p.required ? ' is-locked' : '');
+        btn.dataset.packet = p.id;
+        btn.disabled = Boolean(p.required);
+        const sharePct = Math.min(100, (p.sizeMb / CAPACITY_MB) * 100).toFixed(1);
+        btn.innerHTML = `<span class="relay-row"><span class="relay-name"><strong>${p.name}</strong><small class="relay-badge ${p.cls}">${p.badge}</small></span><span class="relay-meta"><strong>${U.decimal(p.sizeMb, 1)} Mb</strong><small>+${p.pts} pts</small></span></span><span class="relay-share" aria-hidden="true"><span style="width:${sharePct}%"></span></span>`;
+        if (!p.required) {
+          btn.addEventListener('click', () => {
+            if (!active) return;
+            if (selected.has(p.id)) selected.delete(p.id);
+            else selected.add(p.id);
+            const { mb, pts } = totals();
+            if (mb > CAPACITY_MB) {
+              render(t('minigames.relay.bufferFull', { over: U.decimal(mb - CAPACITY_MB, 1) }));
+            } else if (pts >= SCORE_GOAL) {
+              render(t('minigames.relay.readyStatus', { mb: U.decimal(mb, 1), pts }));
+            } else {
+              render(t('minigames.relay.selectedStatus', { count: selected.size, mb: U.decimal(mb, 1), pts, goal: SCORE_GOAL }));
+            }
+          });
+        }
+        listEl.append(btn);
+      });
+      render();
+    }
+    rebuildList();
 
     sendBtn.addEventListener('click', () => {
       if (!active) return;
       const { mb, pts } = totals();
       if (mb > CAPACITY_MB) {
-        render(`Over 250 Mb limit by ${(mb - CAPACITY_MB).toFixed(1)} Mb — uncheck a packet.`);
+        render(t('minigames.relay.overLimitErr', { over: U.decimal(mb - CAPACITY_MB, 1) }));
         return;
       }
       if (pts < SCORE_GOAL) {
-        render(`Need at least ${SCORE_GOAL} science pts (currently ${pts}) — tap more packets.`);
+        render(t('minigames.relay.needPtsErr', { goal: SCORE_GOAL, pts }));
         return;
       }
       stop();
       sendBtn.disabled = true;
-      render(`Relayed ${mb.toFixed(1)} Mb (${pts} science pts) cleanly over Electra UHF link!`);
+      render(t('minigames.relay.relayedStatus', { mb: U.decimal(mb, 1), pts }));
       dialog.dispatchEvent(new CustomEvent('astro:minigame-completed', { detail: { id: 'O-S1' } }));
     });
     resetBtn.addEventListener('click', reset);
 
-    return { reset, stop };
+    return { reset, stop, render, rebuildList };
   })();
 
   // ---------------------------------------------------------------------------
@@ -570,12 +602,12 @@
     }
 
     function render(statusText) {
-      $('bio-found').textContent = `${found} / ${NEED_SPOTS} SPOTS`;
+      $('bio-found').textContent = t('minigames.bio.found', { found, need: NEED_SPOTS });
       const timeEl = $('bio-time');
-      timeEl.textContent = `${timeLeft.toFixed(1)} min`;
+      timeEl.textContent = t('minigames.bio.timeMin', { min: U.decimal(timeLeft, 1) });
       timeEl.classList.toggle('is-danger', timeLeft < 25);
       const energyEl = $('bio-energy');
-      energyEl.textContent = `${energyLeft.toFixed(1)} Wh`;
+      energyEl.textContent = `${U.decimal(energyLeft, 1)} Wh`;
       energyEl.classList.toggle('is-danger', energyLeft < 16);
 
       board.querySelectorAll('.bio-cell').forEach((btn, i) => {
@@ -601,13 +633,13 @@
         }
         btn.textContent = label;
         btn.disabled = !active;
-        const desc = !label ? 'unscanned'
-          : label === '✦' ? 'glowing suspect'
-          : label === '✓' ? 'confirmed leopard spot'
-          : label === '✕' ? 'abiotic decoy'
-          : label === '↗' ? 'spot adjacent'
-          : 'empty mudstone';
-        btn.setAttribute('aria-label', `Row ${c.y + 1}, column ${c.x + 1}, ${desc}`);
+        const descKey = !label ? 'descUnscanned'
+          : label === '✦' ? 'descSuspect'
+          : label === '✓' ? 'descSpot'
+          : label === '✕' ? 'descDecoy'
+          : label === '↗' ? 'descNear'
+          : 'descEmpty';
+        btn.setAttribute('aria-label', t('minigames.bio.cellAria', { row: c.y + 1, col: c.x + 1, desc: t(`minigames.bio.${descKey}`) }));
       });
 
       updateHover();
@@ -620,14 +652,14 @@
       if (found >= NEED_SPOTS) {
         active = false;
         hoverXY = null;
-        render('Biosignature verified! 3 Cheyava Falls leopard spots confirmed with PIXL.');
+        render(t('minigames.bio.statusVerified'));
         dialog.dispatchEvent(new CustomEvent('astro:minigame-completed', { detail: { id: 'M-S1' } }));
         return;
       }
       if (!canAfford(PIXL) && !canAfford(SHERLOC)) {
         active = false;
         hoverXY = null;
-        render('Time or battery ran out before confirming 3 spots. Click New rock sample to retry.');
+        render(t('minigames.bio.statusExhausted'));
         return;
       }
       render(lastMsg);
@@ -644,11 +676,11 @@
           }
         }
         if (block.every(c => c.uv)) {
-          render('That whole 3×3 area was already swept — try an unscanned zone or switch to PIXL.');
+          render(t('minigames.bio.statusAlreadySwept'));
           return;
         }
         if (!canAfford(SHERLOC)) {
-          render('Not enough budget for a 3×3 SHERLOC sweep (10 min, 8.1 Wh). Switch to PIXL (1×1).');
+          render(t('minigames.bio.statusNoBudgetSherloc'));
           return;
         }
         timeLeft -= SHERLOC.min;
@@ -659,14 +691,14 @@
           if (!c.pixl && (c.kind === 'spot' || c.kind === 'decoy')) glowCount++;
         });
         const msg = glowCount > 0
-          ? `✦ ${glowCount} suspect${glowCount > 1 ? 's' : ''} glowing in that 3×3 block! Switch to PIXL (1×1) to test them.`
-          : 'No suspects glowing in that 3×3 block — sweep elsewhere on the rock.';
+          ? t('minigames.bio.statusGlowFound', { count: glowCount, plural: glowCount > 1 ? 's' : '' })
+          : t('minigames.bio.statusNoGlow');
         checkCompleteOrExhausted(msg);
       } else {
         const target = cells[idxOf(x, y)];
-        if (target.pixl) { render('Already tested with PIXL — pick a ✦ suspect or new tile.'); return; }
+        if (target.pixl) { render(t('minigames.bio.statusAlreadyPixl')); return; }
         if (!canAfford(PIXL)) {
-          render('Not enough time or energy left for a PIXL scan (12.5 min, 5.2 Wh).');
+          render(t('minigames.bio.statusNoBudgetPixl'));
           return;
         }
         timeLeft -= PIXL.min;
@@ -674,13 +706,13 @@
         target.pixl = true;
         if (target.kind === 'spot') {
           found++;
-          checkCompleteOrExhausted(`✓ Leopard spot confirmed (${found} / ${NEED_SPOTS})!`);
+          checkCompleteOrExhausted(t('minigames.bio.statusSpotConfirmed', { found, need: NEED_SPOTS }));
         } else if (target.kind === 'decoy') {
-          checkCompleteOrExhausted('✕ Abiotic mineral decoy — test another ✦ glowing tile.');
+          checkCompleteOrExhausted(t('minigames.bio.statusDecoy'));
         } else if (target.nearSpot) {
-          checkCompleteOrExhausted('↗ Mineral halo detected — a real Leopard Spot is right next to this tile!');
+          checkCompleteOrExhausted(t('minigames.bio.statusHalo'));
         } else {
-          checkCompleteOrExhausted('Empty mudstone — sweep more rock with SHERLOC (3×3) to save budget.');
+          checkCompleteOrExhausted(t('minigames.bio.statusEmpty'));
         }
       }
     }
@@ -695,7 +727,7 @@
       hoverXY = null;
       active = true;
       setTool('sherloc');
-      render('Step 1: Hover & click with SHERLOC (3×3 UV) to reveal ✦ suspects, then confirm 3 with PIXL.');
+      render(t('minigames.bio.statusInit'));
     }
 
     for (let y = 0; y < ROWS; y++) {
@@ -715,7 +747,7 @@
     btnPixl.addEventListener('click', () => setTool('pixl'));
     resetBtn.addEventListener('click', reset);
 
-    return { reset, stop };
+    return { reset, stop, render };
   })();
 
   const GAMES = { 'H-S1': scout, 'L-S1': moxie, 'O-S1': relay, 'M-S1': bio };
@@ -728,6 +760,13 @@
     close();
     GAMES[id]?.reset();
   }
+
+  moxie.syncLabels();
+  window.addEventListener('astro:settings', () => {
+    moxie.syncLabels();
+    relay.rebuildList();
+    if (dialog.open && dialog.dataset.exp) GAMES[dialog.dataset.exp]?.render?.();
+  });
 
   dialog.addEventListener('close', close);
   window.ASTRO_SCOUT = { reset: () => open('H-S1'), stop: close };

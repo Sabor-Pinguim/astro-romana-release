@@ -60,7 +60,7 @@
     .app-foot .foot-actions{margin-left:auto}
     .foot-actions{display:flex;gap:.6rem}
     /* faceted backdrop: two hard-edged fans overlap into flat polygons */
-    #orbit,#lobby,#planner,#cockpit,#surface,#results{background:
+    #orbit,#lobby,#planner,#cockpit,#surface,#results,#settings{background:
       conic-gradient(from 10deg at 84% 8%,#ffffff06 0deg 38deg,transparent 38deg 84deg,#ffffff09 84deg 128deg,transparent 128deg 196deg,#ffffff04 196deg 252deg,transparent 252deg),
       conic-gradient(from -40deg at 10% 96%,#9b5de50c 0deg 28deg,transparent 28deg 66deg,#9b5de512 66deg 104deg,transparent 104deg 150deg,#6d28d90a 150deg 214deg,transparent 214deg),
       var(--bg-void)}
@@ -87,7 +87,9 @@
     .menu-actions{display:flex;flex-direction:column;align-items:center;gap:.7rem;margin-top:2.2rem;width:100%}
     .menu-actions .button{min-height:54px;padding-inline:2.2rem;font-size:.86rem}
     .menu-actions #play-button{width:min(100%,360px)}
+    .menu-actions #settings-button{width:min(86%,310px)}
     .menu-actions #quit-button{width:min(72%,260px)}
+    .settings-glyph{width:11px;height:10px;background:currentColor;clip-path:polygon(evenodd,25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%,25% 0,38% 24%,18% 50%,38% 76%,62% 76%,82% 50%,62% 24%,38% 24%)}
     .menu-footer{position:absolute;left:clamp(24px,5vw,80px);bottom:28px;display:flex;align-items:center;font:600 .7rem var(--heading);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
     .menu-footer span+span::before{content:"";display:inline-block;width:6px;height:8px;margin:0 .9rem;background:var(--mars-orange);clip-path:polygon(0 0,100% 50%,0 100%)}
     .coordinates{position:absolute;right:clamp(24px,5vw,80px);bottom:28px;font:500 .66rem var(--heading);letter-spacing:.16em;color:var(--muted)}
@@ -114,7 +116,7 @@
     .orbit-world.selected .world-name{top:calc(140% + 10px);color:var(--solar-amber)}
     .orbit-world.selected:not(.mars-target)::before{background:var(--muted)}
     .orbit-world.selected:not(.mars-target) .world-name{color:var(--muted);opacity:1}
-    .orbit-world.selected:not(.mars-target) .world-name::after{content:" · unavailable"}
+    .orbit-world.selected:not(.mars-target) .world-name::after{content:var(--unavailable-suffix," · unavailable")}
     #objective-status.locked{color:var(--muted)}
     .button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.7)}
     /* Planning background: the orbit scene, zoomed on the chosen planet, behind the lobby and the planner */
@@ -682,6 +684,27 @@
     @keyframes blink{50%{opacity:.45}}
     @keyframes descend{from{translate:-46px -40px}to{translate:0 0}}
 
+    /* Settings screen */
+    .settings-main{flex:1;display:flex;align-items:flex-start;justify-content:center;width:100%;max-width:960px;margin:0 auto;padding:28px clamp(16px,3vw,44px) 28px}
+    .settings-card{width:100%;display:flex;flex-direction:column;gap:22px;padding:26px clamp(18px,3vw,34px)}
+    .settings-group{display:flex;flex-direction:column;gap:12px;padding-bottom:20px;border-bottom:1px solid #ffffff14}
+    .settings-group:last-child{padding-bottom:0;border-bottom:0}
+    .settings-group-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .settings-desc{margin-top:.35rem;font-size:.88rem;color:var(--muted);max-width:60ch}
+    #settings .segmented{flex-wrap:wrap;gap:6px}
+    #settings .segmented button{min-height:42px;padding:.65rem 1.25rem;font-size:.72rem}
+    .settings-units-group button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;min-width:170px}
+    .settings-units-group button small{font:500 .68rem/1.2 var(--body);letter-spacing:.02em;text-transform:none;opacity:.82}
+    .settings-server-row{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+    .settings-server-row input{flex:1 1 280px;min-width:0;min-height:46px;padding:.6rem .9rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:600 .88rem var(--heading);letter-spacing:.04em}
+    .settings-server-row input::placeholder{color:var(--muted);opacity:.65}
+    .settings-server-row input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
+    .settings-server-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .settings-preview{font:600 .74rem var(--heading);letter-spacing:.06em;color:var(--safe);word-break:break-all}
+    .settings-preview.is-error{color:var(--coral-hover)}
+    .settings-override{padding:.55rem .8rem;font:600 .76rem var(--body);color:var(--solar-amber);background:var(--f1);border-left:3px solid var(--solar-amber)}
+    #settings-server-tag.is-custom{color:var(--bg-void);background:var(--solar-amber)}
+
     @media (max-width:1200px){
       .assembly-grid{grid-template-columns:1fr 1fr;height:auto}
       .blueprint.slab{min-height:560px}
@@ -736,6 +759,11 @@
       .dialog-inner{padding:18px 16px;gap:.55rem}
       .moxie-bars,.bio-tools{grid-template-columns:1fr}
       .bio-cell{min-height:32px;font-size:.54rem}
+      .settings-main{padding:18px 14px 22px}
+      .settings-card{padding:20px 16px;gap:18px}
+      .settings-server-actions{width:100%}
+      .settings-server-actions .button{flex:1}
+      .settings-units-group button{flex:1 1 100%}
     }
     @media (max-width:360px){.scout-order-label{display:none}}
     @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}

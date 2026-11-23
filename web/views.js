@@ -237,15 +237,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const zoomButton = document.getElementById('rocket-overview');
   const navigation = document.getElementById('rocket-navigation');
   const upButton = document.getElementById('rocket-up'), downButton = document.getElementById('rocket-down');
+  const t = (key, opts) => window.ASTRO_I18N?.t(key, opts) ?? key;
   function updateZoomControls() {
     const index = layout.findIndex(item => item.key === focusKey);
     const zoomed = focusKey !== null;
-    zoomButton.textContent = zoomed ? '⛶ Zoom out' : '⛶ Zoom in';
+    zoomButton.textContent = zoomed ? t('planner.zoomOut') : t('planner.zoomIn');
     zoomButton.setAttribute('aria-pressed', String(zoomed));
     navigation.hidden = !zoomed;
     upButton.disabled = index < 0 || index >= layout.length - 1;
     downButton.disabled = index <= 0;
   }
+  window.addEventListener('astro:settings', updateZoomControls);
   window.addEventListener('astro:focus-module', e => { focusKey = e.detail; updateZoomControls(); });
   window.addEventListener('astro:stage-removed', e => { if (focusKey !== null) focusKey = e.detail; updateZoomControls(); });
   zoomButton.addEventListener('click', () => { focusKey = focusKey === null ? ui.selectedKey() : null; updateZoomControls(); });
@@ -446,6 +448,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 (() => {
   const root = document.getElementById('surface'), ui = window.ASTRO, sim = () => window.ASTRO_SIM;
   if (!root || !ui) return;
+  const t = (key, opts) => window.ASTRO_I18N?.t(key, opts) ?? key;
+  const U = window.ASTRO_UNITS || { distanceM: (m, d = 0) => `${d > 0 ? Number(m).toFixed(d) : Math.round(m)} m` };
   const $s = id => document.getElementById(id);
   const viewEl = $s('surface-view'), startEl = $s('surface-start'), promptEl = $s('surface-prompt'), dlg = $s('minigame-dialog');
   const MARS_G = 3.71; // m/s², Mars surface gravity (same value as tools/modeling/lib/fx-presets.mjs)
@@ -762,26 +766,29 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       tags.append(tag); block.userData.tag = tag;
       scene.add(block); world.blocks.push(block); world.colliders.push({ x: spot.x, z: spot.z, r: 1.6 });
     }
-    $s('surface-goals').innerHTML = tasks().map(e => { const o = ui.crew.find(c => c.id === e.crew);
-      return `<li data-goal="${e.id}" style="--crew:${o.color}"><span class="goal-chip"></span><span class="goal-name"><strong>${e.id} · ${e.title}</strong><small>${o.name}</small></span><span class="goal-dist"></span><span class="goal-arrow"></span></li>`; }).join('');
+    function renderSurfaceGoals() {
+      $s('surface-goals').innerHTML = tasks().map(e => { const o = ui.crew.find(c => c.id === e.crew);
+        return `<li data-goal="${e.id}" style="--crew:${o.color}"><span class="goal-chip"></span><span class="goal-name"><strong>${e.id} · ${e.title}</strong><small>${o.name}</small></span><span class="goal-dist"></span><span class="goal-arrow"></span></li>`; }).join('');
+    }
+    renderSurfaceGoals();
   }
 
   // In a room, an astronaut another player moves cannot be taken.
   function renderCrewBar() {
     const control = sim()?.surf.control || {};
     $s('surface-crew').innerHTML = ui.crew.map((c, i) => { const other = mp() && c.id !== s.crew && !!control[c.id] && control[c.id] !== net().you.id;
-      return `<button type="button" data-crew="${c.id}" style="--crew:${c.color}" aria-pressed="${c.id === s.crew}" ${other ? 'disabled' : ''}>${c.name}<small>${other ? 'player' : touch ? '' : `key ${i + 1}`}</small></button>`; }).join('');
+      return `<button type="button" data-crew="${c.id}" style="--crew:${c.color}" aria-pressed="${c.id === s.crew}" ${other ? 'disabled' : ''}>${c.name}<small>${other ? t('common.player') : touch ? '' : t('surface.keyHint', { n: i + 1 })}</small></button>`; }).join('');
   }
   $s('surface-crew').addEventListener('click', e => { const b = e.target.closest('[data-crew]'); if (b && world) switchCrew(b.dataset.crew); });
   function switchCrew(id) {
     if (id === s.crew) return;
     if (mp()) { sim()?.requestCrew(id); return; } // the host hands out the AI astronauts (astro:control below)
-    useCrew(id).then(() => ui.toast(`You are now ${ui.crew.find(c => c.id === id).name}.`));
+    useCrew(id).then(() => ui.toast(t('surface.nowControlling', { name: ui.crew.find(c => c.id === id).name })));
   }
   window.addEventListener('astro:control', () => {
     if (!world || !s.ready || !mp()) return;
     const mine = sim()?.myCrew();
-    if (mine && mine !== s.crew) useCrew(mine).then(() => ui.toast(`You are now ${ui.crew.find(c => c.id === mine).name}.`));
+    if (mine && mine !== s.crew) useCrew(mine).then(() => ui.toast(t('surface.nowControlling', { name: ui.crew.find(c => c.id === mine).name })));
     else renderCrewBar();
   });
 
@@ -789,20 +796,20 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     $s('surface-start-kicker').textContent = kicker; $s('surface-start-title').textContent = title;
     $s('surface-keys').innerHTML = keys; startEl.hidden = false;
   }
-  function fail(message) { root.classList.add('surface-fail'); showStart('Surface', message, 'Use “Board & depart” to end the mission.'); }
+  function fail(message) { root.classList.add('surface-fail'); showStart(t('surface.surfaceLabel'), message, t('surface.failFallbackHint')); }
 
   async function land({ site, crew, seed }) {
     root.classList.remove('surface-fail');
     if (!world) world = initWorld();
     const info = ui.sites[site];
-    if (!world) return fail('The 3D surface needs WebGL.');
+    if (!world) return fail(t('surface.needWebgl'));
     s.ready = false; s.site = site;
-    showStart('Touchdown', `Loading ${info.name}…`, '');
+    showStart(t('surface.touchdown'), t('surface.loadingSite', { name: info.name }), '');
     try {
-      const [t] = await Promise.all([fetchTerrain(site), world.lander.userData.ready]);
+      const [terrain] = await Promise.all([fetchTerrain(site), world.lander.userData.ready]);
       if (s.site !== site) return;
-      setTerrain(t);
-      world.lander.position.set(0, t.hf.at(0, 0), 0);
+      setTerrain(terrain);
+      world.lander.position.set(0, terrain.hf.at(0, 0), 0);
       placeBlocks(seed); buildCompass();
       await Promise.all(ui.crew.map(c => loadCrew(c.id)));
       let idx = 0;
@@ -819,20 +826,30 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       s.yaw = Math.atan2(-(first.x - s.pos.x), -(first.z - s.pos.z)); s.bodyYaw = s.yaw + Math.PI;
       s.ready = true;
       startEl.hidden = true;
-      ui.toast(touch ? 'Left side to walk · right side to look.' : 'Click to look · WASD to walk · E to interact.');
+      ui.toast(window.ASTRO_I18N.t(touch ? 'surface.touchHint' : 'surface.desktopHint'));
       if (mp()) { for (const p of net().poses) takePose(p.data); sim()?.surfaceLoaded?.(); renderCrewBar(); }
     } catch (err) {
       console.warn('Surface not shown:', err);
-      fail(`Could not load the ${info?.name ?? site} terrain.`);
+      fail(window.ASTRO_I18N.t('surface.terrainError', { name: info?.name ?? site }));
     }
   }
   window.addEventListener('astro:land', e => land(e.detail));
 
   // Emote wheel: the animations every avatar has (AGENTS.md §5.5). Hold Q, aim with the mouse and release;
   // or click/tap the emotes button and pick. In first person the camera steps back while the emote plays.
-  const ACTION_EMOTE = { helena: ['🪛', 'Tinker'], lucas: ['💻', 'Computer'], oscar: ['📡', 'Antenna'], maya: ['🧪', 'Sample'] };
+  const ACTION_EMOTE = {
+    helena: ['🪛', () => t('surface.emoteLabels.helena')],
+    lucas: ['💻', () => t('surface.emoteLabels.lucas')],
+    oscar: ['📡', () => t('surface.emoteLabels.oscar')],
+    maya: ['🧪', () => t('surface.emoteLabels.maya')],
+  };
   const wheelEl = $s('emote-wheel');
-  const emotes = () => [['wave', '👋', 'Wave'], ...(ACTION_EMOTE[s.crew] ? [['action', ...ACTION_EMOTE[s.crew]]] : []), ['walk', '🚶', 'Walk'], ['idle', '🧍', 'Idle']];
+  const emotes = () => [
+    ['wave', '👋', t('surface.emoteLabels.wave')],
+    ...(ACTION_EMOTE[s.crew] ? [['action', ACTION_EMOTE[s.crew][0], ACTION_EMOTE[s.crew][1]()]] : []),
+    ['walk', '🚶', t('surface.emoteLabels.walk')],
+    ['idle', '🧍', t('surface.emoteLabels.idle')],
+  ];
   const wheel = { open: false, hold: false, pick: -1, x: 0, y: 0 };
   function openWheel(hold) {
     if (!world?.avatar || dlg.open) return;
@@ -840,7 +857,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     wheelEl.querySelectorAll('button').forEach(b => b.remove());
     list.forEach(([kind, icon, label], i) => wheelEl.insertAdjacentHTML('beforeend', `<button type="button" role="menuitem" data-emote="${kind}" style="--a:${i * 360 / list.length}deg">${icon}<small>${label}</small></button>`));
     Object.assign(wheel, { open: true, hold, pick: -1, x: 0, y: 0 });
-    $s('emote-name').textContent = 'Emotes'; wheelEl.hidden = false; s.keys.clear();
+    $s('emote-name').textContent = t('surface.emotesTitle'); wheelEl.hidden = false; s.keys.clear();
   }
   function closeWheel(play) {
     if (!wheel.open) return;
@@ -882,13 +899,15 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   }
 
   // Compass strip: ±90° around the view heading; cardinal points, 15° ticks, the lander and each experiment.
-  const compassEl = $s('surface-compass-strip'), CARDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const compassEl = $s('surface-compass-strip');
   let compassItems = [];
   function buildCompass() {
+    if (!world) return;
+    const CARDINAL = t('surface.cardinals');
     compassEl.innerHTML = Array.from({ length: 24 }, (_, i) => i * 15).map(d => d % 45
       ? `<span class="cmp-tick" data-deg="${d}"></span>`
       : `<span class="cmp-card${d ? '' : ' north'}" data-deg="${d}">${CARDINAL[d / 45]}</span>`).join('')
-      + '<span class="cmp-mark lander" title="Lander"></span>'
+      + `<span class="cmp-mark lander" title="${t('surface.landerTitle')}"></span>`
       + world.blocks.map(b => `<span class="cmp-mark" data-mark="${b.userData.exp.id}" style="--crew:${ui.crew.find(c => c.id === b.userData.exp.crew).color}"></span>`).join('');
     compassItems = [...compassEl.children].map(el => ({ el, deg: el.dataset.deg == null ? null : +el.dataset.deg,
       at: el.classList.contains('lander') ? new THREE.Vector3() : world.blocks.find(b => b.userData.exp.id === el.dataset.mark)?.position, id: el.dataset.mark }));
@@ -902,7 +921,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       if (!it.el.hidden) it.el.style.left = `${half + d / 90 * (half - 8)}px`;
       if (it.id) it.el.classList.toggle('done', isDone(it.id));
     }
-    $s('surface-compass-readout').textContent = `HDG ${String(Math.round(heading) % 360).padStart(3, '0')}°`;
+    $s('surface-compass-readout').textContent = t('surface.hdg', { deg: String(Math.round(heading) % 360).padStart(3, '0') });
   }
 
   // Input: keyboard + mouse look (a click on the view captures the mouse, Esc frees it; drag only when the
@@ -986,7 +1005,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const confirmation = document.createElement('div');
   confirmation.className = 'minigame-complete';
   confirmation.setAttribute('role', 'status');
-  confirmation.innerHTML = '<span class="minigame-check" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 24 L19 34 L40 12"/></svg></span><strong>Experiment complete</strong><p class="minigame-fact" id="minigame-fact"></p>';
+  confirmation.innerHTML = `<span class="minigame-check" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 24 L19 34 L40 12"/></svg></span><strong id="minigame-complete-banner">${t('minigames.completeBanner')}</strong><p class="minigame-fact" id="minigame-fact"></p>`;
   dlg.querySelector('.dialog-inner').append(confirmation);
   const nearBlock = () => world.blocks.find(b => Math.hypot(b.position.x - s.pos.x, b.position.z - s.pos.z) <= REACH) ?? null;
   const nearLander = () => Math.hypot(s.pos.x, s.pos.z) <= BOARD_REACH;
@@ -1000,17 +1019,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const owner = ui.crew.find(c => c.id === e.crew);
     if (document.pointerLockElement) document.exitPointerLock();
     s.keys.clear();
-    $s('minigame-kicker').textContent = `Experiment ${e.id} · ${owner.name}`;
+    $s('minigame-kicker').textContent = t('minigames.kicker', { id: e.id, name: owner.name });
     $s('minigame-title').textContent = e.title;
     $s('minigame-brief').textContent = e.desc;
-    $s('minigame-summary').innerHTML = [['Minigame', e.minigame], ['Mechanic', e.mechanic], ['Based on', e.basis]].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
+    $s('minigame-summary').innerHTML = [[t('minigames.summaryMinigame'), e.minigame], [t('minigames.summaryMechanic'), e.mechanic], [t('minigames.summaryBasis'), e.basis]].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
     dlg.dataset.exp = e.id;
     const panelId = MINIGAME_PANELS[e.id] || null;
     Object.values(MINIGAME_PANELS).forEach(id => { $s(id).hidden = id !== panelId; });
     $s('minigame-summary').hidden = false;
     $s('minigame-placeholder').hidden = Boolean(panelId);
     $s('minigame-done').hidden = Boolean(panelId);
-    $s('minigame-done').textContent = 'Complete experiment';
+    $s('minigame-done').textContent = t('minigames.completeBtn');
     $s('minigame-fact').textContent = '';
     window.ASTRO_MINIGAMES?.open(e.id);
     dlg.showModal();
@@ -1271,11 +1290,11 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const e = b.userData.exp, li = document.querySelector(`[data-goal="${e.id}"]`), dx = b.position.x - s.pos.x, dz = b.position.z - s.pos.z, dist = Math.hypot(dx, dz);
       li.classList.toggle('done', isDone(e.id)); li.classList.toggle('here', dist <= REACH);
       if (isDone(e.id) && !b.userData.done) markDone(b); // also when another player finished it
-      li.querySelector('.goal-dist').textContent = isDone(e.id) ? 'DONE' : `${Math.round(dist)} m`;
+      li.querySelector('.goal-dist').textContent = isDone(e.id) ? t('surface.done') : U.distanceM(dist, 0);
       li.querySelector('.goal-arrow').style.rotate = `${Math.atan2(dx, -dz) + s.yaw}rad`; // bearing from north, relative to the view
     }
     const surf = sim()?.surf;
-    $s('surface-count').textContent = `${surf?.completed.size ?? 0}/${tasks().length} DONE`;
+    $s('surface-count').textContent = t('surface.countDone', { done: surf?.completed.size ?? 0, total: tasks().length });
     const b = nearBlock(), e = b?.userData.exp, owner = e && ui.crew.find(c => c.id === e.crew);
     const state = e ? (isDone(e.id) ? 'done' : e.crew === s.crew ? 'run' : 'locked') : nearLander() ? 'board' : '';
     const key = state + (e?.id ?? '') + s.crew;
@@ -1283,10 +1302,11 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     s.prompt = key; promptEl.hidden = !state; promptEl.disabled = state === 'locked' || state === 'done';
     if (!state) return;
     promptEl.className = 'surface-prompt' + (state === 'run' || state === 'board' ? '' : ' ' + state);
-    promptEl.textContent = state === 'board' ? `${touch ? 'Tap' : 'E'} · Board the ascent vehicle · ${surf?.completed.size ?? 0}/${tasks().length} done`
-      : state === 'done' ? `${e.id} · ${e.title} · done`
-      : state === 'run' ? `${touch ? 'Tap' : 'E'} · Run ${e.id} · ${e.title}`
-      : `${e.id} · ${owner.name} only`;
+    const keyLabel = t(touch ? 'surface.tapAction' : 'surface.keyAction');
+    promptEl.textContent = state === 'board' ? t('surface.promptBoard', { key: keyLabel, done: surf?.completed.size ?? 0, total: tasks().length })
+      : state === 'done' ? t('surface.promptDone', { id: e.id, title: e.title })
+      : state === 'run' ? t('surface.promptRun', { key: keyLabel, id: e.id, title: e.title })
+      : t('surface.promptLocked', { id: e.id, name: owner.name });
   }
   const v = new THREE.Vector3();
   function placeTags(now) {
@@ -1298,10 +1318,21 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const show = v.z < 1 && dist < 260;
       tag.hidden = !show;
       if (!show) continue;
-      tag.textContent = isDone(exp.id) ? `${exp.id} ✓` : `${exp.id} · ${Math.round(dist)} m`;
+      tag.textContent = isDone(exp.id) ? `${exp.id} ✓` : `${exp.id} · ${U.distanceM(dist, 0)}`;
       tag.style.transform = `translate(${(v.x + 1) / 2 * world.width}px, ${(1 - v.y) / 2 * world.height}px)`;
     }
   }
+  window.addEventListener('astro:settings', () => {
+    const banner = $s('minigame-complete-banner');
+    if (banner) banner.textContent = t('minigames.completeBanner');
+    if (!world || !s.ready) return;
+    $s('surface-goals').innerHTML = tasks().map(e => { const o = ui.crew.find(c => c.id === e.crew);
+      return `<li data-goal="${e.id}" style="--crew:${o.color}"><span class="goal-chip"></span><span class="goal-name"><strong>${e.id} · ${e.title}</strong><small>${o.name}</small></span><span class="goal-dist"></span><span class="goal-arrow"></span></li>`; }).join('');
+    buildCompass();
+    renderCrewBar();
+    s.prompt = '';
+    updateHud();
+  });
 
   let last = performance.now(), hudClock = 0;
   function frame(now) {

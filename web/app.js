@@ -2,16 +2,35 @@
   'use strict';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const i18n = window.ASTRO_I18N || { t: k => k, applyDOM() {}, locale: 'en-US' };
+  const t = (key, opts) => i18n.t(key, opts);
+  const U = window.ASTRO_UNITS || {
+    number: (n, o) => (n == null ? 'n/f' : o ? Number(n).toLocaleString('en-US', o) : Math.round(n).toLocaleString('en-US')),
+    decimal: (n, d = 1) => (n == null ? 'n/f' : Number(n).toFixed(d)),
+    money: n => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: Math.abs(n) < 10 ? 1 : 0 }) + 'M',
+    massKg: kg => `${Math.round(kg).toLocaleString('en-US')} kg`,
+    massTonnes: kg => `${(kg / 1000).toLocaleString('en-US', { maximumFractionDigits: kg < 10000 ? 2 : 1 })} t`,
+    massGrams: (g, d = 1) => `${Number(g).toFixed(d)} g`,
+    thrustKn: kn => `${Math.round(kn).toLocaleString('en-US')} kN`,
+    velocityMs: (ms, d = 0) => `${d ? Number(ms).toFixed(d) : Math.round(ms)} m/s`,
+    speedKmh: kmh => `${Math.round(kmh).toLocaleString('en-US')} km/h`,
+    altitudeKm: km => km < 1 ? `${Math.round(km * 1000)} m` : `${(Math.round(km * 10) / 10)} km`,
+    distanceM: m => `${Math.round(m)} m`,
+    distanceKm: (km, d = 1) => `${Number(km).toFixed(d)} km`,
+    tempC: c => `${Math.round(c)} °C`,
+    tempRangeC: (a, b) => `${a}–${b} °C`,
+  };
+  const capFirst = s => (s ? s[0].toUpperCase() + s.slice(1) : '');
   const crew = [
     // Keep HUD, labels, and lobby accents in sync with each avatar's 3D Accent material.
-    {id:'helena',name:'Helena',role:'Commander & Pilot',color:'#D7263D',quote:'A mission only succeeds when every choice has a way home.',tags:['Aerospace Engineering','Test Pilot','Trajectory'],perk:'Precision Piloting',perkText:'Improves the crew’s margin during orbital maneuvers (full game).'},
-    {id:'lucas',name:'Lucas',role:'Systems Engineer',color:'#F2A900',quote:'A reliable spacecraft is built from a thousand careful decisions.',tags:['Electrical Power','Structures','Repairs'],perk:'Redundant Engineering',perkText:'Reduces the impact of component failures (full game).'},
-    {id:'oscar',name:'Oscar',role:'Data & Telecom Specialist',color:'#1FA2FF',quote:'A discovery that never reaches Earth is a story left untold.',tags:['Data Systems','Communications','Signal Planning'],perk:'Smart Compression',perkText:'Moves more science data through a limited connection (full game).'},
-    {id:'maya',name:'Maya',role:'Mission Scientist & Medical Officer',color:'#2BB673',quote:'Every rock on Mars holds a secret waiting to be decoded.',tags:['Planetary Geology','Astrobiology','Crew Health'],perk:'Experimental Synergy',perkText:'Rewards a well-matched set of science instruments (full game).'}
+    {id:'helena',name:'Helena',color:'#D7263D',get role(){return t('crew.helena.role');},get quote(){return t('crew.helena.quote');},get tags(){return t('crew.helena.tags');},get perk(){return t('crew.helena.perk');},get perkText(){return t('crew.helena.perkText');}},
+    {id:'lucas',name:'Lucas',color:'#F2A900',get role(){return t('crew.lucas.role');},get quote(){return t('crew.lucas.quote');},get tags(){return t('crew.lucas.tags');},get perk(){return t('crew.lucas.perk');},get perkText(){return t('crew.lucas.perkText');}},
+    {id:'oscar',name:'Oscar',color:'#1FA2FF',get role(){return t('crew.oscar.role');},get quote(){return t('crew.oscar.quote');},get tags(){return t('crew.oscar.tags');},get perk(){return t('crew.oscar.perk');},get perkText(){return t('crew.oscar.perkText');}},
+    {id:'maya',name:'Maya',color:'#2BB673',get role(){return t('crew.maya.role');},get quote(){return t('crew.maya.quote');},get tags(){return t('crew.maya.tags');},get perk(){return t('crew.maya.perk');},get perkText(){return t('crew.maya.perkText');}}
   ];
   const SITES_INFO = {
-    jezero:{name:'Jezero Crater',mission:'Biosignature Hunters',tag:'Ancient delta · biosignatures',desc:'An ancient lake with a river delta, a target in the search for biosignatures. The Perseverance rover has explored the crater since 2021.'},
-    gale:{name:'Gale Crater',mission:'Gale Climate Archive',tag:'Layered rocks · climate',desc:'The rock layers of Mount Sharp hold the history of the Martian climate. The Curiosity rover has explored the crater since 2012.'}
+    jezero:{get name(){return t('sites.jezero.name');},get mission(){return t('sites.jezero.mission');},get tag(){return t('sites.jezero.tag');},get desc(){return t('sites.jezero.desc');}},
+    gale:{get name(){return t('sites.gale.name');},get mission(){return t('sites.gale.mission');},get tag(){return t('sites.gale.tag');},get desc(){return t('sites.gale.desc');}}
   };
   // Per difficulty (game-balance): budget multiplier (the base budget comes from missionRules), surface window in
   // seconds and the engineering rules. fuelTypes: engine and tank must burn the same propellants. failures: the
@@ -19,18 +38,20 @@
   // a power deficit and overspending cost points and add trouble in flight. dvTolerance: share of the orbit and
   // Mars-transfer Δv the rocket may lack and still make it. The badge and the button tooltips show all of it.
   const difficulty = {
-    easy:{factor:1.2,surfaceS:210,fuelTypes:false,failures:false,penalties:false,dvTolerance:0,rules:'warnings only',
-      about:'Easy: every telemetry problem is only a warning and the mission always flies. Fuel types are ignored.'},
-    normal:{factor:1,surfaceS:180,fuelTypes:false,failures:true,penalties:true,dvTolerance:.2,rules:'Δv −20%',
-      about:'Normal: the telemetry can fail the mission, with 20% tolerance on the Δv to orbit and to Mars. Fuel types are ignored.'},
-    hard:{factor:.8,surfaceS:140,fuelTypes:true,failures:true,penalties:true,dvTolerance:0,rules:'every rule',
-      about:'Hard: every rule. Engine and tank must share propellants and the full Δv is needed.'},
+    easy:{factor:1.2,surfaceS:210,fuelTypes:false,failures:false,penalties:false,dvTolerance:0,get rules(){return t('difficulty.easy.rules');},
+      get about(){return t('difficulty.easy.about');}},
+    normal:{factor:1,surfaceS:180,fuelTypes:false,failures:true,penalties:true,dvTolerance:.2,get rules(){return t('difficulty.normal.rules');},
+      get about(){return t('difficulty.normal.about');}},
+    hard:{factor:.8,surfaceS:140,fuelTypes:true,failures:true,penalties:true,dvTolerance:0,get rules(){return t('difficulty.hard.rules');},
+      get about(){return t('difficulty.hard.about');}},
   };
   const LV = () => difficulty[state.difficulty];
-  const easyNote = () => LV().failures ? '' : ' (Easy: warning only.)';
+  const easyNote = () => LV().failures ? '' : t('planner.easyNote');
   // Δv target text: the real target (⚠) and, on Normal, the one the game accepts.
-  const tolNote = (target,key) => LV().dvTolerance?`Target on Normal: ${number(target)} m/s (${number(rule(key,0))} m/s ⚠ less ${Math.round(LV().dvTolerance*100)}%).`:`Target ≈ ${number(target)} m/s ⚠.`;
-  const EQUIPMENT_GROUPS = [['power','Power',/^power-/],['data','Data & comms',/^(comm|data)-/],['science','Science',/^(sci|drill|truss)-/],['edl','Landing',/^edl-/],['systems','Systems',/^(attitude|isru|hab)-/]];
+  const tolNote = (target,key) => LV().dvTolerance
+    ? t('planner.tolNormal',{target:U.velocityMs(target),full:U.velocityMs(rule(key,0)),pct:Math.round(LV().dvTolerance*100)})
+    : t('planner.tolFull',{target:U.velocityMs(target)});
+  const EQUIPMENT_GROUPS = [['power','planner.tabs.power',/^power-/],['data','planner.tabs.data',/^(comm|data)-/],['science','planner.tabs.science',/^(sci|drill|truss)-/],['edl','planner.tabs.edl',/^edl-/],['systems','planner.tabs.systems',/^(attitude|isru|hab)-/]];
   const CABIN_GROUPS = [['helena','Helena',['cabin-launch-seats','cabin-orion-cockpit','cabin-idss-docking']],['lucas','Lucas',['cabin-pcdu-thermal','cabin-eva-airlock','cabin-eclss-wrs']],['oscar','Oscar',['cabin-hera-dosimetry','cabin-scan-console','cabin-autonav-conjunction']],['maya','Maya',['cabin-ared-exercise','cabin-storm-shelter','cabin-msg-minion']]];
   const CREW_MODELS = { helena: 'characters/helena.glb', lucas: 'characters/lucas.glb', oscar: 'characters/oscar.glb', maya: 'characters/maya.glb' };
   const COCKPIT_MODEL = 'rocket/cockpit_pilot.glb';
@@ -42,7 +63,7 @@
   if (window.ASTRO_FILES?.['parts/manifest.json']) useData(window.ASTRO_FILES['parts/manifest.json']);
   const rule = (key,fallback) => DATA?.rules?.[key] ?? fallback;
   const MAX_STAGES = () => rule('maxInternalStages',7), CABIN_SLOTS = () => rule('cabinModuleSlots',4), TWR_MIN = () => rule('minSafeLiftoffTwr',1.2), TWR_BARE = () => rule('minBareLiftoffTwr',1), UPPER_TWR = () => rule('minUpperStageTwr',.3);
-  const stageName = key => key==='booster'?'stage 1':`stage ${+key.slice(6)+2}`;
+  const stageName = key => key==='booster'?t('planner.stage1Name'):t('planner.stageNName',{n:+key.slice(6)+2});
   // Ascent (game-balance): at a constant net acceleration (TWR − 1)·g the time to climb a fixed height goes as
   // 1/√(TWR − 1). The liftoff minigame lasts refS at refTwr, follows that law and stays within minS–maxS.
   const ASCENT = { refTwr: 1.5, refS: 15, minS: 9, maxS: 30 };
@@ -53,10 +74,10 @@
   function liftoffOf(m){
     if(!LV().failures){const fly=m.ready&&m.twr>=TWR_BARE();return {ok:true,twr:m.twr,seconds:fly?ascentSeconds(m.twr):ASCENT.refS,accel:fly?(m.twr-1)/(ASCENT.refTwr-1):1};} // Easy: it always flies
     const b=state.rocket.booster,fail=(reason,pad,status,title,detail)=>({ok:false,reason,pad,status,title,detail,twr:m.twr});
-    if(!b.engine)return fail('no-engine','NO IGNITION','No ignition · no stage 1 engine','No Ignition','Stage 1 had no engine, so nothing lit at T−0.');
-    if(!b.tank)return fail('no-tank','NO IGNITION','No ignition · no propellant','No Ignition','Stage 1 had no tank, so the engines had no propellant to burn.');
-    if(m.issue==='propellant')return fail('propellant','NO IGNITION','No ignition · wrong propellant','No Ignition',`The stage 1 engine burns ${fuelOf(b.engine)}, but the tank held ${fuelOf(b.tank)}.`);
-    if(m.twr<TWR_BARE())return fail('low-twr','NO LIFTOFF','Thrust below weight · engines shut down','No Liftoff',`Thrust-to-weight ${m.twr.toFixed(2)} is below ${TWR_BARE().toFixed(1)}: the engines lit, but the rocket never left the pad.`);
+    if(!b.engine)return fail('no-engine',t('launch.liftoff.noEnginePad'),t('launch.liftoff.noEngineStatus'),t('launch.liftoff.noEngineTitle'),t('launch.liftoff.noEngineDetail'));
+    if(!b.tank)return fail('no-tank',t('launch.liftoff.noEnginePad'),t('launch.liftoff.noTankStatus'),t('launch.liftoff.noEngineTitle'),t('launch.liftoff.noTankDetail'));
+    if(m.issue==='propellant')return fail('propellant',t('launch.liftoff.noEnginePad'),t('launch.liftoff.propStatus'),t('launch.liftoff.noEngineTitle'),t('launch.liftoff.propDetail',{engineFuel:fuelOf(b.engine),tankFuel:fuelOf(b.tank)}));
+    if(m.twr<TWR_BARE())return fail('low-twr',t('launch.liftoff.lowTwrPad'),t('launch.liftoff.lowTwrStatus'),t('launch.liftoff.lowTwrTitle'),t('launch.liftoff.lowTwrDetail',{twr:U.decimal(m.twr,2),bare:U.decimal(TWR_BARE(),1)}));
     return {ok:true,twr:m.twr,seconds:ascentSeconds(m.twr),accel:(m.twr-1)/(ASCENT.refTwr-1)};
   }
   const ORBIT = { altKm: 400, velMs: 7670 }; // game: ISS-like orbit; 7,670 m/s ≈ √(GM/r) at 400 km (derived)
@@ -65,24 +86,24 @@
   // warn: the launch review (future); detail: the debrief (past).
   function abortOf(m){
     if(!m.ready||!LV().failures)return null;
-    const v=number(Math.round(m.dv/m.leo*ORBIT.velMs)),base={ok:false,pad:'SPLASHDOWN'};
-    if(!m.orbit)return {...base,reason:'no-orbit',status:'Abort · Δv short of orbit',title:'Orbit Not Reached',
-      warn:`Its stages run dry at ${v} of the ${number(ORBIT.velMs)} m/s needed for orbit: the crew will abort and splash down.`,
-      detail:`The stages ran dry at ${v} m/s, short of the ${number(ORBIT.velMs)} m/s for orbit (Δv ${number(m.dv)} of ${number(m.leo)} m/s). The capsule separated and splashed down.`};
-    if(!m.marsOk)return {...base,reason:'no-mars',status:'Abort · Mars out of reach',title:'Mars Out of Reach',
-      warn:`Even refuelled in orbit, the transfer burn gives ${number(m.marsDv)} of the ${number(m.transfer)} m/s to Mars: the crew will return to Earth.`,
-      detail:`Even refuelled, the transfer burn gave ${number(m.marsDv)} of the ${number(m.transfer)} m/s to Mars. The crew came home: the capsule re-entered and splashed down.`};
+    const vNum=Math.round(m.dv/m.leo*ORBIT.velMs),v=U.velocityMs(vNum),orbVel=U.velocityMs(ORBIT.velMs),base={ok:false,sea:true,pad:t('launch.pad.splashdown')};
+    if(!m.orbit)return {...base,reason:'no-orbit',status:t('launch.abort.noOrbitStatus'),title:t('launch.abort.noOrbitTitle'),
+      warn:t('launch.abort.noOrbitWarn',{vel:v,orbVel}),
+      detail:t('launch.abort.noOrbitDetail',{vel:v,orbVel,dv:U.velocityMs(m.dv),leo:U.velocityMs(m.leo)})};
+    if(!m.marsOk)return {...base,reason:'no-mars',status:t('launch.abort.noMarsStatus'),title:t('launch.abort.noMarsTitle'),
+      warn:t('launch.abort.noMarsWarn',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer)}),
+      detail:t('launch.abort.noMarsDetail',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer)})};
     return null;
   }
   const budgetOf = level => rule('defaultBudgetM',250)*difficulty[level].factor;
   const defaultRocket=()=>({booster:{engine:'merlin-1d',fins:'fins-small',tank:'falcon-9-stage-1-tank'},stages:[{item:'power-rosa-solar'},{item:null}],cabin:[]});
   const state={screen:'menu',difficulty:'normal',site:'jezero',detail:{kind:'crew',id:'helena'},rocket:defaultRocket(),sel:{kind:'booster'},tab:'engine'};
-  const money = n => (n<0?'−$':'$')+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:Math.abs(n)<10?1:0})+'M';
-  const number = n => n==null?'n/f':Math.round(n).toLocaleString('en-US');
-  const tonnes = kg => kg==null?'n/f':(kg/1000).toLocaleString('en-US',{maximumFractionDigits:kg<10000?2:1})+' t';
+  const money = n => U.money(n);
+  const number = (n, opts) => U.number(n, opts);
+  const tonnes = kg => U.massTonnes(kg);
   const part = id => DATA?.parts[id];
   const spec = id => part(id)?.specs || {};
-  const warn = (id,key) => String(spec(id).sources?.[key]||'').includes('⚠')?' <span class="warn" title="sources disagree">⚠</span>':'';
+  const warn = (id,key) => String(spec(id).sources?.[key]||'').includes('⚠')?` <span class="warn" title="${t('planner.metrics.sourcesDisagree')}">⚠</span>`:'';
   const shortName = id => (part(id)?.name||id).replace(/\s*\(.*\)\s*$/,'');
   // Low-poly astronaut: flat polygons; s* = suit tones, c* = crew colour, v* = visor, d1 = dark gear.
   const astronaut = (person) => `<svg class="astronaut" style="--crew:${person.color}" viewBox="0 0 150 215" aria-hidden="true">${[
@@ -113,22 +134,22 @@
   function renderLobby(){
     const site=SITES_INFO[state.site];
     $('#mission-name').textContent=site.mission;
-    $('#planner-title').textContent='Mission: '+site.mission;
+    $('#planner-title').textContent=t('common.missionPrefix',{name:site.mission});
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
-    $('#crew-count').textContent=`${playerCount()}/4 PLAYERS`;
+    $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
     $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.isGuest&&net.joinable&&!seat.player;
-      return `<article class="crew-card ${picked?'selected':''}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${seat.text}</span></div><div class="crew-actions">${take?`<button class="invite" type="button" data-take="${p.id}" aria-label="Play as ${p.name}">Take seat</button>`:''}<button class="pick" type="button" data-pick="${p.id}" aria-label="Details: ${p.name}" aria-pressed="${picked}">Details</button></div></article>`;}).join('');
+      return `<article class="crew-card ${picked?'selected':''}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${seat.text}</span></div><div class="crew-actions">${take?`<button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button>`:''}<button class="pick" type="button" data-pick="${p.id}" aria-label="${t('lobby.detailsBtn')}: ${p.name}" aria-pressed="${picked}">${t('lobby.detailsBtn')}</button></div></article>`;}).join('');
     $$('#crew-grid [data-pick]').forEach(b=>b.addEventListener('click',()=>{state.detail={kind:'crew',id:b.dataset.pick};renderLobby();}));
     $$('#crew-grid [data-take]').forEach(b=>b.addEventListener('click',()=>net.setSeat(b.dataset.take)));
     renderRoom();renderDetail();syncSetup();
   }
   // Who plays each crew member: the room's peers, or (solo) the player as Helena and the AI for the rest.
   function seatStatus(id){
-    if(net.mode==='solo'){const host=id===crew[0].id;return {player:host,text:host?'HOST (PLAYER)':'AI (NPC)'};}
+    if(net.mode==='solo'){const host=id===crew[0].id;return {player:host,text:host?t('lobby.hostPlayer'):t('lobby.aiNpc')};}
     const peer=net.peerOf(id);
-    if(!peer)return {player:false,text:'AI (NPC)'};
-    const you=peer.id===net.you.id?' · YOU':'';
-    return {player:true,text:(peer.host?'HOST':'PLAYER')+(peer.online?'':' (OFFLINE)')+you};
+    if(!peer)return {player:false,text:t('lobby.aiNpc')};
+    const you=peer.id===net.you.id?t('lobby.seatYou'):'';
+    return {player:true,text:(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'))+(peer.online?'':t('lobby.seatOffline'))+you};
   }
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
   // Room panel under the crew: create a room (host) or join one with its code; in a room, its code and invite link.
@@ -138,15 +159,15 @@
     panel.hidden=false;
     if(net.mode==='solo'){
       const off=!net.available();
-      panel.innerHTML=`<span class="micro">Co-op</span><button class="button" type="button" id="room-create" ${off?'disabled':''}>Create room</button><span class="room-or">or</span><input id="room-code" maxlength="4" placeholder="CODE" aria-label="Room code" autocomplete="off" ${off?'disabled':''}><button class="button quiet" type="button" id="room-join" ${off?'disabled':''}>Join</button>${off?'<span class="room-note">No room server configured (?server=wss://…/ws).</span>':''}`;
+      panel.innerHTML=`<span class="micro">${t('lobby.room.coop')}</span><button class="button" type="button" id="room-create" ${off?'disabled':''}>${t('lobby.room.create')}</button><span class="room-or">${t('lobby.room.or')}</span><input id="room-code" maxlength="4" placeholder="${t('lobby.room.codePlaceholder')}" aria-label="${t('lobby.room.codeAria')}" autocomplete="off" ${off?'disabled':''}><button class="button quiet" type="button" id="room-join" ${off?'disabled':''}>${t('lobby.room.join')}</button>${off?`<span class="room-note">${t('lobby.room.noServer')}</span>`:''}`;
       $('#room-create').addEventListener('click',()=>enterRoom(()=>net.create(state.screen)));
       $('#room-join').addEventListener('click',()=>enterRoom(()=>net.join($('#room-code').value)));
       $('#room-code').addEventListener('keydown',e=>{if(e.key==='Enter')$('#room-join').click();});
       return;
     }
     const lost=net.status!=='open';
-    panel.innerHTML=`<span class="micro">Room</span><strong class="room-code">${net.code}</strong><button class="button" type="button" id="room-copy">Copy invite link</button><button class="button quiet" type="button" id="room-leave">Leave</button><span class="room-note">${lost?'Reconnecting…':net.isHost?'You host: the mission runs on your screen. Empty seats are AI crew.':'The host runs the mission. Pick a free crew member to play.'}</span>`;
-    $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast('Invite link copied.');}catch{prompt('Copy the invite link:',net.link);}});
+    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${net.code}</strong><button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{net.leave();});
   }
   async function enterRoom(go){
@@ -158,14 +179,14 @@
     const d=state.detail,view=$('#detail-view');
     if(d.kind==='crew'){
       const p=crew.find(c=>c.id===d.id);
-      $('#detail-kind').textContent='Crew member';$('#detail-name').textContent=p.name;$('#detail-role').textContent=p.role;$('#detail-desc').textContent='“'+p.quote+'”';
+      $('#detail-kind').textContent=t('lobby.kindCrew');$('#detail-name').textContent=p.name;$('#detail-role').textContent=p.role;$('#detail-desc').textContent='“'+p.quote+'”';
       $('#detail-status').textContent=seatStatus(p.id).text;
-      $('#detail-extra').innerHTML=p.tags.map(t=>`<span class="tag">${t}</span>`).join('')+`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
+      $('#detail-extra').innerHTML=p.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')+`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
       view.classList.remove('site');view.style.setProperty('--crew',p.color);
     }else{
       const s=SITES_INFO[d.id];
-      $('#detail-kind').textContent='Landing site';$('#detail-name').textContent=s.name;$('#detail-role').textContent=s.tag;$('#detail-desc').textContent=s.desc;
-      $('#detail-status').textContent=state.site===d.id?'SELECTED SITE':'AVAILABLE';
+      $('#detail-kind').textContent=t('lobby.kindSite');$('#detail-name').textContent=s.name;$('#detail-role').textContent=s.tag;$('#detail-desc').textContent=s.desc;
+      $('#detail-status').textContent=state.site===d.id?t('lobby.siteSelected'):t('lobby.siteAvailable');
       $('#detail-extra').innerHTML='';$('#detail-site').innerHTML=sitePhoto(d.id,true);view.classList.add('site');
     }
     window.dispatchEvent(new CustomEvent('astro:detail',{detail:d}));
@@ -177,12 +198,12 @@
   // [title, contents, status]; the status line (Δv of a propulsive stage or why it cannot fire) needs metrics().
   function moduleLabel(key,m){
     const r=state.rocket,st=m?.stack.find(s=>s.key===key);
-    const engineSub=s=>s.engine&&s.tank?`${shortName(s.engine)} + ${shortName(s.tank)}`:s.engine?'tank missing':s.tank?'engine missing':'engine + tank empty';
-    const status=!st?'':st.issue==='propellant'?'propellant mismatch':st.issue==='thrust'?`too weak · TWR ${st.twr.toFixed(2)}`
-      :st.dv?`Δv ${number(st.dv)} m/s${key!=='booster'?` · TWR ${st.twr.toFixed(2)}`:''}`:st.issue&&key!=='booster'?'dead weight':'';
-    if(key==='booster')return ['Stage 1 · booster',engineSub(r.booster)+(r.booster.fins?' + fins':''),status];
-    if(key==='cabin')return ['Cabin',`${r.cabin.length}/${CABIN_SLOTS()} modules`,''];
-    const i=+key.slice(6),stage=r.stages[i],item=stage?.item;if(stage?.type==='booster')return [`Stage ${i+2} · booster`,engineSub(stage),status];return [`Stage ${i+2} · bay`,item?shortName(item):'empty bay',''];
+    const engineSub=s=>s.engine&&s.tank?`${shortName(s.engine)} + ${shortName(s.tank)}`:s.engine?t('planner.tankMissing'):s.tank?t('planner.engineMissing'):t('planner.engineTankEmpty');
+    const status=!st?'':st.issue==='propellant'?t('planner.propellantMismatch'):st.issue==='thrust'?t('planner.tooWeakTwr',{twr:U.decimal(st.twr,2)})
+      :st.dv?`Δv ${U.velocityMs(st.dv)}${key!=='booster'?` · TWR ${U.decimal(st.twr,2)}`:''}`:st.issue&&key!=='booster'?t('planner.deadWeight'):'';
+    if(key==='booster')return [t('planner.stage1Title'),engineSub(r.booster)+(r.booster.fins?t('planner.plusFins'):''),status];
+    if(key==='cabin')return [t('planner.cabinTitle'),t('planner.cabinSlotsCount',{used:r.cabin.length,total:CABIN_SLOTS()}),''];
+    const i=+key.slice(6),stage=r.stages[i],item=stage?.item;if(stage?.type==='booster')return [t('planner.stageNTitle',{n:i+2}),engineSub(stage),status];return [t('planner.stageBayTitle',{n:i+2}),item?shortName(item):t('planner.emptyBay'),''];
   }
   // An engine and a tank work together only when they hold the same propellants (specs: `propellants`).
   const fuelOf = id => (spec(id).propellants||[]).join('/');
@@ -248,25 +269,25 @@
     if(!DATA)return null;
     const m=metrics();
     $('#cost-value').textContent=`${money(m.cost)} / ${money(m.budget)}`;setBar('#cost-fill',m.cost/m.budget,m.cost>m.budget?'danger':'');
-    $('#twr-value').textContent=m.ready?m.twr.toLocaleString('en-US',{maximumFractionDigits:2}):'—';setBar('#twr-fill',m.ready?m.twr/2:0,m.ready&&m.twr<TWR_MIN()?'danger':'');
-    $('#twr-hint').textContent=m.ready&&m.twr>=TWR_BARE()?`Ascent to MECO ≈ ${ascentSeconds(m.twr)} s: more thrust per tonne climbs faster. Below ${TWR_MIN().toFixed(1)} the stack wallows; below ${TWR_BARE().toFixed(1)} it stays on the pad.${easyNote()}`:`Below ${TWR_BARE().toFixed(1)}, or with no working engine, the rocket stays on the pad and the mission fails.${easyNote()}`;
+    $('#twr-value').textContent=m.ready?U.number(m.twr,{maximumFractionDigits:2}):'—';setBar('#twr-fill',m.ready?m.twr/2:0,m.ready&&m.twr<TWR_MIN()?'danger':'');
+    $('#twr-hint').textContent=m.ready&&m.twr>=TWR_BARE()?t('planner.twrHintReady',{sec:ascentSeconds(m.twr),min:U.decimal(TWR_MIN(),1),bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.twrHintLow',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()});
     $('#power-value').textContent=`${number(m.gen)} W / ${number(m.draw)} W`;setBar('#power-fill',m.draw?m.gen/(m.draw*1.5):0,m.gen<m.draw?'danger':'');
-    $('#dv-value').textContent=m.ready?`${number(m.dv)} / ${number(m.leo)} m/s`:'—';setBar('#dv-fill',m.dv/m.leo,m.ready&&!m.orbit?'short':'');
-    $('#mars-value').textContent=m.orbit?`${number(m.marsDv)} / ${number(m.transfer)} m/s`:'—';setBar('#mars-fill',m.marsDv/m.transfer,m.orbit&&!m.marsOk?'short':'');
-    $('#mars-hint').textContent=(!m.orbit?'Reach low Earth orbit first: the stage burning there refuels, then it and the stages above make the transfer.'
-      :!m.marsOk?`Even with a full tank, ${stageName(m.refuelStage.key)} and the stages above fall short.`
-      :m.refuelKg>0?`Orbital refuel: ${Math.ceil(m.refuelPct)}% of the ${stageName(m.refuelStage.key)} tank (${tonnes(m.refuelKg)}).`:'No refuel needed: the tanks already hold enough.')+` ${tolNote(m.transfer,'marsTransferDeltaVMs')}`;
-    $('#dv-hint').textContent=`Sum of every stage; each one drops away when empty. ${tolNote(m.leo,'earthOrbitDeltaVMs')}`;
+    $('#dv-value').textContent=m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—';setBar('#dv-fill',m.dv/m.leo,m.ready&&!m.orbit?'short':'');
+    $('#mars-value').textContent=m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—';setBar('#mars-fill',m.marsDv/m.transfer,m.orbit&&!m.marsOk?'short':'');
+    $('#mars-hint').textContent=(!m.orbit?t('planner.marsHintWait')
+      :!m.marsOk?t('planner.marsHintShort',{stage:stageName(m.refuelStage.key)})
+      :m.refuelKg>0?t('planner.marsHintRefuel',{pct:Math.ceil(m.refuelPct),stage:stageName(m.refuelStage.key),mass:tonnes(m.refuelKg)}):t('planner.marsHintEnough'))+` ${tolNote(m.transfer,'marsTransferDeltaVMs')}`;
+    $('#dv-hint').textContent=t('planner.dvHint',{tol:tolNote(m.leo,'earthOrbitDeltaVMs')});
     $('#mass-value').textContent=tonnes(m.mass);
     const b=state.rocket.booster,dead=m.stack.slice(1).find(s=>s.issue);
-    $('#booster-alert').textContent=!b.engine?'NO MAIN ENGINE! Nothing lights at T−0: install a stage 1 engine.'+easyNote():!b.tank?'NO STAGE 1 TANK! The engines have no propellant and will not ignite.'+easyNote():`PROPELLANT MISMATCH! The stage 1 engine burns ${fuelOf(b.engine)}; the tank holds ${fuelOf(b.tank)}. It will not ignite.`+easyNote();
+    $('#booster-alert').textContent=!b.engine?t('planner.alerts.noEngine',{easy:easyNote()}):!b.tank?t('planner.alerts.noTank',{easy:easyNote()}):t('planner.alerts.propellantMismatch',{engineFuel:fuelOf(b.engine),tankFuel:fuelOf(b.tank),easy:easyNote()});
     $('#booster-alert').classList.toggle('show',!m.ready);
-    $('#stage-alert').textContent=!dead?'':dead.issue==='thrust'?`${stageName(dead.key).toUpperCase()} TOO WEAK! Thrust-to-weight ${dead.twr.toFixed(2)} at ignition (needs ${UPPER_TWR().toFixed(1)}): it cannot climb and rides along as dead weight.${easyNote()}`
-      :`${stageName(dead.key).toUpperCase()} ${dead.issue==='propellant'?'PROPELLANT MISMATCH':'INCOMPLETE'}! It cannot fire and rides along as dead weight.`;
+    $('#stage-alert').textContent=!dead?'':dead.issue==='thrust'?t('planner.alerts.stageTooWeak',{stage:stageName(dead.key).toUpperCase(),twr:U.decimal(dead.twr,2),min:U.decimal(UPPER_TWR(),1),easy:easyNote()})
+      :t('planner.alerts.stageDead',{stage:stageName(dead.key).toUpperCase(),reason:dead.issue==='propellant'?t('planner.alerts.reasonPropellant'):t('planner.alerts.reasonIncomplete')});
     $('#stage-alert').classList.toggle('show',!!dead);
-    $('#twr-alert').textContent=m.twr<TWR_BARE()?`WON'T LEAVE THE PAD! Thrust-to-weight below ${TWR_BARE().toFixed(1)}: the mission ends at liftoff.${easyNote()}`:`LOW THRUST! Thrust-to-weight below ${TWR_MIN().toFixed(1)}: a long, rough ascent.`;
+    $('#twr-alert').textContent=m.twr<TWR_BARE()?t('planner.alerts.noLiftoff',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.alerts.lowTwr',{min:U.decimal(TWR_MIN(),1)});
     $('#twr-alert').classList.toggle('show',m.ready&&m.twr<TWR_MIN());
-    $('#dv-alert').textContent=!m.orbit?`CAN'T REACH ORBIT! The crew would abort and splash down: add a bigger tank or an upper stage.${easyNote()}`:`MARS OUT OF REACH! Refuelled, the rocket gives ${number(m.marsDv)} of ${number(m.transfer)} m/s: the crew would return to Earth.${easyNote()}`;
+    $('#dv-alert').textContent=!m.orbit?t('planner.alerts.noOrbit',{easy:easyNote()}):t('planner.alerts.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer),easy:easyNote()});
     $('#dv-alert').classList.toggle('show',m.ready&&!m.marsOk);
     $('#budget-alert').classList.toggle('show',m.cost>m.budget);$('#power-alert').classList.toggle('show',m.gen<m.draw);
     $('#budget-remaining').textContent=money(m.budget-m.cost);$('#budget-readout').classList.toggle('negative',m.cost>m.budget);
@@ -274,17 +295,17 @@
   }
   function renderRocket(){
     const r=state.rocket,keys=['booster',...r.stages.map((_,i)=>`stage-${i}`),'cabin'],cur=moduleKey(state.sel),m=DATA?metrics():null;
-    $('#stack-overlay').innerHTML=keys.map((k,i)=>{const [title,sub,status]=moduleLabel(k,m),rem=k.startsWith('stage-')?`<button class="remove-stage" type="button" data-remove="${k.slice(6)}" title="Remove ${title}" aria-label="Remove ${title}">×</button>`:'';return `<div class="stage-node ${i%2?'right':'left'}" data-module="${k}"><button class="rocket-stage ${k===cur?'selected':''}" type="button" data-select="${k}" aria-pressed="${k===cur}"><strong>${title}</strong><small>${sub}</small>${status?`<small>${status}</small>`:''}</button>${rem}</div>`;}).join('')
-      +(r.stages.length<MAX_STAGES()?Array.from({length:r.stages.length+1},(_,i)=>`<button class="add-stage" type="button" data-insert="${i}" title="Add stage" aria-label="Add a stage at position ${i+2}">+</button>`).join(''):'');
+    $('#stack-overlay').innerHTML=keys.map((k,i)=>{const [title,sub,status]=moduleLabel(k,m),rem=k.startsWith('stage-')?`<button class="remove-stage" type="button" data-remove="${k.slice(6)}" title="${t('planner.removeTitle',{title})}" aria-label="${t('planner.removeTitle',{title})}">×</button>`:'';return `<div class="stage-node ${i%2?'right':'left'}" data-module="${k}"><button class="rocket-stage ${k===cur?'selected':''}" type="button" data-select="${k}" aria-pressed="${k===cur}"><strong>${title}</strong><small>${sub}</small>${status?`<small>${status}</small>`:''}</button>${rem}</div>`;}).join('')
+      +(r.stages.length<MAX_STAGES()?Array.from({length:r.stages.length+1},(_,i)=>`<button class="add-stage" type="button" data-insert="${i}" title="${t('planner.addStageTitle')}" aria-label="${t('planner.addStageAria',{pos:i+2})}">+</button>`).join(''):'');
     $$('#stack-overlay [data-select]').forEach(b=>b.addEventListener('click',()=>selectModule(b.dataset.select)));
     $$('#stack-overlay [data-remove]').forEach(b=>b.addEventListener('click',()=>removeStage(+b.dataset.remove)));
     $$('#stack-overlay [data-insert]').forEach(b=>b.addEventListener('click',()=>addStage(+b.dataset.insert)));
     const installed=[r.booster.engine,r.booster.tank,r.booster.fins,...r.stages.flatMap(s=>s.type==='booster'?[s.engine,s.tank]:[s.item]),...r.cabin].filter(Boolean).length;
-    $('#rocket-tags').innerHTML=`<span class="tag">${r.stages.length+2} STAGES</span><span class="tag">${installed} PARTS INSTALLED</span>`;
+    $('#rocket-tags').innerHTML=`<span class="tag">${t('planner.stagesTag',{count:r.stages.length+2})}</span><span class="tag">${t('planner.partsTag',{count:installed})}</span>`;
     window.dispatchEvent(new Event('astro:rocket'));
   }
   const isBooster = sel => sel.kind==='booster'||(sel.kind==='stage'&&state.rocket.stages[sel.index]?.type==='booster');
-  const tabsFor = sel => isBooster(sel)?[['engine','Engines'],['tank','Tanks'],...(sel.kind==='booster'?[['fins','Fins']]:[])]:sel.kind==='stage'?EQUIPMENT_GROUPS.map(([k,l])=>[k,l]):CABIN_GROUPS.map(([k,l])=>[k,l]);
+  const tabsFor = sel => isBooster(sel)?[['engine',t('planner.tabs.engine')],['tank',t('planner.tabs.tank')],...(sel.kind==='booster'?[['fins',t('planner.tabs.fins')]]:[])]:sel.kind==='stage'?EQUIPMENT_GROUPS.map(([k,key])=>[k,t(key)]):CABIN_GROUPS.map(([k,l])=>[k,l]);
   function partsFor(sel,tab){
     const all=Object.entries(DATA.parts);
     // Stage 1 takes sea-level engines; the upper stages take the vacuum ones (thrustSlKn = 0: they cannot lift off).
@@ -297,7 +318,7 @@
   function fuelClash(id){
     const sel=state.sel;if(!isBooster(sel)||!LV().fuelTypes)return '';
     const m=sel.kind==='booster'?state.rocket.booster:state.rocket.stages[sel.index],partner=part(id)?.category==='engines'?'tank':'engine',other=m[partner];
-    return other&&!sameFuel(id,other)?` <span class="warn" title="Different propellants from the installed ${partner}">≠ ${partner}</span>`:'';
+    return other&&!sameFuel(id,other)?` <span class="warn" title="${t('planner.metrics.differentFuel',{partner})}">≠ ${partner}</span>`:'';
   }
   // Upper stage catalog: the thrust-to-weight the stage would have at ignition with this part (minUpperStageTwr).
   function stageTwr(id){
@@ -305,14 +326,14 @@
     const st=state.rocket.stages[sel.index],slot=part(id)?.category==='engines'?'engine':'tank',was=st[slot];
     st[slot]=id;const s=metrics().stack.find(x=>x.key===`stage-${sel.index}`);st[slot]=was;
     if(!s||s.twr==null||!(s.ready||s.issue==='thrust'))return [];
-    return [s.twr<UPPER_TWR()?`<span class="warn" title="Too weak to climb: needs ${UPPER_TWR().toFixed(1)}">TWR ${s.twr.toFixed(2)}</span>`:`TWR ${s.twr.toFixed(2)}`];
+    return [s.twr<UPPER_TWR()?`<span class="warn" title="${t('planner.metrics.weakTitle',{min:U.decimal(UPPER_TWR(),1)})}">TWR ${U.decimal(s.twr,2)}</span>`:`TWR ${U.decimal(s.twr,2)}`];
   }
   function partMetrics(id){
     const s=spec(id),p=part(id);
-    if(p.category==='engines'){const n=s.defaultClusterCount||1,sl=s.thrustSlKn>0;return [`${n}×`,sl?`${number(s.thrustSlKn)} kN${warn(id,'thrustSlKn')}`:`${number(s.thrustVacKn)} kN vac${warn(id,'thrustVacKn')}`,sl?`Isp ${number(s.ispSlS)}${s.ispVacS&&s.ispVacS!==s.ispSlS?'–'+number(s.ispVacS):''} s${warn(id,'ispSlS')}`:`Isp ${number(s.ispVacS)} s vac${warn(id,'ispVacS')}`,`${number(s.massDryKg)} kg each${warn(id,'massDryKg')}`,fuelOf(id)+fuelClash(id),...stageTwr(id),money(n*s.costM)];}
-    if(p.category==='fins')return [`${number(s.massDryKg)} kg`,`gusts −${Math.round((1-(s.aeroDriftFactor??1))*100)}%`,money(s.costM)];
-    if(p.category==='tanks')return [`propellant ${tonnes(s.propellantMassKg)}${warn(id,'propellantMassKg')}`,`dry ${tonnes(s.massDryKg)}${warn(id,'massDryKg')}`,fuelOf(id)+fuelClash(id),...stageTwr(id),money(s.costM)];
-    return [`${number(s.massDryKg)} kg${warn(id,'massDryKg')}`,s.powerW>0?`+${number(s.powerW)} W`:`${number(Math.abs(s.powerW||0))} W`,money(s.costM)];
+    if(p.category==='engines'){const n=s.defaultClusterCount||1,sl=s.thrustSlKn>0;return [`${n}×`,sl?`${U.thrustKn(s.thrustSlKn)}${warn(id,'thrustSlKn')}`:`${U.thrustKn(s.thrustVacKn)} ${t('common.vac')}${warn(id,'thrustVacKn')}`,sl?`Isp ${number(s.ispSlS)}${s.ispVacS&&s.ispVacS!==s.ispSlS?'–'+number(s.ispVacS):''} s${warn(id,'ispSlS')}`:`Isp ${number(s.ispVacS)} s ${t('common.vac')}${warn(id,'ispVacS')}`,`${U.massKg(s.massDryKg)} ${t('common.each')}${warn(id,'massDryKg')}`,fuelOf(id)+fuelClash(id),...stageTwr(id),money(n*s.costM)];}
+    if(p.category==='fins')return [U.massKg(s.massDryKg),t('planner.metrics.gusts',{pct:Math.round((1-(s.aeroDriftFactor??1))*100)}),money(s.costM)];
+    if(p.category==='tanks')return [`${t('common.propellant')} ${tonnes(s.propellantMassKg)}${warn(id,'propellantMassKg')}`,`${t('common.dry')} ${tonnes(s.massDryKg)}${warn(id,'massDryKg')}`,fuelOf(id)+fuelClash(id),...stageTwr(id),money(s.costM)];
+    return [`${U.massKg(s.massDryKg)}${warn(id,'massDryKg')}`,s.powerW>0?`+${number(s.powerW)} W`:`${number(Math.abs(s.powerW||0))} W`,money(s.costM)];
   }
   function partThumbFallback(id, p) {
     const cached = THUMB_CACHE.get(id);
@@ -336,16 +357,16 @@
     return `<svg viewBox="0 0 64 64" aria-hidden="true">${polys}</svg>`;
   }
   function renderCatalog(){
-    if(!DATA){$('#parts-list').innerHTML='<div class="empty-state">Loading part data…</div>';return;}
+    if(!DATA){$('#parts-list').innerHTML=`<div class="empty-state">${t('planner.loadingParts')}</div>`;return;}
     const sel=state.sel,tabs=tabsFor(sel);if(!tabs.some(t=>t[0]===state.tab))state.tab=tabs[0][0];
     $('#category-tabs').innerHTML=tabs.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${k===state.tab}">${l}</button>`).join('');
     $$('#category-tabs [data-tab]').forEach(b=>b.addEventListener('click',()=>{state.tab=b.dataset.tab;renderCatalog();}));
     $('#selected-stage-tag').textContent=moduleLabel(moduleKey(sel))[0].toUpperCase();
-    $('#catalog-summary').innerHTML=sel.kind==='stage'?`<label>Stage type <select id="stage-type"><option value="bay">Bay</option><option value="booster">Booster</option></select></label><br>${isBooster(sel)?`Upper stage: a vacuum engine and a tank with the same propellants. It lights when the stage below runs dry and drops once empty; it needs a thrust-to-weight of ${UPPER_TWR().toFixed(1)} at ignition to keep climbing.`:'One equipment module per bay.'}`:sel.kind==='booster'?'Stage 1 engine and tank, with real data for each part; both must use the same propellants. Fins (optional) steady the ascent through Max-Q.':`${state.rocket.cabin.length}/${CABIN_SLOTS()} cabin slots filled. Three modules per specialist.`;
+    $('#catalog-summary').innerHTML=sel.kind==='stage'?`<label>${t('planner.stageTypeLabel')} <select id="stage-type"><option value="bay">${t('planner.stageTypeBay')}</option><option value="booster">${t('planner.stageTypeBooster')}</option></select></label><br>${isBooster(sel)?t('planner.summaryUpperStage',{twr:U.decimal(UPPER_TWR(),1)}):t('planner.summaryBay')}`:sel.kind==='booster'?t('planner.summaryBooster'):t('planner.summaryCabin',{used:state.rocket.cabin.length,total:CABIN_SLOTS()});
     if(sel.kind==='stage'){const control=$('#stage-type');control.value=state.rocket.stages[sel.index].type||'bay';control.addEventListener('change',()=>{state.tab=control.value==='booster'?'engine':'power';plan('stageType',sel.index,control.value);});}
     const inst=installedIn(sel),current=isBooster(sel)?(sel.kind==='booster'?state.rocket.booster:state.rocket.stages[sel.index])[state.tab]:sel.kind==='stage'?inst[0]:null;
     $('#parts-list').innerHTML=partsFor(sel,state.tab).map(id=>{const p=part(id),on=inst.includes(id);
-      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${p.name}</span><span class="part-slot">Tier ${p.tier}</span></div><p>${(p.role||'').replace(/`/g,'')}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?'REMOVE':current?'SWAP':'INSTALL'}</button></article>`;}).join('');
+      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${p.name}</span><span class="part-slot">${t('planner.tier',{n:p.tier})}</span></div><p>${(p.role||'').replace(/`/g,'')}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?t('planner.btnRemove'):current?t('planner.btnSwap'):t('planner.btnInstall')}</button></article>`;}).join('');
     $$('#parts-list [data-part]').forEach(b=>b.addEventListener('click',()=>togglePart(b.dataset.part)));
     window.dispatchEvent(new Event('astro:catalog'));
   }
@@ -355,21 +376,21 @@
   // sends to the room; a guest sends it to the host instead. The selection and the tab stay on each screen, so the
   // part actions carry the module they apply to. An action returns an error text for the one who did it.
   const ROCKET_ACTIONS = {
-    addStage(index){const r=state.rocket;if(r.stages.length>=MAX_STAGES()||!(index>=0&&index<=r.stages.length))return 'No room for another stage.';r.stages.splice(index,0,{item:null});},
-    removeStage(index){const r=state.rocket;if(!(index>=0&&index<r.stages.length))return 'That stage is gone.';r.stages.splice(index,1);},
-    stageType(index,type){const s=state.rocket.stages[index];if(!s||!['bay','booster'].includes(type))return 'That stage is gone.';s.type=type;},
+    addStage(index){const r=state.rocket;if(r.stages.length>=MAX_STAGES()||!(index>=0&&index<=r.stages.length))return t('planner.errors.noRoomStage');r.stages.splice(index,0,{item:null});},
+    removeStage(index){const r=state.rocket;if(!(index>=0&&index<r.stages.length))return t('planner.errors.stageGone');r.stages.splice(index,1);},
+    stageType(index,type){const s=state.rocket.stages[index];if(!s||!['bay','booster'].includes(type))return t('planner.errors.stageGone');s.type=type;},
     togglePart(id,sel,tab){
-      const r=state.rocket;if(!part(id))return 'Unknown part.';
-      if(!['booster','stage','cabin'].includes(sel?.kind))return 'Unknown module.';
-      if(sel.kind==='stage'&&!r.stages[sel.index])return 'That stage is gone.';
-      if(isBooster(sel)){if(!['engine','tank','fins'].includes(tab))return 'Unknown slot.';const target=sel.kind==='booster'?r.booster:r.stages[sel.index];target[tab]=target[tab]===id?null:id;}
+      const r=state.rocket;if(!part(id))return t('planner.errors.unknownPart');
+      if(!['booster','stage','cabin'].includes(sel?.kind))return t('planner.errors.unknownModule');
+      if(sel.kind==='stage'&&!r.stages[sel.index])return t('planner.errors.stageGone');
+      if(isBooster(sel)){if(!['engine','tank','fins'].includes(tab))return t('planner.errors.unknownSlot');const target=sel.kind==='booster'?r.booster:r.stages[sel.index];target[tab]=target[tab]===id?null:id;}
       else if(sel.kind==='stage'){const s=r.stages[sel.index];s.item=s.item===id?null:id;}
-      else{const i=r.cabin.indexOf(id);if(i>=0)r.cabin.splice(i,1);else if(r.cabin.length>=CABIN_SLOTS())return `The cabin is full: ${CABIN_SLOTS()} modules at most.`;else r.cabin.push(id);}
+      else{const i=r.cabin.indexOf(id);if(i>=0)r.cabin.splice(i,1);else if(r.cabin.length>=CABIN_SLOTS())return t('planner.errors.cabinFull',{max:CABIN_SLOTS()});else r.cabin.push(id);}
     },
   };
   function plan(name,...args){
     if(net.isGuest){
-      if(name==='togglePart'){const [id,sel]=args;if(sel.kind==='cabin'&&!state.rocket.cabin.includes(id)&&state.rocket.cabin.length>=CABIN_SLOTS()){toast(`The cabin is full: ${CABIN_SLOTS()} modules at most.`);return false;}}
+      if(name==='togglePart'){const [id,sel]=args;if(sel.kind==='cabin'&&!state.rocket.cabin.includes(id)&&state.rocket.cabin.length>=CABIN_SLOTS()){toast(t('planner.errors.cabinFull',{max:CABIN_SLOTS()}));return false;}}
       net.act('rocket',name,...args);return true;
     }
     const error=ROCKET_ACTIONS[name](...args);
@@ -378,26 +399,41 @@
   }
   // After someone else's change, a selected stage that no longer exists falls back to the booster.
   function fitSelection(){if(state.sel.kind==='stage'&&!state.rocket.stages[state.sel.index]){state.sel={kind:'booster'};state.tab='engine';}}
-  function addStage(index){if(plan('addStage',index)){toast(`Stage ${index+2} added.`);if(!net.isGuest)selectModule(`stage-${index}`);}}
-  function removeStage(index){if(!plan('removeStage',index))return;toast('Stage removed.');if(net.isGuest)return;state.sel=parseKey(index>0?`stage-${index-1}`:'booster');state.tab=isBooster(state.sel)?'engine':'power';window.dispatchEvent(new CustomEvent('astro:stage-removed',{detail:moduleKey(state.sel)}));renderPlanner();}
+  function addStage(index){if(plan('addStage',index)){toast(t('planner.stageAdded',{n:index+2}));if(!net.isGuest)selectModule(`stage-${index}`);}}
+  function removeStage(index){if(!plan('removeStage',index))return;toast(t('planner.stageRemoved'));if(net.isGuest)return;state.sel=parseKey(index>0?`stage-${index-1}`:'booster');state.tab=isBooster(state.sel)?'engine':'power';window.dispatchEvent(new CustomEvent('astro:stage-removed',{detail:moduleKey(state.sel)}));renderPlanner();}
   function togglePart(id){plan('togglePart',id,{...state.sel},state.tab);}
   function showLaunch(){
     const m=metrics(),lift=liftoffOf(m),abort=lift.ok?abortOf(m):null,warnings=[];
-    if(!lift.ok)warnings.push(`${lift.status[0].toUpperCase()+lift.status.slice(1).toLowerCase()}: the mission ends on the pad`);
-    m.stack.slice(1).filter(s=>s.issue).forEach(s=>warnings.push(`${stageName(s.key)[0].toUpperCase()+stageName(s.key).slice(1)} ${s.issue==='thrust'?`too weak to fire (TWR ${s.twr.toFixed(2)} < ${UPPER_TWR().toFixed(1)})`:'cannot fire'}: dead weight`));
-    if(lift.ok&&m.twr<TWR_MIN())warnings.push(`Thrust-to-weight below ${TWR_MIN().toFixed(1)}: slow, rough ascent`);
-    if(m.cost>m.budget)warnings.push('Over budget');
-    if(m.gen<m.draw)warnings.push('Power deficit');
-    if(m.ready&&!m.orbit)warnings.push(`Δv below low Earth orbit (${number(m.dv)} of ${number(m.leo)} m/s): abort and splashdown`);
-    if(m.orbit&&!m.marsOk)warnings.push(`Mars out of reach even after refueling (${number(m.marsDv)} of ${number(m.transfer)} m/s): the crew returns to Earth`);
-    $('#launch-title').textContent=!lift.ok?'This rocket will not leave the pad':abort?(abort.reason==='no-orbit'?'This rocket will not reach orbit':'This rocket cannot reach Mars'):warnings.length?'Review the mission risks':'Mission ready to launch';
-    $('#launch-message').textContent=!lift.ok?`${lift.detail} Launching now ends the mission on the pad.`:abort?`${abort.warn} The mission fails.`:warnings.length&&!LV().failures?'Easy: these are warnings only. The mission flies anyway.':warnings.length?'These choices will have consequences at launch or on arrival. Revise the design or launch with risks.':'The crew is ready for liftoff, orbital checklist, Mars landing, and surface operations.';
-    $('#launch-summary').innerHTML=[['Crew',`${playerCount()} player${playerCount()>1?'s':''} · ${crew.length-playerCount()} AI`],['Site',SITES_INFO[state.site].name],['Difficulty',{easy:'EASY',normal:'NORMAL',hard:'HARD'}[state.difficulty]],['Stages',`${state.rocket.stages.length+2}`],['Budget remaining',money(m.budget-m.cost)],['Liftoff mass',tonnes(m.mass)],['Thrust-to-weight',m.ready?`${m.twr.toLocaleString('en-US',{maximumFractionDigits:2})} · ${lift.ok?`${lift.seconds} s ascent`:'no liftoff'}`:'— · no ignition'],['Δv to orbit',m.ready?`${number(m.dv)} / ${number(m.leo)} m/s`:'—'],['Mars transfer',m.orbit?`${number(m.marsDv)} / ${number(m.transfer)} m/s`:'—'],['Orbital refuel',m.marsOk?(m.refuelKg>0?`${Math.ceil(m.refuelPct)}% · ${tonnes(m.refuelKg)}`:'Not needed'):'—'],['Power',`${number(m.gen)} / ${number(m.draw)} W`],['Risks',warnings.length?warnings.join('; '):'All clear']].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
-    $('#launch-confirm').textContent=!lift.ok||abort?'Launch anyway →':warnings.length&&!LV().failures?'Launch with warnings →':warnings.length?'Launch with risks →':'Launch mission →';
+    if(!lift.ok)warnings.push(`${capFirst(lift.status.toLowerCase())}: ${t('launch.msgNoPad',{detail:''}).trim()}`);
+    m.stack.slice(1).filter(s=>s.issue).forEach(s=>warnings.push(s.issue==='thrust'?t('launch.risks.stageWeak',{stage:capFirst(stageName(s.key)),twr:U.decimal(s.twr,2),min:U.decimal(UPPER_TWR(),1)}):t('launch.risks.stageCantFire',{stage:capFirst(stageName(s.key))})));
+    if(lift.ok&&m.twr<TWR_MIN())warnings.push(t('launch.risks.lowTwr',{min:U.decimal(TWR_MIN(),1)}));
+    if(m.cost>m.budget)warnings.push(t('launch.risks.overBudget'));
+    if(m.gen<m.draw)warnings.push(t('launch.risks.powerDeficit'));
+    if(m.ready&&!m.orbit)warnings.push(t('launch.risks.noOrbit',{dv:U.velocityMs(m.dv),leo:U.velocityMs(m.leo)}));
+    if(m.orbit&&!m.marsOk)warnings.push(t('launch.risks.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer)}));
+    $('#launch-title').textContent=!lift.ok?t('launch.titleNoPad'):abort?(abort.reason==='no-orbit'?t('launch.titleNoOrbit'):t('launch.titleNoMars')):warnings.length?t('launch.titleRisks'):t('launch.titleReady');
+    $('#launch-message').textContent=!lift.ok?t('launch.msgNoPad',{detail:lift.detail}):abort?t('launch.msgAbort',{warn:abort.warn}):warnings.length&&!LV().failures?t('launch.msgEasy'):warnings.length?t('launch.msgRisks'):t('launch.msgReady');
+    const pc=playerCount();
+    $('#launch-summary').innerHTML=[
+      [t('launch.summary.crew'),t('launch.summary.crewVal',{players:pc,playerWord:pc>1?t('common.players'):t('common.player'),ai:crew.length-pc})],
+      [t('launch.summary.site'),SITES_INFO[state.site].name],
+      [t('launch.summary.difficulty'),t(`difficulty.${state.difficulty}.label`).toUpperCase()],
+      [t('launch.summary.stages'),`${state.rocket.stages.length+2}`],
+      [t('launch.summary.budgetRemaining'),money(m.budget-m.cost)],
+      [t('launch.summary.liftoffMass'),tonnes(m.mass)],
+      [t('launch.summary.twr'),m.ready?`${U.number(m.twr,{maximumFractionDigits:2})} · ${lift.ok?t('launch.summary.twrAscent',{twr:U.number(m.twr,{maximumFractionDigits:2}),sec:lift.seconds}).split(' · ')[1]:t('launch.summary.twrNoLiftoff')}`:t('launch.summary.twrNoIgnition')],
+      [t('launch.summary.dvOrbit'),m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—'],
+      [t('launch.summary.marsTransfer'),m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—'],
+      [t('launch.summary.orbitalRefuel'),m.marsOk?(m.refuelKg>0?`${Math.ceil(m.refuelPct)}% · ${tonnes(m.refuelKg)}`:t('launch.summary.notNeeded')):'—'],
+      [t('launch.summary.power'),`${number(m.gen)} / ${number(m.draw)} W`],
+      [t('launch.summary.risks'),warnings.length?warnings.join('; '):t('common.allClear')]
+    ].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
+    $('#launch-confirm').textContent=!lift.ok||abort?t('launch.btnLaunchAnyway'):warnings.length&&!LV().failures?t('launch.btnLaunchWarnings'):warnings.length?t('launch.btnLaunchRisks'):t('launch.btnLaunchMission');
     $('#launch-dialog').showModal();
   }
   function setupStars(){const canvas=$('#stars'),ctx=canvas.getContext('2d');if(!ctx)return;let stars=[];let width=0,height=0;const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;function resize(){const ratio=Math.min(devicePixelRatio||1,2);width=canvas.clientWidth;height=canvas.clientHeight;canvas.width=width*ratio;canvas.height=height*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);stars=Array.from({length:Math.min(150,Math.floor(width*height/8500))},(_,i)=>({x:((i*2819)%1009)/1009*width,y:((i*3877)%1013)/1013*height,r:.4+(i%5)*.25,phase:i*.63,c:['#FCE8A6','#f7dfff','#c9a6ff'][i%3]}));}function draw(time){ctx.clearRect(0,0,width,height);for(const star of stars){ctx.globalAlpha=.25+.45*(.5+.5*Math.sin(time*.0008+star.phase));const r=star.r*1.7;ctx.fillStyle=star.c;ctx.beginPath();ctx.moveTo(star.x,star.y-r);ctx.lineTo(star.x+r*.6,star.y);ctx.lineTo(star.x,star.y+r);ctx.lineTo(star.x-r*.6,star.y);ctx.fill();}ctx.globalAlpha=1;if(!reduce)requestAnimationFrame(draw);}resize();window.addEventListener('resize',resize);requestAnimationFrame(draw);}
-  const WORLD_NAMES={mercury:'Mercury',venus:'Venus',earth:'Earth',mars:'Mars',jupiter:'Jupiter',saturn:'Saturn',uranus:'Uranus',neptune:'Neptune'};
+  const WORLD_IDS=['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune'];
+  const worldName = w => t(`orbit.worlds.${w}`);
   $('#orbit-back').addEventListener('click',()=>showScreen('menu'));
   $('#objective-next').addEventListener('click',()=>showScreen('lobby'));
   // Every planet can be picked; only Mars opens a mission in this prototype, the others show as unavailable.
@@ -405,21 +441,23 @@
   state.world = state.world || 'mars';
   function selectWorld(w){
     state.world=w;
-    $$('[data-world]').forEach(b=>{const on=b.dataset.world===w;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
-    const open=w==='mars',name=WORLD_NAMES[w];
-    $('#objective-title').textContent=open?'Explore Mars':name;
-    $('#objective-description').textContent=open?'Land a crew, investigate ancient environments, and return discoveries to Earth.':w==='earth'?'The launch origin. Pick Mars to plan a mission.':`${name} is not open in this prototype. Mars is the only destination you can plan now.`;
-    $('#objective-profile').textContent=open?'CREWED · SURFACE':'—';
-    $('#objective-constraint').textContent=open?'MASS · POWER · DATA':'—';
-    $('#objective-status').textContent=open?'READY TO PLAN':w==='earth'?'LAUNCH ORIGIN':'UNAVAILABLE';
+    $$('[data-world]').forEach(b=>{const on=b.dataset.world===w;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));const id=b.dataset.world,name=worldName(id);b.setAttribute('aria-label',id==='mars'?`${name}, ${t('orbit.selectedEyebrow').toLowerCase()}`:id==='earth'?`${name}, ${t('orbit.statusOrigin').toLowerCase()}`:`${name}, ${t('orbit.unavailableLower')}`);});
+    const open=w==='mars',name=worldName(w);
+    $('#objective-title').textContent=open?t('orbit.exploreMars'):name;
+    $('#objective-description').textContent=open?t('orbit.marsDesc'):w==='earth'?t('orbit.earthDesc'):t('orbit.unavailableDesc',{name});
+    $('#objective-profile').textContent=open?t('orbit.profileCrewed'):'—';
+    $('#objective-constraint').textContent=open?t('orbit.constraintValue'):'—';
+    $('#objective-status').textContent=open?t('orbit.statusReady'):w==='earth'?t('orbit.statusOrigin'):t('orbit.statusUnavailable');
     $('#objective-status').classList.toggle('locked',!open);
-    const next=$('#objective-next');next.disabled=!open;next.textContent=open?'Plan this mission →':'Unavailable';
+    const next=$('#objective-next');next.disabled=!open;next.textContent=open?t('orbit.planBtn'):t('common.unavailable');
     window.dispatchEvent(new CustomEvent('astro:world',{detail:w}));
   }
   // The destination, the landing site and the difficulty are host controls; a guest only looks at the site details.
   $$('[data-world]').forEach(button=>button.addEventListener('click',()=>{if(net.isGuest)return;selectWorld(button.dataset.world);syncSetup();}));
   $$('[data-site]').forEach(button=>button.addEventListener('click',()=>{if(!net.isGuest)state.site=button.dataset.site;state.detail={kind:'site',id:button.dataset.site};renderLobby();}));
   $('#play-button').addEventListener('click',()=>{const go=()=>showScreen('orbit');window.ASTRO_LAUNCH?window.ASTRO_LAUNCH().then(go):go();});
+  $('#settings-button')?.addEventListener('click',()=>{window.ASTRO_SETTINGS?.syncUI();showScreen('settings');});
+  $('#settings-back')?.addEventListener('click',()=>showScreen('menu'));
   $('#lobby-back').addEventListener('click',()=>showScreen('orbit'));
   $('#to-assembly').addEventListener('click',()=>showScreen('planner'));
   $('#planner-back').addEventListener('click',()=>showScreen('lobby'));
@@ -536,8 +574,8 @@
   };
   // Landing site photo: the real HiRISE orthoimage around the landing point (assets/sites, tools/web/site-photos.mjs).
   // The big view marks the 512 m walkable terrain (centre third of the 1.5 km photo) and credits the source.
-  const sitePhoto = (id, big) => `<img class="site-photo" src="assets/sites/${id}.png" alt="${big ? `HiRISE orbital photo around the ${SITES_INFO[id].name} landing point` : ''}">`
-    + (big ? `<span class="site-walk" aria-hidden="true"><small>512 m walk area</small></span><span class="site-credit">HiRISE (MRO) · 1.5 km wide · north up · NASA/JPL/UArizona, USGS (CC0)</span>` : '');
+  const sitePhoto = (id, big) => `<img class="site-photo" src="assets/sites/${id}.png" alt="${big ? t('lobby.sitePhotoAlt', { name: SITES_INFO[id].name }) : ''}">`
+    + (big ? `<span class="site-walk" aria-hidden="true"><small>${t('lobby.walkArea', { dist: U.distanceM(512, 0) })}</small></span><span class="site-credit">${t('lobby.siteCredit', { width: U.distanceKm(1.5, 1) })}</span>` : '');
   function menuMars() {
     const tilt = -14 * Math.PI / 180, at = t => { const x = 1.45 * Math.cos(t), y = .36 * Math.sin(t); return [x * Math.cos(tilt) - y * Math.sin(tilt), x * Math.sin(tilt) + y * Math.cos(tilt)]; };
     const arc = (t0, t1) => Array.from({ length: 13 }, (_, k) => at(t0 + (t1 - t0) * k / 12).map(v => v.toFixed(3)).join(',')).join(' ');
@@ -630,13 +668,13 @@
         f.throttle = e >= EDL_POWERED ? 0.6 : 0; // descent engines only fire after the backshell separates
         if (e >= EDL_CHUTE && !f.edlChuteDeployed) {
           f.edlChuteDeployed = true;
-          logFlight('Supersonic parachute deployed: 11 km, 1,512 km/h.');
+          logFlight(t('cockpit.logs.chuteDeployed', { alt: U.altitudeKm(11), vel: U.speedKmh(1512) }));
           radAudio.tone(820, 0.12, 'triangle', 0.06);
         }
       }
     }
-    const tankLabel = () => flight.step === 3 ? 'Descent tank' : !flight.ascent ? 'Propellant'
-      : `${(flight.step === 0 ? 'stage 1' : stageName(flight.ascent.top.key)).replace(/^s/, 'S')} tank`;
+    const tankLabel = () => flight.step === 3 ? t('cockpit.descentTank') : !flight.ascent ? t('cockpit.propellant')
+      : flight.step === 0 ? t('cockpit.stage1Tank') : t('cockpit.stageTank', { stage: stageName(flight.ascent.top.key) });
     const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.ceil(Math.max(0, seconds) % 60)).padStart(2, '0')}`;
     const radAudio = {
       muted: false,
@@ -688,10 +726,10 @@
         this.muted = !this.muted;
         if (this.muted) this.stopAll();
         else if (state.screen === 'surface') this.startSurfaceBed();
-        const txt = this.muted ? 'Audio: Off' : 'Audio: On';
-        $('#audio-toggle-cockpit').textContent = txt;
+        $('#audio-toggle-cockpit').textContent = this.muted ? t('cockpit.audioOff') : t('cockpit.audioOn');
       }
     };
+    $('#audio-toggle-cockpit').textContent = radAudio.muted ? t('cockpit.audioOff') : t('cockpit.audioOn');
     $('#audio-toggle-cockpit').addEventListener('click', () => radAudio.toggleMute());
 
     const flight = {
@@ -731,28 +769,40 @@
     // references/experiments/minigames/*/README.md.
     const SURFACE_TASKS = [
       {
-        id: 'H-S1', crew: 'helena', title: 'Surface escort', minigame: 'Escort route', mechanic: 'Route planning',
-        basis: 'Mars traverse & Ingenuity recon (2021–24)',
-        desc: 'Trace a path from 1 to 5 in order without stepping onto ⚠ sand traps or crossing your trail.',
-        fact: 'Real fact: Reconnaissance routes on Mars avoid featureless sand ripples — Ingenuity completed 72 flights (17 km total, over 10× its 5-flight plan) before smooth sand confused its navigation camera on Flight 72.',
+        id: 'H-S1', crew: 'helena',
+        get title() { return t('surface.tasks.H-S1.title'); },
+        get minigame() { return t('surface.tasks.H-S1.minigame'); },
+        get mechanic() { return t('surface.tasks.H-S1.mechanic'); },
+        get basis() { return t('surface.tasks.H-S1.basis'); },
+        get desc() { return t('surface.tasks.H-S1.desc'); },
+        get fact() { return t('surface.tasks.H-S1.fact', { dist: U.distanceKm(17, 0) }); },
       },
       {
-        id: 'L-S1', crew: 'lucas', title: 'Oxygen oven', minigame: 'Make oxygen', mechanic: 'Keep in range',
-        basis: 'MOXIE on Perseverance (2021–23)',
-        desc: 'Hold Heat to keep the reactor inside the 780–820 °C green zone (target 800 °C) until 6.0 g of O₂ is produced.',
-        fact: 'Real fact: MOXIE produced 122 g of ≥98% pure oxygen across 16 runs on Mars at 800 °C (300 W), peaking at 12 g/h — twice NASA’s original goal.',
+        id: 'L-S1', crew: 'lucas',
+        get title() { return t('surface.tasks.L-S1.title'); },
+        get minigame() { return t('surface.tasks.L-S1.minigame'); },
+        get mechanic() { return t('surface.tasks.L-S1.mechanic'); },
+        get basis() { return t('surface.tasks.L-S1.basis'); },
+        get desc() { return t('surface.tasks.L-S1.desc', { range: U.tempRangeC(780, 820), target: U.tempC(800), goal: U.massGrams(6.0, 1) }); },
+        get fact() { return t('surface.tasks.L-S1.fact', { total: U.massGrams(122, 0), target: U.tempC(800) }); },
       },
       {
-        id: 'O-S1', crew: 'oscar', title: 'Orbiter pass', minigame: 'Contact window', mechanic: 'Choice under a limit',
-        basis: 'Electra UHF relay (MRO / TGO)',
-        desc: 'Pick the highest-value science packets that fit inside the 250 Mb pass budget before the 40 s orbiter window closes.',
-        fact: 'Real fact: A single 8-minute UHF orbiter pass relays 100–250 Mb at up to 2 Mbps. With MAVEN lost in Dec 2025, every remaining Mars relay pass is even more critical.',
+        id: 'O-S1', crew: 'oscar',
+        get title() { return t('surface.tasks.O-S1.title'); },
+        get minigame() { return t('surface.tasks.O-S1.minigame'); },
+        get mechanic() { return t('surface.tasks.O-S1.mechanic'); },
+        get basis() { return t('surface.tasks.O-S1.basis'); },
+        get desc() { return t('surface.tasks.O-S1.desc'); },
+        get fact() { return t('surface.tasks.O-S1.fact'); },
       },
       {
-        id: 'M-S1', crew: 'maya', title: 'Biosignature hunter', minigame: 'Leopard spots', mechanic: 'Pattern search',
-        basis: 'PIXL + SHERLOC on Cheyava Falls (2024–25)',
-        desc: 'Step 1: Sweep 3×3 zones with SHERLOC to spot glowing ✦ suspects. Step 2: Test them with PIXL (1×1) to confirm 3 real leopard spots.',
-        fact: 'Real fact: In Sept 2025, NASA called the vivianite and greigite “leopard spots” on Cheyava Falls a potential biosignature; confirming it requires returning samples to Earth, while Mars Sample Return was cancelled in Jan 2026.',
+        id: 'M-S1', crew: 'maya',
+        get title() { return t('surface.tasks.M-S1.title'); },
+        get minigame() { return t('surface.tasks.M-S1.minigame'); },
+        get mechanic() { return t('surface.tasks.M-S1.mechanic'); },
+        get basis() { return t('surface.tasks.M-S1.basis'); },
+        get desc() { return t('surface.tasks.M-S1.desc'); },
+        get fact() { return t('surface.tasks.M-S1.fact'); },
       },
     ];
 
@@ -837,11 +887,11 @@
       flight.docked = false;
       flight.marsBurn = null;
 
-      logFlight('T-00:00 Flight Deck online. Camera_Pilot locked.');
-      if (flight.design.ready) logFlight(`Liftoff TWR ${flight.design.twr.toFixed(2)}: ${phaseDuration(0)} s climb to MECO.`);
-      if (flight.design.overweight) logFlight(`ALERT: Low liftoff TWR (<${TWR_MIN().toFixed(1)}): slow climb and heavy aerodynamic buffet!`);
-      if (flight.design.powerDeficit) logFlight('ALERT: Electrical bus deficit — inspect Breaker_Bank.');
-      if (flight.design.budgetPenalty) logFlight('CAUTION: Mission exceeded budget — finance penalty logged.');
+      logFlight(t('cockpit.logs.deckOnline'));
+      if (flight.design.ready) logFlight(t('cockpit.logs.twrClimb', { twr: U.decimal(flight.design.twr, 2), sec: phaseDuration(0) }));
+      if (flight.design.overweight) logFlight(t('cockpit.logs.lowTwrAlert', { min: U.decimal(TWR_MIN(), 1) }));
+      if (flight.design.powerDeficit) logFlight(t('cockpit.logs.powerAlert'));
+      if (flight.design.budgetPenalty) logFlight(t('cockpit.logs.budgetAlert'));
       showScreen('cockpit');
       renderFlightUI();
       cancelAnimationFrame(flight.raf);
@@ -897,8 +947,9 @@
       const stars = g.stars(), share = Math.round(g.share() * 100);
       flight.liftoffStars = stars;
       flight.score += (stars - 1) * 4;
-      logFlight(`MECO. Ascent program held ${share}% of the time (${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}).`);
-      crewToast(`Liftoff ${'★'.repeat(stars)}${'☆'.repeat(3 - stars)} · ${share}% inside the band`);
+      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      logFlight(t('cockpit.logs.meco', { pct: share, stars: starStr }));
+      crewToast(t('cockpit.toasts.liftoffResult', { stars: starStr, pct: share }));
       const abort = flight.design.orbit ? null : abortOf(flight.design); // the stages ran dry short of orbit (not on Easy)
       if (abort) { abortMission(abort); return; }
       setFlightStep(1);
@@ -940,8 +991,8 @@
       flight.docked = true;
       flight.stability = aligned;
       flight.score += g.stars() * 3;
-      logFlight(`Station hard-dock confirmed. Relative alignment held ${aligned}% of the approach.`);
-      crewToast(`Docking secure · ${aligned}% inside the approach corridor`);
+      logFlight(t('cockpit.logs.hardDock', { pct: aligned }));
+      crewToast(t('cockpit.toasts.dockingSecure', { pct: aligned }));
       renderFlightUI();
     }
 
@@ -963,8 +1014,9 @@
       const share = Math.round(g.share() * 100), stars = g.stars();
       flight.score += (stars - 1) * 5 - (timedOut ? 8 : 0);
       flight.landingShare = share;
-      logFlight(`Touchdown. ${share}% inside the landing corridor.`);
-      crewToast(`Mars landing ${'★'.repeat(stars)}${'☆'.repeat(3 - stars)} · ${share}% aligned`);
+      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      logFlight(t('cockpit.logs.touchdown', { pct: share }));
+      crewToast(t('cockpit.toasts.landingResult', { stars: starStr, pct: share }));
       finishFlightAndLand();
     }
 
@@ -998,19 +1050,17 @@
         };
         flight.breakers = [false, false, false];
         flight.sparksUntil = 0;
-        logFlight(roughAscent
-          ? 'Rough ascent increased station approach offset. Align the cabin hatch on the centre monitor.'
-          : 'Booster separated. Align the cabin hatch with the rotating station port on the centre monitor.');
+        logFlight(t(roughAscent ? 'cockpit.logs.roughAscent' : 'cockpit.logs.boosterSep'));
         radAudio.tone(520, 0.14, 'triangle', 0.05);
       } else if (nextStep === 2) {
         flight.docking = startDocking();
         flight.docked = false;
         flight.refuelDone = 0;
-        logFlight(`ORBIT ACHIEVED. Match velocity with the tanker, then transfer ${refuelTarget()}% propellant.`);
+        logFlight(t('cockpit.logs.orbitAchieved', { target: refuelTarget() }));
         radAudio.tone(660, 0.12, 'triangle', 0.05);
       } else if (nextStep === 3) {
         flight.marsBurn = startMarsBurn();
-        logFlight('Trans-Mars injection and cruise complete. Entry interface: 125 km, 19,500 km/h. Hold the landing corridor.');
+        logFlight(t('cockpit.logs.tmiComplete', { alt: U.altitudeKm(125), vel: U.speedKmh(19500) }));
         radAudio.tone(520, 0.15, 'triangle', 0.05);
       }
       renderFlightUI();
@@ -1020,7 +1070,7 @@
     // action may do it (crewFor); a guest sends it to the host, which checks the seat the server stamped.
     function handleCockpitAction(actionId, arg) {
       const seats = crewFor(actionId);
-      if (!canAct(seats)) { if (flight.active) toast(`${crewNames(seats)} ${seats.length > 1 ? 'do' : 'does'} that.`); return; }
+      if (!canAct(seats)) { if (flight.active) toast(t('cockpit.toasts.onlyOwner', { names: crewNames(seats), verb: seats.length > 1 ? t('cockpit.toasts.doPlural') : t('cockpit.toasts.doSingular') })); return; }
       if (net.isGuest) { net.act('cockpit', actionId, arg); return; }
       applyCockpitAction(actionId, arg);
     }
@@ -1029,7 +1079,7 @@
       if (actionId === 'throttle_up') {
         flight.throttle = Math.min(1, flight.throttle + 0.35);
         radAudio.tone(240 + flight.throttle * 180, 0.09, 'triangle', 0.05);
-        if (flight.step === 0) logFlight(`Throttle_Lever pushed to ${Math.round(flight.throttle * 100)}%.`);
+        if (flight.step === 0) logFlight(t('cockpit.logs.throttlePushed', { pct: Math.round(flight.throttle * 100) }));
       } else if (actionId === 'steer') {
         const [dx, dy] = arg || [0, 0];
         const gain = flight.design.hasCockpitUpgrade ? 0.32 : 0.24;
@@ -1042,7 +1092,7 @@
           flight.docking.rate = flight.docking.rate.map(v => v * 0.2);
           flight.docking.error = Math.hypot(...flight.docking.value);
           flight.stability = Math.min(100, flight.stability + 8);
-          logFlight('Relative-velocity trim fired.');
+          logFlight(t('cockpit.logs.trimFired'));
           radAudio.tone(540, 0.06, 'triangle', 0.04);
           renderFlightUI();
           return;
@@ -1055,14 +1105,14 @@
         const idx = typeof arg === 'number' ? arg : flight.breakers.findIndex(Boolean);
         if (idx >= 0) {
           flight.breakers[idx] = false;
-          logFlight(`Breaker_Bank #${idx + 1} reset to NOMINAL.`);
+          logFlight(t('cockpit.logs.breakerReset', { idx: idx + 1 }));
           radAudio.tone(780, 0.07, 'triangle', 0.05);
         }
       } else if (actionId === 'stage_sep') {
         if (flight.step === 1 && !flight.portDock && !flight.breakers.some(Boolean) && !flight.stageSeparated) {
           flight.stageSeparated = true;
           flight.separationAdvancing = true;
-          logFlight('Stage_Sep_Switch actuated! Main booster separated cleanly.');
+          logFlight(t('cockpit.logs.stageSep'));
           radAudio.tone(880, 0.14, 'triangle', 0.06);
           renderFlightUI();
           window.setTimeout(() => {
@@ -1070,28 +1120,28 @@
           }, 1800);
           return;
         }
-        toast('Reset all tripped Breaker_Bank switches before stage separation.');
+        toast(t('cockpit.toasts.resetBreakers'));
       } else if (actionId === 'pump_fuel') {
         if (flight.step === 2 && flight.docked) {
           const target = refuelTarget();
           if (flight.refuelDone >= target) return;
           flight.refuelDone = Math.min(target, flight.refuelDone + PUMP_STEP);
           flight.progress = Math.min(100, (flight.refuelDone / target) * 100);
-          logFlight(`Orbital propellant transfer: ${flight.refuelDone}% / ${target}%.`);
+          logFlight(t('cockpit.logs.fuelTransfer', { done: flight.refuelDone, target }));
           radAudio.tone(500, 0.06, 'sine', 0.04);
         } else if (flight.step === 2) {
-          toast('Hold the docking corridor until the hard-dock latches.');
+          toast(t('cockpit.toasts.holdDock'));
         }
       } else if (actionId === 'shield_storm') {
         flight.stormShielded = true;
-        logFlight(flight.design.hasShelter ? 'Orion Storm Shelter sealed! Solar storm dose reduced by 82%.' : 'Water bags stacked for solar storm protection.');
+        logFlight(t(flight.design.hasShelter ? 'cockpit.logs.shelterSealed' : 'cockpit.logs.waterBags'));
         radAudio.tone(740, 0.1, 'triangle', 0.05);
       } else if (actionId === 'edl_arm') {
         if (flight.step === 3 && !flight.edlChuteDeployed) {
           flight.edlChuteDeployed = true;
           const bonus = (flight.design.hasTrn || flight.design.hasLoftid) ? 18 : 6;
           flight.stability = Math.min(100, flight.stability + bonus);
-          logFlight(`EDL_Arm_Switch ON! ${flight.design.hasTrn || flight.design.hasLoftid ? 'Supersonic parachute & LOFTID shield inflated.' : 'Backup drogue chute deployed!'}`);
+          logFlight(t(flight.design.hasTrn || flight.design.hasLoftid ? 'cockpit.logs.edlFull' : 'cockpit.logs.edlBackup'));
           radAudio.tone(820, 0.12, 'triangle', 0.06);
         }
       } else if (actionId === 'complete_step') {
@@ -1106,7 +1156,7 @@
     function finishFlightAndLand() {
       flight.active = false;
       cancelAnimationFrame(flight.raf);
-      crewToast(`Mars transfer confirmed. Arrival and landing sequence complete at ${state.site === 'jezero' ? 'Jezero Crater' : 'Gale Crater'}!`);
+      crewToast(t('cockpit.toasts.arrivedSite', { site: SITES_INFO[state.site].name }));
       startSurface();
     }
 
@@ -1125,13 +1175,13 @@
         flight.score -= 10;
         flight.hull = Math.max(55, flight.hull - 12);
         flight.stageSeparated = true;
-        logFlight('Separation window expired. Emergency separation fired with hull damage (-10 pts).');
+        logFlight(t('cockpit.logs.sepTimeout'));
         setFlightStep(2);
       } else if (flight.step === 2) {
         flight.score -= flight.docked ? 4 : 12;
         flight.docked = true;
         flight.refuelDone = refuelTarget();
-        logFlight('Docking window expired. Auto-capture and minimum transfer completed with a mission penalty.');
+        logFlight(t('cockpit.logs.dockTimeout'));
         toMars();
       }
     }
@@ -1153,7 +1203,7 @@
       if (flight.step === 0) {
         if (!flight.liftoff && flight.throttle >= LIFTOFF.throttle) {
           flight.liftoff = startLiftoff();
-          logFlight(`Liftoff! Hold the navball target inside the green brackets for ${phaseDuration(0)} s.`);
+          logFlight(t('cockpit.logs.liftoffHold', { sec: phaseDuration(0) }));
           renderFlightUI();
         }
         const g = flight.liftoff;
@@ -1190,15 +1240,15 @@
           flight.progress = Math.max(0, Math.min(100, (5 - d.z) / 4.65 * 100));
           if (d.z <= .36 && Math.hypot(d.x, d.y) < .18) {
             d.status = 'success'; flight.stageSeparated = true; flight.score += 10;
-            logFlight('Hard-dock achieved! Cabin hatch latched to station port.');
+            logFlight(t('cockpit.logs.hatchLatched'));
             radAudio.tone(880, 0.14, 'triangle', 0.06);
-            crewToast('Docking complete'); renderFlightUI();
+            crewToast(t('cockpit.toasts.dockingComplete')); renderFlightUI();
             window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'success') setFlightStep(2); }, 1400);
           } else if (d.fuel <= 0 || flight.phaseElapsed >= phaseDuration(1)) {
             d.status = 'failed'; flight.score -= 5;
-            logFlight(d.fuel <= 0 ? 'RCS docking propellant depleted! Advancing to orbital transfer.' : 'Approach window expired! Advancing to orbital transfer.');
+            logFlight(t(d.fuel <= 0 ? 'cockpit.logs.rcsDepleted' : 'cockpit.logs.approachExpired'));
             radAudio.tone(240, 0.16, 'sawtooth', 0.06);
-            crewToast('Docking failed — proceeding to next phase'); renderFlightUI();
+            crewToast(t('cockpit.toasts.dockingFailed')); renderFlightUI();
             window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'failed') setFlightStep(2); }, 1400);
           }
         }
@@ -1273,18 +1323,20 @@
         dockFuel.classList.toggle('amber', fuel <= 45 && fuel > 20);
         dockFuel.classList.toggle('danger', fuel <= 20);
         $('#port-dock-fuel-value').textContent = `${Math.ceil(fuel)}%`;
-        $('#port-dock-distance').textContent = `${flight.portDock.z.toFixed(1)} m`;
+        $('#port-dock-distance').textContent = U.distanceM(flight.portDock.z, 1);
         const offsetEl = $('#port-dock-offset');
         if (offsetEl) {
           const err = Math.hypot(flight.portDock.x, flight.portDock.y);
-          offsetEl.textContent = err < 0.18 ? `LOCKED (${err.toFixed(2)} m)` : `OFFSET ${err.toFixed(2)} m`;
+          offsetEl.textContent = err < 0.18
+            ? t('cockpit.cards.dockLocked', { dist: U.distanceM(err, 2) })
+            : t('cockpit.cards.dockOffset', { dist: U.distanceM(err, 2) });
         }
       }
-      $('#flight-alt-val').textContent = flight.altKm < 1 ? `${Math.round(flight.altKm * 1000)} m` : `${number(Math.round(flight.altKm * 10) / 10)} km`;
-      $('#flight-vel-val').textContent = `${flight.velMs < 10 ? flight.velMs.toFixed(1) : number(Math.round(flight.velMs))} m/s`;
+      $('#flight-alt-val').textContent = U.altitudeKm(flight.altKm);
+      $('#flight-vel-val').textContent = flight.velMs < 10 ? U.velocityMs(flight.velMs, 1) : U.velocityMs(flight.velMs, 0);
       $('#flight-hull-val').textContent = `${Math.round(flight.propellant)}% / ${Math.round(flight.hull)}%`;
-      $('#flight-hull-val').previousElementSibling.textContent = `${tankLabel()} / Hull`;
-      const goalLabels = ['Ascent Corridor Alignment', 'Cabin Docking Alignment', 'Docking Corridor Alignment', 'Landing Corridor Alignment'];
+      $('#flight-hull-val').previousElementSibling.textContent = `${tankLabel()}${t('cockpit.hullSuffix')}`;
+      const goalLabels = t('cockpit.goalLabels');
       const goal = flight.step === 1
         ? Math.round(Math.max(0, 100 - Math.hypot(flight.portDock?.x ?? 0, flight.portDock?.y ?? 0) * 100))
         : flight.step === 2 && flight.docking && !flight.docked
@@ -1299,8 +1351,8 @@
         mark.style.left = `${50 + (g.value[1] / g.limit) * 50}%`;
         mark.style.top = `${50 - (g.value[0] / g.limit) * 50}%`;
         mark.classList.toggle('out', g.error > g.band);
-        $('#kir-time').textContent = `${Math.ceil(g.duration - g.t)} s to ${flight.step === 0 ? 'MECO' : 'touchdown'}`;
-        $('#kir-share').textContent = `${Math.round(g.share() * 100)}% in band`;
+        $('#kir-time').textContent = t(flight.step === 0 ? 'cockpit.cards.timeToMeco' : 'cockpit.cards.timeToTouchdown', { sec: Math.ceil(g.duration - g.t) });
+        $('#kir-share').textContent = t('cockpit.cards.inBandPct', { pct: Math.round(g.share() * 100) });
         const st = g.stars(); $('#kir-stars').textContent = '★'.repeat(st) + '☆'.repeat(3 - st);
         $$('[data-hold]').forEach(b => b.classList.toggle('on', !!flight.input?.[b.dataset.hold]));
       }
@@ -1310,12 +1362,12 @@
         pip.classList.toggle('danger', Math.hypot(flight.pitchX, flight.pitchY) > 0.55);
       }
       const hasAlert = flight.breakers.some(Boolean) || (flight.step === 2 && !flight.docked);
-      $('#cockpit-badge').textContent = hasAlert ? 'ACTION REQUIRED' : 'NOMINAL';
-      $('#cockpit-alert-tag').textContent = hasAlert ? 'C&W MATRIX ALERT ACTIVE' : 'ALL SYSTEMS NOMINAL';
+      $('#cockpit-badge').textContent = hasAlert ? t('cockpit.badgeAction') : t('cockpit.badgeNominal');
+      $('#cockpit-alert-tag').textContent = hasAlert ? t('cockpit.alertActive') : t('cockpit.alertNominal');
       // Real RAD data exists only for the surface of Mars (Curiosity), so the tag appears on arrival.
       const rad = $('#cockpit-rad-tag');
       rad.style.display = flight.step === 3 ? '' : 'none';
-      rad.textContent = `Mars surface RAD: ${RAD_MARS_UGY_DAY} µGy/day`;
+      rad.textContent = t('cockpit.radTag', { val: RAD_MARS_UGY_DAY });
       const actionBtn = $('#cockpit-minigame [data-act="complete_step"]');
       if (actionBtn && flight.step === 2) actionBtn.disabled = !flight.docked || flight.refuelDone < refuelTarget();
       const dockReadout = $('#docking-monitor-readout'), docking = flight.docking;
@@ -1329,12 +1381,7 @@
 
     function renderFlightUI() {
       updateFlightStepper();
-      const titles = [
-        ['Flight Operations / Phase 05', 'Liftoff & Max-Q Corridor'],
-        ['Flight Operations / Phase 05B', 'Cabin Docking'],
-        ['Transit Operations / Phase 06A', 'Orbital Docking & Propellant Transfer'],
-        ['Mars Arrival / Phase 06B', 'Mars Landing'],
-      ];
+      const titles = t('cockpit.phaseTitles');
       $('.cockpit-reticle')?.toggleAttribute('hidden', true);
       $('#cockpit-eyebrow').textContent = titles[flight.step][0];
       $('#cockpit-title').textContent = titles[flight.step][1];
@@ -1350,9 +1397,9 @@
         outcome.hidden = !done;
         outcome.className = `dock-outcome${st === 'success' ? ' is-success' : st === 'failed' ? ' is-failed' : ''}`;
         outcome.innerHTML = st === 'success'
-          ? '<span class="dock-outcome-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><polyline points="7,19 15,27 29,10"/></svg></span><strong>Docking Complete</strong>'
+          ? `<span class="dock-outcome-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><polyline points="7,19 15,27 29,10"/></svg></span><strong>${t('cockpit.dockComplete')}</strong>`
           : st === 'failed'
-            ? '<span class="dock-outcome-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><line x1="9" y1="9" x2="27" y2="27"/><line x1="27" y1="9" x2="9" y2="27"/></svg></span><strong>Docking Failed</strong>'
+            ? `<span class="dock-outcome-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><line x1="9" y1="9" x2="27" y2="27"/><line x1="27" y1="9" x2="9" y2="27"/></svg></span><strong>${t('cockpit.dockFailed')}</strong>`
             : '';
       }
 
@@ -1360,47 +1407,47 @@
       if (flight.step === 0) {
         const g = flight.liftoff;
         box.innerHTML = `
-          <span class="eyebrow">Helena · Liftoff · Keep in range</span>
-          <h4>Hold the ascent program</h4>
-          <p>${g ? 'Keep the navball target centred, inside the green brackets, until MECO. <b>W/S</b> or <b>↑/↓</b> pitch, <b>A/D</b> or <b>←/→</b> yaw; corrections take a moment to bite.' : `Push <b>Throttle_Lever</b> to ${LIFTOFF.throttle * 100}% (<b>Space</b>) to lift off.`}${flight.design.ready ? ` <b>TWR ${flight.design.twr.toFixed(2)}: ${phaseDuration(0)} s climb${flight.design.overweight ? ', and the stack wallows more' : ''}.</b>` : ''}${flight.design.finsDrift < 1 ? ` <b>Fins damp the gusts (−${Math.round((1 - flight.design.finsDrift) * 100)}%).</b>` : ''}</p>
+          <span class="eyebrow">${t('cockpit.cards.helenaLiftoffEyebrow')}</span>
+          <h4>${t('cockpit.cards.helenaLiftoffTitle')}</h4>
+          <p>${g ? t('cockpit.cards.helenaLiftoffActive') : t('cockpit.cards.helenaLiftoffIdle', { pct: LIFTOFF.throttle * 100 })}${flight.design.ready ? t('cockpit.cards.helenaLiftoffTwr', { twr: U.decimal(flight.design.twr, 2), sec: phaseDuration(0), wallow: flight.design.overweight ? t('cockpit.cards.helenaLiftoffWallow') : '' }) : ''}${flight.design.finsDrift < 1 ? t('cockpit.cards.helenaLiftoffFins', { pct: Math.round((1 - flight.design.finsDrift) * 100) }) : ''}</p>
           <div class="kir-row">
-            <div class="kir kir-2d" style="--band:${(LIFTOFF.band / LIFTOFF.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">Nose high</span><span class="kir-label bottom">Nose low</span></div>
+            <div class="kir kir-2d" style="--band:${(LIFTOFF.band / LIFTOFF.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">${t('cockpit.cards.noseHigh')}</span><span class="kir-label bottom">${t('cockpit.cards.noseLow')}</span></div>
             <div class="kir-ctrl ${g ? 'kir-pad' : ''}">${g
               ? '<button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button>'
-              : `<button class="button primary" type="button" data-act="throttle_up">Throttle ${Math.round(flight.throttle * 100)}%<kbd>Space</kbd></button>`}</div>
+              : `<button class="button primary" type="button" data-act="throttle_up">${t('cockpit.cards.throttleBtn', { pct: Math.round(flight.throttle * 100) })}</button>`}</div>
           </div>
-          <div class="kir-stats"><span id="kir-time">${phaseDuration(0)} s to MECO</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
+          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToMeco', { sec: phaseDuration(0) })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
       } else if (flight.step === 1) {
         box.innerHTML = `
-          <span class="eyebrow">Helena · Station docking</span>
-          <h4>Align the cabin hatch</h4>
-          <p>Align the cabin hatch with the rotating station port on the centre monitor (keyboard only). Use <b>← →</b> (or <b>A / D</b>) left/right, <b>↑ ↓</b> up/down, <b>E / Q</b> (or <b>W / S</b>) forward/back. Every movement uses fuel.</p>
-          <div class="meter"><div class="meter-head"><span class="meter-label">Docking fuel</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
-          <div class="docking-readout"><span id="port-dock-offset">OFFSET 0.54 m</span><strong id="port-dock-distance">5.0 m</strong></div>
-          <p>${flight.portDock?.status === 'failed' ? '✕ Docking failed. Advancing to orbital transfer…' : flight.portDock?.status === 'success' ? '✓ Hatch secured! Advancing to orbital transfer…' : 'Centre the port inside the green ring before closing to 0.36 m.'}</p>`;
+          <span class="eyebrow">${t('cockpit.cards.helenaDockEyebrow')}</span>
+          <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
+          <p>${t('cockpit.cards.helenaDockDesc')}</p>
+          <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
+          <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(5.0, 1)}</strong></div>
+          <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(0.36, 2) })}</p>`;
       } else if (flight.step === 2) {
         const g = flight.docking, aligned = g ? Math.round(g.share() * 100) : 0;
         box.innerHTML = `
-          <span class="eyebrow">Oscar &amp; Maya · Orbital docking</span>
-          <h4>Match velocity &amp; transfer propellant</h4>
-          <p>${flight.docked ? `Hard-dock secure. Press ↑ to transfer propellant, then → to continue to Mars landing.` : 'Keep the tanker centred in the external view on the right monitor. W/S or ↑/↓ translate vertical, A/D or ←/→ translate lateral; the rougher the ascent, the more the stack drifts.'}</p>
-          <div class="docking-readout"><span>${flight.docked ? 'LATCHED · READY TO TRANSFER' : `ALIGNMENT ${aligned}%`}</span><strong>${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : `${Math.ceil((g?.duration ?? 0) - (g?.t ?? 0))} s APPROACH`}</strong></div>
+          <span class="eyebrow">${t('cockpit.cards.oscarMayaEyebrow')}</span>
+          <h4>${t('cockpit.cards.oscarMayaTitle')}</h4>
+          <p>${flight.docked ? t('cockpit.cards.oscarMayaDockedDesc') : t('cockpit.cards.oscarMayaApproachDesc')}</p>
+          <div class="docking-readout"><span>${flight.docked ? t('cockpit.cards.latchedReadout') : t('cockpit.cards.alignmentReadout', { pct: aligned })}</span><strong>${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : t('cockpit.cards.approachTime', { sec: Math.ceil((g?.duration ?? 0) - (g?.t ?? 0)) })}</strong></div>
           <div class="control-grid">
-            <button class="button secondary" type="button" data-act="pump_fuel" ${flight.docked && flight.refuelDone < refuelTarget() ? '' : 'disabled'}>Transfer Propellant (${flight.refuelDone}/${refuelTarget()}%)</button>
-            <button class="button secondary" type="button" data-act="stabilize" ${flight.docked ? 'disabled' : ''}>Trim Relative Velocity</button>
+            <button class="button secondary" type="button" data-act="pump_fuel" ${flight.docked && flight.refuelDone < refuelTarget() ? '' : 'disabled'}>${t('cockpit.cards.transferBtn', { done: flight.refuelDone, target: refuelTarget() })}</button>
+            <button class="button secondary" type="button" data-act="stabilize" ${flight.docked ? 'disabled' : ''}>${t('cockpit.cards.trimBtn')}</button>
           </div>
-          <button class="button primary" type="button" data-act="complete_step" ${!flight.docked || flight.refuelDone < refuelTarget() ? 'disabled' : ''}>Continue to Mars Landing →</button>`;
+          <button class="button primary" type="button" data-act="complete_step" ${!flight.docked || flight.refuelDone < refuelTarget() ? 'disabled' : ''}>${t('cockpit.cards.continueMarsBtn')}</button>`;
       } else {
         const g = flight.marsBurn;
         box.innerHTML = `
-          <span class="eyebrow">Helena · Mars landing · Keep in range</span>
-          <h4>Hold the landing program</h4>
-          <p>Keep the navball target centred, inside the green brackets, until touchdown. <b>W/S</b> or <b>↑/↓</b> pitch, <b>A/D</b> or <b>←/→</b> yaw; corrections take a moment to bite.</p>
+          <span class="eyebrow">${t('cockpit.cards.helenaLandingEyebrow')}</span>
+          <h4>${t('cockpit.cards.helenaLandingTitle')}</h4>
+          <p>${t('cockpit.cards.helenaLandingDesc')}</p>
           <div class="kir-row">
-            <div class="kir kir-2d" style="--band:${(MARS_BURN.band / MARS_BURN.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">Burn high</span><span class="kir-label bottom">Burn low</span></div>
+            <div class="kir kir-2d" style="--band:${(MARS_BURN.band / MARS_BURN.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">${t('cockpit.cards.burnHigh')}</span><span class="kir-label bottom">${t('cockpit.cards.burnLow')}</span></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button></div>
           </div>
-          <div class="kir-stats"><span id="kir-time">${MARS_BURN.duration} s to touchdown</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
+          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToTouchdown', { sec: MARS_BURN.duration })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
       }
       $$('[data-hold]', box).forEach(btn => {
         btn.addEventListener('pointerdown', () => { flight.hold = { [btn.dataset.hold]: true }; sendInput(); });
@@ -1414,7 +1461,7 @@
       const seats = STEP_CREW[flight.step] || [];
       if (net.mode !== 'solo' && !canAct(seats)) {
         $$('[data-act],[data-hold]', box).forEach(b => { b.disabled = true; });
-        box.insertAdjacentHTML('beforeend', `<p class="mp-watch">${crewNames(seats)} ${seats.length > 1 ? 'fly' : 'flies'} this phase: watch the crew work.</p>`);
+        box.insertAdjacentHTML('beforeend', `<p class="mp-watch">${t('cockpit.cards.watchCrew', { names: crewNames(seats), verb: seats.length > 1 ? t('cockpit.cards.flyPlural') : t('cockpit.cards.flySingular') })}</p>`);
       }
       updateCockpitHUD();
       syncFlight(true);
@@ -1457,7 +1504,7 @@
       surf.completed.add(id);
       syncSurface(true);
       radAudio.tone(860, 0.14, 'triangle', 0.06);
-      crewToast(surf.completed.size === surf.tasks.length ? 'All surface experiments done! Walk back to the lander and board the ascent vehicle.' : `${id} · ${t.title} done (${surf.completed.size}/${surf.tasks.length}).`);
+      crewToast(surf.completed.size === surf.tasks.length ? t('surface.allDoneToast') : t('surface.taskDoneToast', { id, title: t.title, done: surf.completed.size, total: surf.tasks.length }));
       window.dispatchEvent(new CustomEvent('astro:surface', { detail: surf }));
     }
 
@@ -1479,7 +1526,7 @@
       if (surfaceClockRuns()) surf.timerSec = Math.max(0, surf.timerSec - dt);
       syncSurface();
       if (surf.timerSec <= 0) {
-        crewToast('Return launch window reached! Mandatory ascent initiating.');
+        crewToast(t('surface.windowReached'));
         boardShipAndFinish(true);
         return;
       }
@@ -1516,8 +1563,8 @@
     function setResultsMode(failed) {
       $('#results').classList.toggle('is-failed', !!failed);
       $('#results-retry').hidden = !failed;
-      $('#results-eyebrow').textContent = failed === 'sea' ? 'Mission Debrief / Ocean Recovery' : failed ? 'Mission Debrief / Launch Pad' : 'Mission Debrief / Phase 07 Complete';
-      $('#results-title').textContent = failed === 'sea' ? 'Mission Abort' : failed ? 'Launch Failure' : 'Mars Return & Final Ranking';
+      $('#results-eyebrow').textContent = failed === 'sea' ? t('results.eyebrowSea') : failed ? t('results.eyebrowPad') : t('results.eyebrowSuccess');
+      $('#results-title').textContent = failed === 'sea' ? t('results.titleSea') : failed ? t('results.titlePad') : t('results.titleSuccess');
     }
 
     function showResults(forcedTimeout) {
@@ -1532,15 +1579,16 @@
       const grade = total >= 1150 ? 'S+' : total >= 950 ? 'A' : total >= 740 ? 'B' : 'C';
 
       $('#results-rank-letter').textContent = grade;
-      $('#results-score-text').textContent = `Total Score: ${number(total)} pts · ${tasksDone}/${surf.tasks.length} Surface Experiments`;
-      $('#results-status-badge').textContent = surf.stranded.length ? `LEFT BEHIND: ${surf.stranded.join(', ').toUpperCase()}` : 'ALL 4 CREW RETURNED';
-      $('#results-headline').textContent = surf.stranded.length ? 'Emergency Extraction Partial' : grade === 'S+' ? 'Historic Mars Triumph' : 'Mission Complete';
-      $('#podium-site-tag').textContent = `${state.site === 'jezero' ? 'JEZERO' : 'GALE'} CRATER · RANK ${grade}`;
+      $('#results-score-text').textContent = t('results.totalScore', { pts: number(total), done: tasksDone, total: surf.tasks.length });
+      $('#results-status-badge').textContent = surf.stranded.length ? t('results.leftBehind', { names: surf.stranded.join(', ').toUpperCase() }) : t('results.allReturned');
+      $('#results-headline').textContent = surf.stranded.length ? t('results.headlinePartial') : grade === 'S+' ? t('results.headlineTriumph') : t('results.headlineComplete');
+      $('#podium-site-tag').textContent = t('results.podiumTagSuccess', { site: SITES_INFO[state.site].name.toUpperCase(), grade });
 
       const helenaPts = Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0));
       const lucasPts = Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25));
       const oscarPts = Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25));
       const mayaPts = Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25));
+      const positions = t('results.positions');
       const ranked = [
         { ...crew[0], pts: helenaPts },
         { ...crew[1], pts: lucasPts },
@@ -1548,7 +1596,7 @@
         { ...crew[3], pts: mayaPts },
       ].sort((a, b) => b.pts - a.pts).map((c, idx) => ({
         ...c,
-        pos: ['1ST', '2ND', '3RD', '4TH'][idx],
+        pos: positions[idx],
         grade: c.pts >= 360 ? 'S+' : c.pts >= 310 ? 'A' : c.pts >= 240 ? 'B' : 'C',
       }));
 
@@ -1556,15 +1604,15 @@
         <div class="leader-row">
           <span class="leader-pos">${r.pos}</span>
           <span><b>${r.name}</b> <small class="muted">· ${r.role}</small></span>
-          <strong>${r.pts} pts</strong>
+          <strong>${t('results.ptsSuffix', { pts: r.pts })}</strong>
           <span class="leader-grade">${r.grade}</span>
         </div>`).join('');
 
       $('#results-breakdown').innerHTML = [
-        ['Budget & TWR', `${d.overBudget ? (d.budgetPenalty ? 'Exceeded' : 'Exceeded (warning only)') : 'On budget'} · ${d.lowTwr ? (d.overweight ? 'Low TWR buffet' : 'Low TWR (warning only)') : 'Liftoff TWR nominal'}`],
-        ['EDL Landing', `${flight.landingShare ?? 0}% in the landing corridor · ${hasEdlLabel(d)}`],
-        ['Radiation (RAD)', `No solar storm this flight · ${d.hasShelter ? 'storm shelter aboard' : 'no storm shelter'}`],
-        ['Surface Window', forcedTimeout ? (surf.stranded.length ? `Timeout — stranded: ${surf.stranded.join(', ')}` : 'Returned on timer') : `Cleared with ${Math.floor(surf.timerSec)}s margin`],
+        [t('results.breakdown.budgetTwr'), `${d.overBudget ? (d.budgetPenalty ? t('results.breakdown.exceeded') : t('results.breakdown.exceededWarn')) : t('results.breakdown.onBudget')} · ${d.lowTwr ? (d.overweight ? t('results.breakdown.lowTwrBuffet') : t('results.breakdown.lowTwrWarn')) : t('results.breakdown.twrNominal')}`],
+        [t('results.breakdown.edlLanding'), t('results.breakdown.edlValue', { pct: flight.landingShare ?? 0, suite: hasEdlLabel(d) })],
+        [t('results.breakdown.radLabel'), t('results.breakdown.radValue', { shelter: d.hasShelter ? t('results.breakdown.shelterYes') : t('results.breakdown.shelterNo') })],
+        [t('results.breakdown.surfaceWindow'), forcedTimeout ? (surf.stranded.length ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', ') }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
       ].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
 
       $('#podium-fallback').innerHTML = ranked.map((r, i) => `
@@ -1582,7 +1630,7 @@
     // Mission failed: on the pad (liftoffOf: no ignition, or thrust below weight) or after a Δv abort (abortOf: no orbit,
     // or Mars out of reach) that ended in a splashdown. Nothing is scored and the podium stays empty.
     function failLaunch(lift) {
-      const sea = lift.pad === 'SPLASHDOWN';
+      const sea = Boolean(lift.sea || lift.reason === 'no-orbit' || lift.reason === 'no-mars' || lift.pad === 'SPLASHDOWN');
       flight.design = captureDesign();
       flight.active = false;
       cancelAnimationFrame(flight.raf);
@@ -1593,33 +1641,33 @@
       setResultsMode(sea ? 'sea' : 'pad');
       radAudio.tone(150, 0.6, 'sawtooth', 0.05);
       $('#results-rank-letter').textContent = 'F';
-      $('#results-score-text').textContent = `Total Score: 0 pts · 0/${surf.tasks.length} Surface Experiments`;
-      $('#results-status-badge').textContent = sea ? 'MISSION FAILED · CREW RECOVERED AT SEA' : 'MISSION FAILED · CREW NEVER LEFT EARTH';
+      $('#results-score-text').textContent = t('results.totalScore', { pts: 0, done: 0, total: surf.tasks.length });
+      $('#results-status-badge').textContent = sea ? t('results.failedSeaBadge') : t('results.failedPadBadge');
       $('#results-headline').textContent = lift.title;
-      $('#podium-site-tag').textContent = sea ? `SPLASHDOWN · ${lift.title.toUpperCase()}` : `LAUNCH PAD · ${lift.pad}`;
-      $('#results-leaderboard').innerHTML = `<p class="muted">No ranking: the mission ${sea ? 'was aborted before Mars' : 'ended on the launch pad'}.</p>`;
+      $('#podium-site-tag').textContent = sea ? t('results.podiumTagSea', { title: lift.title.toUpperCase() }) : t('results.podiumTagPad', { pad: lift.pad });
+      $('#results-leaderboard').innerHTML = `<p class="muted">${t('results.noRanking', { cause: sea ? t('results.causeAborted') : t('results.causePad') })}</p>`;
       $('#results-breakdown').innerHTML = [
         ...(sea ? [
-          ['Abort', lift.detail],
-          ['Δv to orbit', `${number(d.dv)} / ${number(d.leo)} m/s`],
-          ['Mars transfer', d.orbit ? `${number(d.marsDv)} / ${number(d.transfer)} m/s (refuelled)` : '—'],
+          [t('results.breakdown.abort'), lift.detail],
+          [t('results.breakdown.dvOrbit'), `${U.velocityMs(d.dv)} / ${U.velocityMs(d.leo)}`],
+          [t('results.breakdown.marsTransfer'), d.orbit ? `${U.velocityMs(d.marsDv)} / ${U.velocityMs(d.transfer)}${t('results.breakdown.refuelledSuffix')}` : '—'],
         ] : [
-          ['Liftoff', lift.detail],
-          ['Thrust-to-weight', d.ready ? `${d.twr.toFixed(2)} · needs ${TWR_BARE().toFixed(1)} to lift off` : 'No thrust'],
+          [t('results.breakdown.liftoff'), lift.detail],
+          [t('results.breakdown.twr'), d.ready ? t('results.breakdown.twrNeeds', { twr: U.decimal(d.twr, 2), bare: U.decimal(TWR_BARE(), 1) }) : t('results.breakdown.noThrust')],
         ]),
-        ['Budget', d.overBudget ? 'Exceeded' : 'On budget'],
-        ['Mars', `Not reached · 0/${surf.tasks.length} surface experiments`],
+        [t('results.breakdown.budget'), d.overBudget ? t('results.breakdown.exceeded') : t('results.breakdown.onBudget')],
+        [t('results.breakdown.mars'), t('results.breakdown.marsNotReached', { total: surf.tasks.length })],
       ].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
-      $('#podium-fallback').innerHTML = ['1ST', '2ND', '3RD', '4TH'].map((pos, i) => `
+      $('#podium-fallback').innerHTML = t('results.positions').map((pos, i) => `
         <div class="podium-col"><div class="podium-step is-empty" style="padding-top:${(4 - i) * 10}px">${pos} · —</div></div>`).join('');
       showScreen('results');
       window.dispatchEvent(new CustomEvent('astro:results', { detail: { ranked: [], grade: 'F', failed: true } }));
     }
 
     function hasEdlLabel(d) {
-      if (d.hasLoftid && d.hasTrn) return 'Full EDL suite';
-      if (d.hasLoftid || d.hasTrn) return 'Cabin EDL gear';
-      return 'Minimal EDL gear';
+      if (d.hasLoftid && d.hasTrn) return t('results.edlFull');
+      if (d.hasLoftid || d.hasTrn) return t('results.edlCabin');
+      return t('results.edlMinimal');
     }
 
     const clearMission = () => { net.setState('flight', null); net.setState('surface', null); };
@@ -1639,7 +1687,7 @@
     const ACTION_CREW = { breaker: ['lucas'], stage_sep: ['lucas'], shield_storm: ['maya'] };
     const crewFor = actionId => ACTION_CREW[actionId] || STEP_CREW[flight.step] || [];
     const canAct = seats => seats.some(seat => net.owns(seat)); // mine, or AI crew while I host (solo: everyone)
-    const crewNames = seats => seats.map(id => crew.find(c => c.id === id)?.name ?? id).join(' & ');
+    const crewNames = seats => seats.map(id => crew.find(c => c.id === id)?.name ?? id).join(` ${t('common.and')} `);
     function crewToast(text) { toast(text); net.emit({ k: 'toast', text }); }
 
     // Steering: the keys and pad of whoever may fly the current step, here and on the guests' screens.
@@ -1758,9 +1806,9 @@
       if (error) toast(error); else window.dispatchEvent(new CustomEvent('astro:control'));
     }
     function grantCrew(id, peerId) {
-      if (!surf.active || !surf.control || !(id in surf.control)) return 'Not now.';
+      if (!surf.active || !surf.control || !(id in surf.control)) return t('surface.notNow');
       const holder = surf.control[id];
-      if (holder && holder !== peerId) return `${crewNames([id])} is controlled by another player.`;
+      if (holder && holder !== peerId) return t('surface.controlledByOther', { names: crewNames([id]) });
       for (const k of Object.keys(surf.control)) if (surf.control[k] === peerId) surf.control[k] = null;
       surf.control[id] = peerId;
       syncSurface(true);
@@ -1778,7 +1826,7 @@
       if (net.isGuest) { net.act('board'); return; }
       if (!surf.active) return;
       const away = playersAway();
-      if (away.length) { const text = `Waiting for the crew at the lander: ${away.join(', ')}.`; if (by) net.send({ k: 'toast', text }, by); else toast(text); return; }
+      if (away.length) { const text = t('surface.waitingCrew', { names: away.join(', ') }); if (by) net.send({ k: 'toast', text }, by); else toast(text); return; }
       boardShipAndFinish(false);
     }
 
@@ -1835,11 +1883,13 @@
 
     return { startFlight, failLaunch, handleCockpitAction, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,
+      refreshUI: () => { if (flight.active) renderFlightUI(); },
+      get isMuted() { return radAudio.muted; },
       surfaceLoaded: () => { if (net.isGuest) net.act('loaded'); } };
   })();
   window.ASTRO_SIM = SIM;
   // Shared with the 3D modules below.
-  function renderBadge(){const lv=LV(),s=lv.surfaceS,badge=$('#modifier-badge');badge.textContent=`${money(budgetOf(state.difficulty))} · ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} on Mars · ${lv.rules}`;badge.title=lv.about;}
+  function renderBadge(){const lv=LV(),s=lv.surfaceS,badge=$('#modifier-badge');badge.textContent=t('lobby.badge',{budget:money(budgetOf(state.difficulty)),time:`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`,rules:lv.rules});badge.title=lv.about;}
   $$('#difficulty-buttons button').forEach(b=>{b.title=difficulty[b.dataset.difficulty].about;});
   window.ASTRO_ART={RAMPS,PLANETS};
   window.ASTRO={state,crew,sites:SITES_INFO,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),CREW_MODELS,COCKPIT_MODEL};
@@ -1857,7 +1907,7 @@
   // Guests copy the host's setup. A host that reloaded the page gets its own setup back from the room (force).
   function applySetup(s,force){
     if(!s||!(net.isGuest||force))return;
-    if(WORLD_NAMES[s.world]&&s.world!==state.world)selectWorld(s.world);
+    if(WORLD_IDS.includes(s.world)&&s.world!==state.world)selectWorld(s.world);
     if(SITES_INFO[s.site])state.site=s.site;
     if(difficulty[s.difficulty]&&s.difficulty!==state.difficulty)setDifficulty(s.difficulty);
     if(s.rocket?.booster&&Array.isArray(s.rocket.stages)&&Array.isArray(s.rocket.cabin))state.rocket=s.rocket;
@@ -1868,7 +1918,7 @@
   function lockGuest(){
     const guest=net.isGuest;let unlocked=false;
     HOST_BUTTONS.forEach(sel=>{const b=$(sel);if(!b)return;
-      if(guest){if(b.dataset.label==null)b.dataset.label=b.innerHTML;b.disabled=true;b.textContent='Waiting for host';}
+      if(guest){if(b.dataset.label==null)b.dataset.label=b.innerHTML;b.disabled=true;b.textContent=t('common.waitingForHost');}
       else if(b.dataset.label!=null){b.innerHTML=b.dataset.label;b.disabled=false;delete b.dataset.label;unlocked=true;}});
     if(unlocked)selectWorld(state.world); // the objective button depends on the destination
     $$('#difficulty-buttons button,[data-world]').forEach(b=>b.toggleAttribute('aria-disabled',guest));
@@ -1885,7 +1935,7 @@
   let role='solo'; // the role in the room, kept after it closes
   net.on('welcome',m=>{
     lastSetup='';role=net.mode;
-    if(net.isGuest){applySetup(net.cached.setup);guestScreen(net.phase);if(m.t!=='resumed')toast(`You joined room ${net.code}.`);}
+    if(net.isGuest){applySetup(net.cached.setup);guestScreen(net.phase);if(m.t!=='resumed')toast(t('lobby.room.joinedRoom',{code:net.code}));}
     else if(m.t==='resumed'){applySetup(net.cached.setup,true);if(GUEST_SCREENS.includes(net.phase)&&net.phase!==state.screen)showScreen(net.phase);else net.setPhase(state.screen);}
     else{net.setPhase(state.screen);syncSetup();}
     lockGuest();renderLobby();
@@ -1914,12 +1964,25 @@
     if(!Object.hasOwn(ROCKET_ACTIONS,name))return;
     if(!['lobby','planner'].includes(state.screen))return; // the rocket is frozen once launched
     let error;
-    try{error=ROCKET_ACTIONS[name](...args);}catch{error='That change did not apply.';}
+    try{error=ROCKET_ACTIONS[name](...args);}catch{error=t('planner.errors.changeFailed');}
     if(error){net.send({k:'toast',text:error},from.id);return;}
     fitSelection();renderPlanner();
   });
   net.on('msg',data=>{if(data?.k==='toast'&&typeof data.text==='string')toast(data.text);});
 
-  paintArt();renderLobby();renderBadge();renderPlanner();setupStars();lockGuest();net.start();
-  if(!DATA)fetch('assets/models/parts/manifest.json').then(r=>r.json()).then(m=>{useData(m);renderBadge();renderPlanner();}).catch(()=>toast('Could not load the part specs.'));
+  window.addEventListener('astro:settings',()=>{
+    HOST_BUTTONS.forEach(sel=>{const b=$(sel);if(b&&b.dataset.label!=null)delete b.dataset.label;});
+    selectWorld(state.world);
+    renderBadge();
+    $$('#difficulty-buttons button').forEach(b=>{b.title=difficulty[b.dataset.difficulty].about;});
+    renderLobby();
+    renderPlanner();
+    lockGuest();
+    const audioBtn=$('#audio-toggle-cockpit');
+    if(audioBtn)audioBtn.textContent=SIM.isMuted?t('cockpit.audioOff'):t('cockpit.audioOn');
+    SIM.refreshUI();
+  });
+
+  selectWorld(state.world);paintArt();renderLobby();renderBadge();renderPlanner();setupStars();lockGuest();net.start();
+  if(!DATA)fetch('assets/models/parts/manifest.json').then(r=>r.json()).then(m=>{useData(m);renderBadge();renderPlanner();}).catch(()=>toast(t('planner.loadPartsError')));
 })();

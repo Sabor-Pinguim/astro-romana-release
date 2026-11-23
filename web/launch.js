@@ -11,10 +11,11 @@ const THREE = await import('three');
 const screen = document.getElementById('launchpad'), host = document.getElementById('launchpad-view');
 const $id = id => document.getElementById(id);
 const ui = window.ASTRO, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const t = (key, opts) => window.ASTRO_I18N?.t(key, opts) ?? key;
 // game: countdown length, how long the engines burn on screen before the camera moves, the fly-in time; on a
 // failed liftoff, how long the engines burn on the pad before the shutdown and how long the pad stays on screen.
 const COUNT = 10, IGNITION_HOLD = 1.6, FLY_IN = 2.2, PAD_BURN = 3, FAIL_HOLD = 4.5;
-const STATUS = [[10, 'Final checks'], [7, 'Go for launch'], [5, 'Tower arm retracting'], [2, 'Engines armed'], [0, 'Ignition · liftoff']];
+const STATUS = [[10, 'launch.pad.status10'], [7, 'launch.pad.status7'], [5, 'launch.pad.status5'], [2, 'launch.pad.status2'], [0, 'launch.pad.status0']];
 
 let renderer = null;
 try { renderer = new THREE.WebGLRenderer({ antialias: true }); } catch { renderer = null; }
@@ -185,19 +186,19 @@ function buildTower(v) {
   v.arm.position.set(x - .35, cabinY, 0); v.arm.rotation.y = 0;
 }
 
-function countdownText(t, lift) {
-  const left = Math.max(0, Math.ceil(COUNT - t)), zero = t >= COUNT, failed = zero && !lift.ok, count = $id('launchpad-count');
-  count.textContent = !zero ? `T−${String(left).padStart(2, '0')}` : lift.ok ? 'LIFTOFF' : lift.pad;
+function countdownText(tSec, lift) {
+  const left = Math.max(0, Math.ceil(COUNT - tSec)), zero = tSec >= COUNT, failed = zero && !lift.ok, count = $id('launchpad-count');
+  count.textContent = !zero ? `T−${String(left).padStart(2, '0')}` : lift.ok ? t('launch.pad.liftoff') : lift.pad;
   count.classList.toggle('fail', failed);
-  $id('launchpad-status').textContent = failed ? lift.status : ([...STATUS].reverse().find(([s]) => s >= left) ?? STATUS[0])[1]; // the latest step reached
+  $id('launchpad-status').textContent = failed ? lift.status : t(([...STATUS].reverse().find(([s]) => s >= left) ?? STATUS[0])[1]); // the latest step reached
 }
 
 window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async resolve => {
   ui.show('launchpad');
   const site = ui.sites?.[ui.state.site];
-  $id('launchpad-title').textContent = `Mission: ${site?.mission ?? 'Mars'}`;
+  $id('launchpad-title').textContent = t('common.missionPrefix', { name: site?.mission ?? t('orbit.worlds.mars') });
   $id('launchpad-fade').classList.remove('on'); $id('launchpad-count').style.opacity = ''; $id('launchpad-count').classList.remove('fail');
-  $id('launchpad-eyebrow').textContent = 'Launch pad · Earth';
+  $id('launchpad-eyebrow').textContent = t('launch.pad.eyebrow');
   let done = false;
   const finish = () => { if (done) return; done = true; $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
@@ -358,10 +359,10 @@ function initSea() {
 window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
   ui.show('launchpad');
   const site = ui.sites?.[ui.state.site], count = $id('launchpad-count');
-  $id('launchpad-title').textContent = `Mission: ${site?.mission ?? 'Mars'}`;
-  $id('launchpad-eyebrow').textContent = 'Abort · ocean recovery';
-  $id('launchpad-status').textContent = info.status ?? 'Abort';
-  $id('launchpad-fade').classList.remove('on'); count.style.opacity = ''; count.classList.add('fail'); count.textContent = 'ABORT';
+  $id('launchpad-title').textContent = t('common.missionPrefix', { name: site?.mission ?? t('orbit.worlds.mars') });
+  $id('launchpad-eyebrow').textContent = t('launch.pad.abortEyebrow');
+  $id('launchpad-status').textContent = info.status ?? t('launch.pad.abort');
+  $id('launchpad-fade').classList.remove('on'); count.style.opacity = ''; count.classList.add('fail'); count.textContent = t('launch.pad.abort');
   let done = false;
   const finish = () => { if (done) return; done = true; $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
@@ -370,7 +371,7 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
   const end = SPLASH.fall + SPLASH.hold;
   if (!renderer || !window.ASTRO_BUILD_ROCKET) { // no 3D: the texts alone
     const t0 = performance.now();
-    const tick = () => { if (done) return; const t = (performance.now() - t0) / 1000; if (t >= SPLASH.fall) count.textContent = 'SPLASHDOWN'; if (t >= end) finish(); else requestAnimationFrame(tick); };
+    const tick = () => { if (done) return; const elapsed = (performance.now() - t0) / 1000; if (elapsed >= SPLASH.fall) count.textContent = t('launch.pad.splashdown'); if (elapsed >= end) finish(); else requestAnimationFrame(tick); };
     tick(); return;
   }
   seaView ||= initSea();
@@ -426,7 +427,7 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
     up.set(0, 1, 0).applyQuaternion(cab.getWorldQuaternion(new THREE.Quaternion()));
     cab.localToWorld(top.set(0, v.towerY, 0));
     v.clip.setFromNormalAndCoplanarPoint(up.negate(), top);
-    count.textContent = splashed ? 'SPLASHDOWN' : 'ABORT';
+    count.textContent = splashed ? t('launch.pad.splashdown') : t('launch.pad.abort');
     // Camera: follows the capsule down with the canopies in frame, then settles low over the water.
     const a = .7 + t * .05, dist = (splashed ? 7 : 9) / Math.min(1, camera.aspect * 1.4); // narrow screens: step back
     look.set(0, splashed ? .4 : v.craft.position.y + 2.4, 0);
