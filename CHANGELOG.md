@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.5] - 2026-11-23
+
+### Removed
+- **Multiplayer & cockpit UI emojis:** removed lock (`🔒`), gear (`⚙`), and double-arrow (`⏫`, `⏬`) emojis from the lobby room browser, locked name badges, and cockpit docking buttons (`web/app.js`, `web/locales/en.js`, `web/locales/pt.js`), replacing them with flat triangles (`▲`, `▼`) and the CSS `.settings-glyph` icon.
+
 ## [1.4.4] - 2026-11-23
 
 ### Changed

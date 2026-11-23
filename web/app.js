@@ -332,7 +332,7 @@
       const host = rm.hostName ? esc(t('lobby.roomBrowser.hostLabel', { name: rm.hostName })) : esc(rm.code);
       return `<div class="room-browser-item">
         <div class="room-browser-info">
-          <strong>${rm.hasPassword ? '🔒 ' : ''}${esc(rm.name || rm.code)}</strong>
+          <strong>${esc(rm.name || rm.code)}</strong>
           <div class="room-browser-meta">
             <span>${esc(rm.code)}</span><span>· ${host}</span>
             <span class="tag">${esc(t('lobby.roomBrowser.slots', { players: rm.players, max: rm.maxPlayers }))}</span>
@@ -407,11 +407,11 @@
           <div class="mp-server-bar">
             <span class="micro">${t('lobby.roomBrowser.serverLabel')}</span>
             <strong class="mp-server-url" title="${esc(net.url)}">${esc(serverHost)}</strong>
-            <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}">⚙</button>
+            <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}"><span class="settings-glyph" aria-hidden="true"></span></button>
           </div>
           <div class="mp-name-bar">
             ${nameLocked
-              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">🔒 ${esc(savedName)}</strong>`
+              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">${esc(savedName)}</strong>`
               : `<label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">`}
           </div>
           <div class="segmented mp-tabs" role="group">
@@ -482,7 +482,7 @@
         <span class="micro">${t('lobby.room.label')}</span>
         <strong class="room-code">${esc(net.code)}</strong>
         ${net.roomName ? `<span class="tag">${esc(net.roomName)}</span>` : ''}
-        ${net.hasPassword ? `<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
+        ${net.hasPassword ? `<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
         ${net.isPrivate ? `<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>` : ''}
         <button class="button quiet" type="button" id="mode-copy-btn">${t('lobby.roomBrowser.copyLinkShort')}</button>
         <button class="button quiet" type="button" id="mode-leave-btn">${t('lobby.room.leave')}</button>
@@ -546,7 +546,7 @@
     const lost=net.status!=='open';
     const nameLocked=!!net.isPlayerNameLocked?.();
     const curName=nameLocked?net.getPlayerName():'';
-    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button>${nameLocked?`<span class="tag">🔒 ${esc(curName)}</span>`:`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`}<span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button>${nameLocked?`<span class="tag">${esc(curName)}</span>`:`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`}<span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{net.leave();});
     if(!nameLocked){
