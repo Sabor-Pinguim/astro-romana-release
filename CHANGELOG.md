@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.5.2] - 2026-11-23
+
+### Changed
+- **AI Crew robot icon (`ROBOT_ICON` in `web/app.js`):** redesigned the low-poly SVG robot icon with a lighter silver faceted head, side ear bolts, diamond-tipped antenna, bright cyan visor eyes, and metallic mouth grille for clearer recognition and contrast.
+
 ## [1.5.1] - 2026-11-23
 
 ### Changed
