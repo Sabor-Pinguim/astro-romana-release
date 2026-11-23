@@ -8,6 +8,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.1.0] - 2026-11-23
+
+### Added
+- **Engineering Hints setting (`#settings`, `web/settings.js`):**
+  - Added an **Engineering hints** (`On` / `Off`, enabled by default, persisted in `localStorage`) preference with full EN/PT-BR localization (`web/locales/en.js`, `web/locales/pt.js`).
+- **Contextual fix hints & quick shortcuts in rocket telemetry (`web/app.js`):**
+  - Each telemetry warning (`#booster-alert`, `#stage-alert`, `#twr-alert`, `#dv-alert`, `#budget-alert`, `#power-alert`) now displays a dynamic, contextual fix suggestion based on the current rocket state (propellant type, budget overshoot, power deficit, upper-stage presence) plus a one-click shortcut button that opens the relevant module and catalog tab.
+- **Scrollable telemetry alerts (`index.html`, `web/styles.css`):**
+  - Wrapped telemetry alerts in `.telemetry-alerts` with vertical scrolling so multiple active warnings never get clipped.
+
 ## [1.0.0] - 2026-11-23
 
 ### Added

@@ -16,7 +16,7 @@
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.0.0</div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.1.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -58,6 +58,19 @@
               <strong data-i18n="settings.imperial">Imperial (US)</strong>
               <small data-i18n="settings.imperialExamples">lb, ton, lbf, ft/s, mi, °F, oz</small>
             </button>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="settings-hints-heading">
+          <div class="settings-group-head">
+            <div>
+              <span class="eyebrow" id="settings-hints-heading" data-i18n="settings.hintsLabel">Engineering hints</span>
+              <p class="settings-desc" data-i18n="settings.hintsDesc">Show fix suggestions and quick catalog shortcuts inside rocket telemetry warnings.</p>
+            </div>
+          </div>
+          <div class="segmented" id="settings-hints" role="group" aria-labelledby="settings-hints-heading">
+            <button type="button" data-hints="on" aria-pressed="true" data-i18n="settings.hintsOn">On</button>
+            <button type="button" data-hints="off" aria-pressed="false" data-i18n="settings.hintsOff">Off</button>
           </div>
         </section>
 
@@ -458,6 +471,7 @@
       <div class="dialog-actions"><button class="button quiet" id="minigame-close" type="button" data-i18n="common.back">Back</button><button class="button primary" id="minigame-done" type="button" data-i18n="minigames.completeBtn">Complete experiment</button></div>
     </div>
   </dialog>
+  <dialog id="hint-dialog" aria-labelledby="hint-dialog-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="planner.hints.modalEyebrow">Engineering hint</span><h3 id="hint-dialog-title" data-i18n="planner.hints.modalTitle">How to fix this warning</h3><div class="alert show" id="hint-dialog-alert" role="status"></div><p class="hint-dialog-copy" id="hint-dialog-text"></p><div class="dialog-actions"><button class="button quiet" id="hint-dialog-close" type="button" data-i18n="planner.hints.close">Close</button><button class="button primary" id="hint-dialog-action" type="button" hidden></button></div></div></dialog>
   <dialog id="launch-dialog" aria-labelledby="launch-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="launch.reviewEyebrow">Launch review</span><h3 id="launch-title">Mission ready for review</h3><p id="launch-message"></p><div class="summary-list" id="launch-summary"></div><div class="dialog-actions"><button class="button quiet" id="launch-close" type="button" data-i18n="launch.keepEditing">Keep editing</button><button class="button primary" id="launch-confirm" type="button">Launch mission →</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>

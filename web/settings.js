@@ -1,8 +1,8 @@
-// Settings persistence and UI controller for Language, Measurement System, and Multiplayer Server.
+// Settings persistence and UI controller for Language, Measurement System, Engineering Hints, and Multiplayer Server.
 (() => {
   'use strict';
   const STORAGE_KEY = 'astro-romana-settings';
-  const DEFAULTS = { language: 'en', unitSystem: 'metric', serverUrl: '' };
+  const DEFAULTS = { language: 'en', unitSystem: 'metric', hints: true, serverUrl: '' };
 
   function loadSettings() {
     try {
@@ -11,6 +11,7 @@
       return {
         language: parsed.language || DEFAULTS.language,
         unitSystem: parsed.unitSystem === 'imperial' ? 'imperial' : DEFAULTS.unitSystem,
+        hints: typeof parsed.hints === 'boolean' ? parsed.hints : DEFAULTS.hints,
         serverUrl: typeof parsed.serverUrl === 'string' ? parsed.serverUrl : DEFAULTS.serverUrl,
       };
     } catch {
@@ -86,6 +87,9 @@
     document.querySelectorAll('#settings-units [data-unit]').forEach(btn => {
       btn.setAttribute('aria-pressed', String(btn.dataset.unit === current.unitSystem));
     });
+    document.querySelectorAll('#settings-hints [data-hints]').forEach(btn => {
+      btn.setAttribute('aria-pressed', String((btn.dataset.hints === 'on') === current.hints));
+    });
     const input = document.getElementById('settings-server-input');
     const n = net();
     if (input && n) {
@@ -109,6 +113,14 @@
     current.unitSystem = target;
     saveSettings(current);
     units()?.setSystem(target);
+    syncUI();
+    emitChange();
+    if (!silent) showToast(t('settings.savedToast'));
+  }
+
+  function setHints(enabled, silent = false) {
+    current.hints = Boolean(enabled);
+    saveSettings(current);
     syncUI();
     emitChange();
     if (!silent) showToast(t('settings.savedToast'));
@@ -159,6 +171,9 @@
     document.querySelectorAll('#settings-units [data-unit]').forEach(btn => {
       btn.addEventListener('click', () => setUnitSystem(btn.dataset.unit));
     });
+    document.querySelectorAll('#settings-hints [data-hints]').forEach(btn => {
+      btn.addEventListener('click', () => setHints(btn.dataset.hints === 'on'));
+    });
     const serverInput = document.getElementById('settings-server-input');
     const serverSave = document.getElementById('settings-server-save');
     const serverReset = document.getElementById('settings-server-reset');
@@ -188,6 +203,7 @@
     get: () => ({ ...current }),
     setLanguage,
     setUnitSystem,
+    setHints,
     setServerUrl,
     resetAll,
     syncUI,

@@ -424,6 +424,52 @@
       budget:budgetOf(state.difficulty),leo,transfer};
   }
   function setBar(id,frac,mode){const el=$(id);el.style.width=Math.min(100,Math.max(0,frac*100))+'%';el.classList.toggle('danger',mode==='danger');el.classList.toggle('short',mode==='short');}
+  let activeHintAction = null;
+  function openHintDialog(message, hint, action) {
+    const dlg = $('#hint-dialog');
+    if (!dlg) return;
+    $('#hint-dialog-alert').textContent = message;
+    $('#hint-dialog-text').textContent = hint;
+    const actBtn = $('#hint-dialog-action');
+    activeHintAction = action?.key ? action : null;
+    if (actBtn) {
+      actBtn.hidden = !activeHintAction;
+      if (activeHintAction) actBtn.textContent = `${activeHintAction.label} →`;
+    }
+    if (!dlg.open) dlg.showModal();
+  }
+  $('#hint-dialog-close')?.addEventListener('click', () => $('#hint-dialog')?.close());
+  $('#hint-dialog-action')?.addEventListener('click', () => {
+    const act = activeHintAction;
+    $('#hint-dialog')?.close();
+    if (act?.key) selectModule(act.key, act.tab);
+  });
+  $('#hint-dialog')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.close();
+  });
+  function setAlert(id, show, message, hint, action) {
+    const el = $(id);
+    if (!el) return;
+    const hintsOn = (window.ASTRO_SETTINGS?.get?.().hints ?? true) && !!hint;
+    el.classList.toggle('show', !!show);
+    el.classList.toggle('has-hint', !!show && hintsOn);
+    el.onclick = null;
+    if (!show) { el.replaceChildren(); return; }
+    const msg = document.createElement('div');
+    msg.className = 'alert-msg';
+    msg.textContent = message;
+    const nodes = [msg];
+    if (hintsOn) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'alert-hint-go';
+      btn.textContent = `${t('planner.hints.label')} ↗`;
+      btn.addEventListener('click', e => { e.stopPropagation(); openHintDialog(message, hint, action); });
+      el.onclick = () => openHintDialog(message, hint, action);
+      nodes.push(btn);
+    }
+    el.replaceChildren(...nodes);
+  }
   function renderTelemetry(){
     if(!DATA)return null;
     const m=metrics();
@@ -439,16 +485,40 @@
     $('#dv-hint').textContent=t('planner.dvHint',{tol:tolNote(m.leo,'earthOrbitDeltaVMs')});
     $('#mass-value').textContent=tonnes(m.mass);
     const b=state.rocket.booster,dead=m.stack.slice(1).find(s=>s.issue);
-    $('#booster-alert').textContent=!b.engine?t('planner.alerts.noEngine',{easy:easyNote()}):!b.tank?t('planner.alerts.noTank',{easy:easyNote()}):t('planner.alerts.propellantMismatch',{engineFuel:fuelOf(b.engine),tankFuel:fuelOf(b.tank),easy:easyNote()});
-    $('#booster-alert').classList.toggle('show',!m.ready);
-    $('#stage-alert').textContent=!dead?'':dead.issue==='thrust'?t('planner.alerts.stageTooWeak',{stage:stageName(dead.key).toUpperCase(),twr:U.decimal(dead.twr,2),min:U.decimal(UPPER_TWR(),1),easy:easyNote()})
-      :t('planner.alerts.stageDead',{stage:stageName(dead.key).toUpperCase(),reason:dead.issue==='propellant'?t('planner.alerts.reasonPropellant'):t('planner.alerts.reasonIncomplete')});
-    $('#stage-alert').classList.toggle('show',!!dead);
-    $('#twr-alert').textContent=m.twr<TWR_BARE()?t('planner.alerts.noLiftoff',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.alerts.lowTwr',{min:U.decimal(TWR_MIN(),1)});
-    $('#twr-alert').classList.toggle('show',m.ready&&m.twr<TWR_MIN());
-    $('#dv-alert').textContent=!m.orbit?t('planner.alerts.noOrbit',{easy:easyNote()}):t('planner.alerts.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer),easy:easyNote()});
-    $('#dv-alert').classList.toggle('show',m.ready&&!m.marsOk);
-    $('#budget-alert').classList.toggle('show',m.cost>m.budget);$('#power-alert').classList.toggle('show',m.gen<m.draw);
+    const hasUpperBooster=state.rocket.stages.some(s=>s.type==='booster');
+    const bayIdx=state.rocket.stages.findIndex(s=>s.type!=='booster');
+    const bayKey=bayIdx>=0?`stage-${bayIdx}`:null;
+    setAlert('#booster-alert',!m.ready,
+      !b.engine?t('planner.alerts.noEngine',{easy:easyNote()}):!b.tank?t('planner.alerts.noTank',{easy:easyNote()}):t('planner.alerts.propellantMismatch',{engineFuel:fuelOf(b.engine),tankFuel:fuelOf(b.tank),easy:easyNote()}),
+      !b.engine?t('planner.hints.noEngine'):!b.tank?t('planner.hints.noTank',{fuel:fuelOf(b.engine)}):t('planner.hints.propellantMismatch',{engineFuel:fuelOf(b.engine)}),
+      {key:'booster',tab:!b.engine?'engine':'tank',label:!b.engine?t('planner.hints.goStage1Engines'):t('planner.hints.goStage1Tanks')}
+    );
+    setAlert('#stage-alert',!!dead,
+      !dead?'':dead.issue==='thrust'?t('planner.alerts.stageTooWeak',{stage:stageName(dead.key).toUpperCase(),twr:U.decimal(dead.twr,2),min:U.decimal(UPPER_TWR(),1),easy:easyNote()})
+        :t('planner.alerts.stageDead',{stage:stageName(dead.key).toUpperCase(),reason:dead.issue==='propellant'?t('planner.alerts.reasonPropellant'):t('planner.alerts.reasonIncomplete')}),
+      !dead?'':dead.issue==='thrust'?t('planner.hints.stageTooWeak',{stage:stageName(dead.key)}):dead.issue==='propellant'?t('planner.hints.stagePropellant',{stage:stageName(dead.key)}):t('planner.hints.stageIncomplete',{stage:stageName(dead.key)}),
+      dead?{key:dead.key,tab:dead.issue==='propellant'?'tank':'engine',label:t('planner.hints.goStage',{stage:stageName(dead.key)})}:null
+    );
+    setAlert('#twr-alert',m.ready&&m.twr<TWR_MIN(),
+      m.twr<TWR_BARE()?t('planner.alerts.noLiftoff',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.alerts.lowTwr',{min:U.decimal(TWR_MIN(),1)}),
+      t('planner.hints.lowTwr',{min:U.decimal(TWR_MIN(),1)}),
+      {key:'booster',tab:'engine',label:t('planner.hints.goStage1Engines')}
+    );
+    setAlert('#dv-alert',m.ready&&!m.marsOk,
+      !m.orbit?t('planner.alerts.noOrbit',{easy:easyNote()}):t('planner.alerts.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer),easy:easyNote()}),
+      !m.orbit?(hasUpperBooster?t('planner.hints.noOrbitTank'):t('planner.hints.noOrbitStage')):t('planner.hints.noMars',{stage:m.refuelStage?stageName(m.refuelStage.key):stageName('booster')}),
+      {key:!m.orbit?'booster':(m.refuelStage?.key||'booster'),tab:'tank',label:t('planner.hints.goTanks')}
+    );
+    setAlert('#budget-alert',m.cost>m.budget,
+      t('planner.alerts.overBudget'),
+      t('planner.hints.overBudget',{over:money(m.cost-m.budget)}),
+      {key:'booster',tab:'engine',label:t('planner.hints.goStage1Engines')}
+    );
+    setAlert('#power-alert',m.gen<m.draw,
+      t('planner.alerts.powerDeficit'),
+      t('planner.hints.powerDeficit',{watts:number(m.draw-m.gen)}),
+      bayKey?{key:bayKey,tab:'power',label:t('planner.hints.goPower')}:null
+    );
     $('#budget-remaining').textContent=money(m.budget-m.cost);$('#budget-readout').classList.toggle('negative',m.cost>m.budget);
     return m;
   }

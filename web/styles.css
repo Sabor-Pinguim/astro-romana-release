@@ -25,7 +25,7 @@
     ::selection{background:var(--mars-orange);color:var(--bg-void)}
     :focus-visible{outline:2px solid var(--solar-amber);outline-offset:3px}
     /* clip-path hides outlines, so clipped controls show focus inside */
-    :is(.button,.step,.lobby-step-tab,.difficulty-card,.site-card,.mars-pin,.crew-card,.site-thumb,.pick,.part button,.rocket-stage,.remove-stage,.category-tabs button,.segmented button,.switch,.invite,.icon-button,.relay-packet,.bio-tool):focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
+    :is(.button,.step,.lobby-step-tab,.difficulty-card,.site-card,.mars-pin,.crew-card,.site-thumb,.pick,.part button,.rocket-stage,.remove-stage,.category-tabs button,.segmented button,.switch,.invite,.icon-button,.relay-packet,.bio-tool,.alert-hint-go):focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .muted{color:var(--muted)}
     #app{min-height:100vh;position:relative;overflow:hidden;z-index:1}
     .screen{display:none;min-height:100vh;flex-direction:column}
@@ -417,6 +417,13 @@
     .telemetry-alerts .alert{flex:none}
     .alert{display:none;padding:.7rem .8rem .7rem 1.5rem;font:700 .66rem/1.35 var(--heading);letter-spacing:.08em;color:#ffe3d8;background:linear-gradient(90deg,transparent 0 10px,var(--crimson-alert) 10px),repeating-linear-gradient(-45deg,var(--solar-amber) 0 5px,var(--bg-void) 5px 10px);clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
     .alert.show{display:block}
+    .alert.has-hint{display:none;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;transition:filter .12s}
+    .alert.has-hint.show{display:flex}
+    .alert.has-hint:hover{filter:brightness(1.12)}
+    .alert-msg{flex:1;min-width:0}
+    .alert-hint-go{flex:none;padding:.34rem .7rem;border:0;font:700 .6rem/1 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--bg-void);background:var(--solar-amber);clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);transition:background .12s}
+    .alert-hint-go:hover{background:var(--starlight-cream)}
+    .hint-dialog-copy{font-size:1rem;line-height:1.5;color:var(--starlight-cream)}
     .telemetry-note{margin-top:auto;font-size:.72rem;color:var(--muted)}
     .blueprint.slab{overflow:hidden;padding:0;background:linear-gradient(112deg,#1c1d48 0 26%,var(--bg-viewport) 26% 68%,#131431 68%)}
     .viewport-label{position:absolute;top:18px;left:20px;z-index:2}
