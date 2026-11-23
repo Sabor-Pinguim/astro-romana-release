@@ -28,7 +28,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'DEMO · v0.1.0',
+        version: 'v1.0.0',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
