@@ -134,7 +134,7 @@
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
   const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
-  const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner')renderPlanner();if(id==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser();net.setPhase(id);lockGuest();};
+  const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser();net.setPhase(id);lockGuest();};
   let toastTimer;
   const toast = message => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);};
 
@@ -211,14 +211,21 @@
     window.dispatchEvent(new CustomEvent('astro:site', { detail: { id: state.site, focus } }));
   }
   function renderSiteStep(){
-    const cards = $('#site-cards'), preview = $('#site-preview-box'), site = SITES_INFO[state.site];
+    const cards = $('#site-cards'), site = SITES_INFO[state.site];
     if(cards){
       cards.innerHTML = Object.entries(SITES_INFO).map(([id, s]) => {
         const selected = state.site === id;
         return `<button type="button" class="site-card" data-site="${id}" role="radio" aria-checked="${selected}" aria-pressed="${selected}" ${net.isGuest?'aria-disabled="true"':''}>
-          <span class="site-card-thumb">${sitePhoto(id, false)}</span>
+          <span class="site-card-media">
+            <img class="site-photo" src="assets/sites/${id}.png" alt="${esc(t('lobby.sitePhotoAlt', { name: s.name }))}">
+            <span class="site-card-badges">
+              <span class="tag">HiRISE · 1.5 KM</span>
+              <span class="tag">${s.coords}</span>
+            </span>
+            <span class="site-walk" aria-hidden="true"><small>${esc(t('lobby.walkArea', { dist: U.distanceM(512, 0) }))}</small></span>
+          </span>
           <span class="site-card-body">
-            <span class="site-card-head"><h4>${s.name}</h4><span class="tag">${s.coords}</span></span>
+            <span class="site-card-head"><h4>${s.name}</h4></span>
             <span class="site-card-meta">${s.mission} · ${s.tag}</span>
             <p>${s.desc}</p>
           </span>
@@ -229,7 +236,6 @@
         selectSite(btn.dataset.site, true);
       }));
     }
-    if(preview) preview.innerHTML = `<div class="site-preview-square"><img class="site-photo" src="assets/sites/${state.site}.png" alt="HiRISE orbital photo around the ${site.name} landing point"><span class="site-walk" aria-hidden="true"><small>512 m walk area</small></span></div>`;
     const title = $('#site-step-mission'); if(title) title.textContent = site.mission;
     const coords = $('#mars-globe-coords'); if(coords) coords.textContent = `${site.name.toUpperCase()} · ${site.coords}`;
     const readout = $('#crew-site-readout'); if(readout) readout.textContent = `Mars · ${site.name}`;
@@ -668,6 +674,13 @@
   $('#hint-dialog')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.close();
   });
+  $$('[data-meter-info]').forEach(btn => btn.addEventListener('click', () => {
+    const target = $(`#${btn.dataset.meterInfo}`);
+    if (!target) return;
+    const open = target.hidden;
+    target.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+  }));
   function setAlert(id, show, message, hint, action) {
     const el = $(id);
     if (!el) return;
@@ -820,8 +833,23 @@
     $$('#parts-list [data-part]').forEach(b=>b.addEventListener('click',()=>togglePart(b.dataset.part)));
     window.dispatchEvent(new Event('astro:catalog'));
   }
-  function renderPlanner(){renderTelemetry();renderRocket();renderCatalog();syncSetup();}
+  function renderPlanner(){renderTelemetry();renderRocket();renderCatalog();renderWizard();syncSetup();}
   function selectModule(key,tab){state.sel=parseKey(key);const r=state.rocket;state.tab=tab||(state.sel.kind==='booster'?(r.booster.engine&&!r.booster.tank?'tank':'engine'):state.sel.kind==='cabin'?'helena':'power');window.dispatchEvent(new CustomEvent('astro:focus-module',{detail:key}));renderPlanner();}
+  function stepRocketModule(delta){
+    const keys=['booster',...state.rocket.stages.map((_,i)=>`stage-${i}`),'cabin'];
+    const idx=keys.indexOf(moduleKey(state.sel));
+    const next=keys[idx+delta];
+    if(next)selectModule(next);
+  }
+  window.addEventListener('keydown',e=>{
+    if(state.screen!=='planner'||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;
+    if(e.altKey||e.ctrlKey||e.metaKey)return;
+    if(document.querySelector('dialog[open]'))return;
+    const tag=document.activeElement?.tagName;
+    if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;
+    e.preventDefault();
+    stepRocketModule(e.key==='ArrowUp'?1:-1);
+  });
   // Rocket changes (the shared planner): each one is an action the host applies (plan → ROCKET_ACTIONS) and then
   // sends to the room; a guest sends it to the host instead. The selection and the tab stay on each screen, so the
   // part actions carry the module they apply to. An action returns an error text for the one who did it.
@@ -852,6 +880,232 @@
   function addStage(index){if(plan('addStage',index)){toast(t('planner.stageAdded',{n:index+2}));if(!net.isGuest)selectModule(`stage-${index}`);}}
   function removeStage(index){if(!plan('removeStage',index))return;toast(t('planner.stageRemoved'));if(net.isGuest)return;state.sel=parseKey(index>0?`stage-${index-1}`:'booster');state.tab=isBooster(state.sel)?'engine':'power';window.dispatchEvent(new CustomEvent('astro:stage-removed',{detail:moduleKey(state.sel)}));renderPlanner();}
   function togglePart(id){plan('togglePart',id,{...state.sel},state.tab);}
+
+  // Rocket Construction Wizard — Dr. Nancy Grace Roman + Compact Chalkboard (Lousa)
+  // Recommends the wizard on the user's first access to #planner only; can be reopened anytime via #wizard-toggle.
+  const WIZARD_SEEN_KEY = 'astro-romana-wizard-seen';
+  const wizardState = { open: false, promptOpen: false, step: 0, seen: false, blinkDismissed: false };
+  try { wizardState.seen = localStorage.getItem(WIZARD_SEEN_KEY) === '1'; } catch {}
+  const WIZARD_STEPS = [
+    {
+      id: 'welcome',
+      targets: () => [$('#planner .blueprint')].filter(Boolean),
+      clip: 'wave',
+      check: () => ({ done: true, vars: {} }),
+      action: () => selectModule('booster', 'engine'),
+    },
+    {
+      id: 'booster',
+      targets: () => [$('#planner .catalog')].filter(Boolean),
+      clip: 'action_loop',
+      check: m => ({
+        done: Boolean(m?.ready && m.twr >= TWR_MIN()),
+        vars: { twr: m?.ready ? U.decimal(m.twr, 2) : '—' },
+      }),
+      action: () => selectModule('booster', 'engine'),
+    },
+    {
+      id: 'staging',
+      targets: () => {
+        const adds = $$('#stack-overlay .add-stage');
+        return adds.length ? adds : [$('#planner .blueprint')].filter(Boolean);
+      },
+      clip: 'action_loop',
+      check: m => ({
+        done: Boolean(m?.orbit),
+        vars: { dv: m?.ready ? U.velocityMs(m.dv) : '—', leo: U.velocityMs(m?.leo ?? rule('earthOrbitDeltaVMs', 9400)) },
+      }),
+      action: () => {
+        const idx = state.rocket.stages.findIndex(s => s.type === 'booster');
+        if (idx >= 0) { selectModule(`stage-${idx}`, 'engine'); return; }
+        if (state.rocket.stages.length > 0) { selectModule('stage-0'); return; }
+        addStage(0);
+      },
+    },
+    {
+      id: 'mars',
+      targets: () => [$('#mars-value')?.closest('.meter')].filter(Boolean),
+      clip: 'action_loop',
+      check: m => ({
+        done: Boolean(m?.marsOk),
+        vars: {
+          marsDv: m?.orbit ? U.velocityMs(m.marsDv) : '—',
+          transfer: U.velocityMs(m?.transfer ?? rule('marsTransferDeltaVMs', 4300)),
+        },
+      }),
+      action: () => {
+        const m = DATA ? metrics() : null;
+        selectModule(m?.refuelStage?.key || 'booster', 'tank');
+      },
+    },
+    {
+      id: 'bays',
+      targets: () => [$('#power-value')?.closest('.meter')].filter(Boolean),
+      clip: 'action_loop',
+      check: m => ({
+        done: Boolean(m && m.gen >= m.draw),
+        vars: { gen: number(m?.gen ?? 0), draw: number(m?.draw ?? 0) },
+      }),
+      action: () => {
+        const bayIdx = state.rocket.stages.findIndex(s => s.type !== 'booster');
+        if (bayIdx >= 0) selectModule(`stage-${bayIdx}`, 'power');
+        else if (state.rocket.stages.length < MAX_STAGES()) addStage(state.rocket.stages.length);
+      },
+    },
+    {
+      id: 'cabin',
+      targets: () => {
+        const cabBtn = $('#stack-overlay [data-select="cabin"]');
+        return cabBtn ? [cabBtn] : [$('#planner .blueprint')].filter(Boolean);
+      },
+      clip: 'action_loop',
+      check: () => ({
+        done: state.rocket.cabin.length > 0,
+        vars: { used: state.rocket.cabin.length, total: CABIN_SLOTS() },
+      }),
+      action: () => selectModule('cabin', 'helena'),
+    },
+    {
+      id: 'launch',
+      targets: () => [$('#budget-readout'), $('#launch-button')].filter(Boolean),
+      clip: 'salute',
+      check: m => {
+        if (!m) return { done: false, vars: { cost: '—', budget: '—', issues: 1 } };
+        let issues = 0;
+        if (!m.ready || m.twr < TWR_MIN()) issues++;
+        if (!m.orbit) issues++;
+        if (!m.marsOk) issues++;
+        if (m.cost > m.budget) issues++;
+        if (m.gen < m.draw) issues++;
+        return {
+          done: issues === 0,
+          vars: { cost: money(m.cost), budget: money(m.budget), issues },
+        };
+      },
+      action: () => showLaunch(),
+    },
+  ];
+  let activeBlinkTargets = [];
+  function markWizardSeen() {
+    wizardState.seen = true;
+    try { localStorage.setItem(WIZARD_SEEN_KEY, '1'); } catch {}
+  }
+  function clearWizardBlink() {
+    $$('#planner .wizard-blink, #planner .wizard-highlight').forEach(el => el.classList.remove('wizard-blink', 'wizard-highlight'));
+    activeBlinkTargets = [];
+  }
+  function stopWizardBlinkOnly() {
+    $$('#planner .wizard-blink').forEach(el => el.classList.remove('wizard-blink'));
+  }
+  function applyWizardBlink(def) {
+    clearWizardBlink();
+    if (!wizardState.open || !def?.targets) return;
+    activeBlinkTargets = def.targets();
+    activeBlinkTargets.forEach(el => {
+      el.classList.add('wizard-highlight');
+      if (!wizardState.blinkDismissed) el.classList.add('wizard-blink');
+    });
+  }
+  function setWizardStep(step) {
+    wizardState.step = Math.max(0, Math.min(WIZARD_STEPS.length - 1, step));
+    wizardState.blinkDismissed = false;
+    renderWizard({ gesture: true });
+  }
+  function setWizardOpen(open, { step = null, gesture = true } = {}) {
+    wizardState.open = !!open;
+    wizardState.promptOpen = false;
+    if (typeof step === 'number' && step >= 0 && step < WIZARD_STEPS.length) wizardState.step = step;
+    if (wizardState.open) wizardState.blinkDismissed = false;
+    markWizardSeen();
+    renderWizard({ gesture });
+  }
+  function maybeAutoOpenWizard() {
+    if (!wizardState.seen && !wizardState.open && !net.isGuest) {
+      wizardState.promptOpen = true;
+      renderWizard();
+    }
+  }
+  function renderWizard({ gesture = false } = {}) {
+    const dock = $('#rocket-wizard'), promptEl = $('#wizard-prompt'), plannerEl = $('#planner'), toggle = $('#wizard-toggle');
+    if (!dock || !plannerEl) return;
+    if (promptEl) promptEl.hidden = !wizardState.promptOpen || wizardState.open;
+    dock.hidden = !wizardState.open;
+    plannerEl.classList.toggle('has-wizard', wizardState.open);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(wizardState.open));
+      const label = toggle.querySelector('span[data-i18n]');
+      if (label) label.textContent = t(wizardState.open ? 'planner.wizard.closeBtn' : 'planner.wizard.openBtn');
+    }
+    if (!wizardState.open) {
+      clearWizardBlink();
+      window.dispatchEvent(new CustomEvent('astro:wizard', { detail: { open: false } }));
+      return;
+    }
+    const idx = wizardState.step, def = WIZARD_STEPS[idx], m = DATA ? metrics() : null;
+    const status = def.check(m);
+    const baseKey = `planner.wizard.steps.${def.id}`;
+    $('#wizard-step-kicker').textContent = t('planner.wizard.kicker', { current: String(idx + 1).padStart(2, '0'), total: String(WIZARD_STEPS.length).padStart(2, '0') });
+    $('#wizard-step-title').textContent = t(`${baseKey}.title`);
+    $('#wizard-step-body').textContent = t(`${baseKey}.body`, status.vars);
+    $('#wizard-formula').textContent = t(`${baseKey}.formula`, status.vars);
+    const checkEl = $('#wizard-check');
+    const checkText = t(status.done ? `${baseKey}.checkReady` : `${baseKey}.checkPending`, status.vars);
+    checkEl.textContent = t(status.done ? 'planner.wizard.checkDone' : 'planner.wizard.checkPending', { text: checkText });
+    checkEl.classList.toggle('is-done', status.done);
+    const nav = $('#wizard-steps-nav');
+    if (nav) {
+      nav.innerHTML = WIZARD_STEPS.map((s, i) => {
+        const done = i > 0 && s.check(m).done;
+        return `<button type="button" class="chalk-step-pip${i === idx ? ' active' : ''}${done ? ' done' : ''}" role="tab" aria-selected="${i === idx}" data-wizard-step="${i}" title="${esc(t(`planner.wizard.steps.${s.id}.title`))}">${i + 1}</button>`;
+      }).join('');
+      $$('[data-wizard-step]', nav).forEach(b => b.addEventListener('click', () => setWizardStep(+b.dataset.wizardStep)));
+    }
+    const actBtn = $('#wizard-action');
+    if (actBtn) {
+      const actLabel = t(`${baseKey}.action`);
+      actBtn.hidden = !actLabel || actLabel === `${baseKey}.action`;
+      actBtn.textContent = actLabel;
+    }
+    const prevBtn = $('#wizard-prev'), nextBtn = $('#wizard-next');
+    if (prevBtn) prevBtn.disabled = idx === 0;
+    if (nextBtn) nextBtn.textContent = t(idx === WIZARD_STEPS.length - 1 ? 'planner.wizard.finishBtn' : 'planner.wizard.nextBtn');
+    applyWizardBlink(def);
+    const clip = def.id === 'launch' ? (status.done ? 'salute' : 'action_loop') : def.clip;
+    window.dispatchEvent(new CustomEvent('astro:wizard', { detail: { open: true, step: idx, id: def.id, clip: gesture ? clip : null } }));
+  }
+  // Stop blinking as soon as the user clicks the suggested element on screen, keeping the solid yellow border.
+  $('#planner')?.addEventListener('pointerdown', e => {
+    if (!wizardState.open || wizardState.blinkDismissed || !activeBlinkTargets.length) return;
+    if (activeBlinkTargets.some(el => el.contains(e.target))) {
+      wizardState.blinkDismissed = true;
+      stopWizardBlinkOnly();
+    }
+  }, true);
+  $('#wizard-prompt-start')?.addEventListener('click', () => setWizardOpen(true, { step: 0, gesture: true }));
+  $('#wizard-prompt-dismiss')?.addEventListener('click', () => { wizardState.promptOpen = false; markWizardSeen(); renderWizard(); });
+  $('#wizard-toggle')?.addEventListener('click', () => setWizardOpen(!wizardState.open, { gesture: true }));
+  $('#wizard-close')?.addEventListener('click', () => setWizardOpen(false));
+  $('#wizard-skip')?.addEventListener('click', () => setWizardOpen(false));
+  $('#wizard-prev')?.addEventListener('click', () => { if (wizardState.step > 0) setWizardStep(wizardState.step - 1); });
+  $('#wizard-next')?.addEventListener('click', () => {
+    if (wizardState.step < WIZARD_STEPS.length - 1) setWizardStep(wizardState.step + 1);
+    else setWizardOpen(false);
+  });
+  $('#wizard-action')?.addEventListener('click', () => {
+    wizardState.blinkDismissed = true;
+    stopWizardBlinkOnly();
+    WIZARD_STEPS[wizardState.step]?.action?.();
+  });
+  $('#wizard-nancy-view')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('astro:wizard-gesture', { detail: { clip: 'action_loop' } }));
+  });
+  $('#wizard-nancy-view')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('astro:wizard-gesture', { detail: { clip: 'action_loop' } }));
+    }
+  });
+  window.addEventListener('astro:settings', () => { if (wizardState.open || wizardState.promptOpen) renderWizard(); });
   function showLaunch(){
     const m=metrics(),lift=liftoffOf(m),abort=lift.ok?abortOf(m):null,warnings=[];
     if(!lift.ok)warnings.push(`${capFirst(lift.status.toLowerCase())}: ${t('launch.msgNoPad',{detail:''}).trim()}`);
@@ -918,7 +1172,15 @@
     syncSetup();
     if(w === 'mars' && state.lobbyStep === 'destination') goToLandingSite();
   }));
+  function requestGameFullscreen() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    const root = document.documentElement;
+    const req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!req) return;
+    try { Promise.resolve(req.call(root)).catch(() => {}); } catch {}
+  }
   $('#play-button').addEventListener('click',()=>{
+    requestGameFullscreen();
     const go=()=>{setLobbyStep(net.isGuest?'crew':net.isHost?'difficulty':'mode');showScreen('lobby');};
     window.ASTRO_LAUNCH?window.ASTRO_LAUNCH().then(go):go();
   });
@@ -2565,7 +2827,7 @@
   // Shared with the 3D modules below.
   function renderBadge(){const lv=LV(),s=lv.surfaceS,badge=$('#modifier-badge');badge.textContent=`${lv.label.toUpperCase()} · ${t('lobby.badge',{budget:money(budgetOf(state.difficulty)),time:formatSurfaceClock(s),rules:lv.rules})}`;badge.title=lv.about;}
   window.ASTRO_ART={RAMPS,PLANETS};
-  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),CREW_MODELS,COCKPIT_MODEL};
+  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),wizard:{open:(step=0)=>setWizardOpen(true,{step,gesture:true}),close:()=>setWizardOpen(false),goTo:step=>setWizardStep(step),isOpen:()=>wizardState.open},CREW_MODELS,COCKPIT_MODEL};
   // ---- Multiplayer: lobby, screens and the shared planner (docs/multiplayer.md, items 1–4; 5–7 live in SIM) ------
   // The host sends the mission setup (state 'setup') whenever it changes; guests copy it. Only what everyone must
   // agree on travels: the selection, the tab and the open details stay on each screen.

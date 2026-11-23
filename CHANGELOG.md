@@ -11,6 +11,17 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.5.0] - 2026-11-23
+
+### Added
+- **Rocket Construction Wizard narrated by Dr. Nancy Grace Roman (`#rocket-wizard`):** compact interactive 7-step guided builder inside `#planner` featuring Nancy's 3D low-poly avatar (`assets/models/characters/nancy.glb`, bundled into `index.models.js` via `npm run web:models`) with `wave`, `action_loop` (wooden ruler tap), `salute`, and `idle_loop` animations, classroom chalkboard (*lousa*) UI & toggle button, plain-language goals, live checklists, blinking-to-solid target highlights (`.wizard-blink` / `.wizard-highlight`), and a slim first-access recommendation prompt (`#wizard-prompt`, persisted in `localStorage`).
+- **Auto-fullscreen on Play:** clicking the main menu **Play** button (`#play-button`) requests browser fullscreen via the Fullscreen API (failing silently if unsupported or blocked).
+- **Keyboard module navigation in Rocket Assembly:** press `↑` / `↓` (`ArrowUp` / `ArrowDown`) on `#planner` to step through rocket modules without scrolling the page, and repositioned `.rocket-navigation` to avoid overlapping the cabin label.
+
+### Changed
+- **Collapsible Telemetry Details (`.meter-info-btn`):** hid verbose `.meter-hint` explanations under all 5 telemetry gauges by default behind an amber hexagonal `i` info button beside each metric value.
+- **Unified Full-Image HiRISE Crater Cards (Step 04):** removed the non-interactive middle Satellite View card and merged the full-bleed HiRISE satellite imagery + `512 m walk area` overlay directly into the clickable crater selection cards alongside the 3D Mars globe.
+
 ## [1.4.3] - 2026-11-23
 
 ### Fixed

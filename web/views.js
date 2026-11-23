@@ -142,6 +142,120 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   requestAnimationFrame(frame);
 })().catch(err => console.warn('Avatar not shown:', err));
 
+// Planner Wizard: Dr. Nancy Grace Roman 3D instructor (characters/nancy.glb) standing beside the chalkboard.
+// Plays wave on welcome, action_loop (tapping her wooden ruler on her palm like a teacher) on lessons, and salute when ready.
+(async () => {
+  const box = document.getElementById('wizard-nancy-view');
+  const view = box && makeView(box, { fov: 26 });
+  if (!view) return;
+  const { scene, camera, renderer } = view;
+  const holder = new THREE.Group();
+  scene.add(holder);
+  let loaded = false, loading = false, mixer = null, clips = {}, activeClip = null, holdTimer = 0, last = performance.now();
+
+  view.onResize = () => {
+    const aspect = Math.max(0.65, camera.aspect || 1);
+    const d = 1.28 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.05, aspect * 1.05);
+    camera.position.set(0.05, 1.38, d);
+    camera.lookAt(0, 1.24, 0);
+  };
+
+  function playGesture(name) {
+    if (!mixer || !clips.idle_loop) return;
+    const target = clips[name] || clips.idle_loop;
+    if (!target) return;
+    if (name === 'action_loop') {
+      holdTimer = 2.6;
+      if (activeClip !== target) {
+        target.reset().setLoop(THREE.LoopRepeat, Infinity).play();
+        if (activeClip) target.crossFadeFrom(activeClip, 0.22, false);
+        activeClip = target;
+      }
+      return;
+    }
+    holdTimer = 0;
+    if (name === 'wave' || name === 'salute') {
+      target.reset().setLoop(THREE.LoopOnce, 1);
+      target.clampWhenFinished = false;
+      target.play();
+      if (activeClip && activeClip !== target) target.crossFadeFrom(activeClip, 0.2, false);
+      activeClip = target;
+      return;
+    }
+    if (activeClip !== clips.idle_loop) {
+      clips.idle_loop.reset().play();
+      if (activeClip) clips.idle_loop.crossFadeFrom(activeClip, 0.25, false);
+      activeClip = clips.idle_loop;
+    }
+  }
+
+  async function ensureLoaded(initialClip) {
+    if (loaded || loading) { if (loaded && initialClip) playGesture(initialClip); return; }
+    loading = true;
+    try {
+      const gltf = await loadGLTF('characters/nancy.glb');
+      const model = gltf.scene.clone(true);
+      holder.clear();
+      holder.add(model);
+      mixer = new THREE.AnimationMixer(model);
+      for (const name of ['idle_loop', 'wave', 'salute', 'action_loop']) {
+        const c = THREE.AnimationClip.findByName(gltf.animations, name);
+        if (c) clips[name] = mixer.clipAction(c);
+      }
+      mixer.addEventListener('finished', () => {
+        if (clips.idle_loop) {
+          clips.idle_loop.reset().fadeIn(0.22).play();
+          activeClip = clips.idle_loop;
+        }
+      });
+      if (clips.idle_loop) {
+        clips.idle_loop.play();
+        activeClip = clips.idle_loop;
+      }
+      box.classList.add('is-3d');
+      loaded = true;
+      view.onResize();
+      if (initialClip) playGesture(initialClip);
+    } catch (err) {
+      console.warn('Nancy 3D instructor not shown:', err);
+    } finally {
+      loading = false;
+    }
+  }
+
+  window.addEventListener('astro:wizard', e => {
+    if (!e.detail?.open) return;
+    ensureLoaded(e.detail.clip || null);
+  });
+  window.addEventListener('astro:wizard-gesture', e => {
+    if (!loaded) ensureLoaded(e.detail?.clip || 'action_loop');
+    else playGesture(e.detail?.clip || 'action_loop');
+  });
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    const dock = document.getElementById('rocket-wizard');
+    if (!loaded || !isActive('planner') || !dock || dock.hidden || !view.width) return;
+    if (!reduce) {
+      if (holdTimer > 0) {
+        holdTimer -= dt;
+        if (holdTimer <= 0 && activeClip === clips.action_loop && clips.idle_loop) {
+          clips.idle_loop.reset().play();
+          clips.idle_loop.crossFadeFrom(clips.action_loop, 0.25, false);
+          activeClip = clips.idle_loop;
+        }
+      }
+      mixer?.update(dt);
+      holder.rotation.y = -0.18 + Math.sin(now / 2600) * 0.22;
+    }
+    renderer.render(scene, camera);
+  }
+  view.onResize();
+  requestAnimationFrame(frame);
+})().catch(err => console.warn('Nancy wizard view disabled:', err));
+
 // Lobby Step 04: interactive 3D low-poly Mars globe with real Martian geography and accurate crater markers.
 (async () => {
   const box = document.getElementById('mars-globe-view'), art = window.ASTRO_ART, ui = window.ASTRO;

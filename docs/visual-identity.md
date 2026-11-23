@@ -50,7 +50,7 @@ Use only these tokens. The names are those of the CSS variables in `:root`.
 | Lucas | `#F2A900` |
 | Oscar | `#1FA2FF` |
 | Maya | `#2BB673` |
-| Nancy Grace Roman (NPC, not in the interface yet) | `#9B5DE5` (same as `--amethyst`) |
+| Nancy Grace Roman (NPC — Rocket Assembly Wizard) | `#9B5DE5` (same as `--amethyst`) |
 
 ## 3. Typography
 
@@ -89,6 +89,7 @@ All of them are CSS `clip-path`.
 - **Windows onto space:** `--bg-viewport` with a hexagonal honeycomb mesh (`--honeycomb` SVG tile) at ~12 % opacity.
 - **Gauges:** 9 px blocks with a 3 px gap, slanted at −24° (`skewX`). In danger they turn coral and blink in 2 steps.
 - **Alerts:** crimson background with a strip of hazard stripes (amber and void, at 45°) on the left edge.
+- **Wizard chalkboard (`.chalkboard`):** faceted wooden frame (`#8c5b30` / `#6d4421` / `#523116`) with a bottom chalk tray (white & amber chalk sticks + two-tone eraser) framing a deep slate-green faceted surface (`#1d4233` / `#163529` / `#112920`), dashed chalk dividers, off-white chalk text (`#f3f5ec`), and a chamfered 3D stage for Nancy Grace Roman (`#9B5DE5` accent).
 
 ## 6. Generated art
 

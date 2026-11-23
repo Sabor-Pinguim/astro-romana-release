@@ -16,7 +16,7 @@
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.4.3</div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.5.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -263,11 +263,7 @@
         <div class="site-select-grid">
           <div class="site-select-left">
             <div class="site-cards" id="site-cards" role="radiogroup" aria-label="Mars landing sites"></div>
-          </div>
-          <div class="site-preview-card" id="site-preview-card">
-            <div class="site-preview-head"><span class="micro">Satellite view · HiRISE</span><span class="tag" id="site-preview-tag">1.5 KM · NORTH UP</span></div>
-            <div class="site-preview-frame" id="site-preview-box"></div>
-            <span class="site-preview-credit">HiRISE (MRO) · NASA/JPL/UArizona, USGS (CC0)</span>
+            <span class="site-preview-credit">Satellite view · HiRISE (MRO) · 1.5 km · north up · NASA/JPL/UArizona, USGS (CC0)</span>
           </div>
           <div class="mars-globe-stage" id="mars-globe-view" aria-label="Interactive 3D Mars globe">
             <div class="mars-globe-hud-top">
@@ -305,14 +301,81 @@
   </section>
 
   <section id="planner" class="screen" aria-labelledby="planner-title">
-    <header class="app-header"><div class="header-title"><button class="button quiet" id="planner-back" type="button" data-i18n="planner.back">← Crew</button><div><div class="eyebrow" data-i18n="planner.eyebrow">Rocket assembly / 03</div><h2 id="planner-title">Mission: Biosignature Hunters</h2></div></div><div class="header-side"><span class="tag" data-i18n="planner.simulationTag">Simulation</span><div class="budget-readout" id="budget-readout"><div class="micro" data-i18n="planner.budgetRemaining">Budget remaining</div><strong id="budget-remaining">$250M</strong></div></div></header>
-    <div class="planner-content"><div class="assembly-grid" aria-label="Rocket assembly">
+    <header class="app-header"><div class="header-title"><button class="button quiet" id="planner-back" type="button" data-i18n="planner.back">← Crew</button><div><div class="eyebrow" data-i18n="planner.eyebrow">Rocket assembly / 03</div><h2 id="planner-title">Mission: Biosignature Hunters</h2></div></div><div class="header-side"><button class="button secondary wizard-toggle-btn" id="wizard-toggle" type="button" aria-expanded="false" aria-controls="rocket-wizard"><span class="wizard-toggle-dot" aria-hidden="true"></span><span data-i18n="planner.wizard.openBtn">Nancy's Guide</span></button><span class="tag" data-i18n="planner.simulationTag">Simulation</span><div class="budget-readout" id="budget-readout"><div class="micro" data-i18n="planner.budgetRemaining">Budget remaining</div><strong id="budget-remaining">$250M</strong></div></div></header>
+    <div class="planner-content">
+      <div class="wizard-prompt chalkboard" id="wizard-prompt" role="region" aria-labelledby="wizard-prompt-title" hidden>
+        <div class="chalkboard-surface wizard-prompt-surface">
+          <div class="wizard-prompt-copy">
+            <span class="chalk-kicker" id="wizard-prompt-title" data-i18n="planner.wizard.promptTitle">FIRST MISSION?</span>
+            <p class="chalk-text" data-i18n="planner.wizard.promptBody">Dr. Nancy Grace Roman can walk you through building a Mars-ready rocket in 7 quick steps.</p>
+          </div>
+          <div class="wizard-prompt-actions">
+            <button class="chalk-btn is-primary" id="wizard-prompt-start" type="button" data-i18n="planner.wizard.promptStart">Start guide →</button>
+            <button class="chalk-btn" id="wizard-prompt-dismiss" type="button" data-i18n="planner.wizard.promptDismiss">Not now</button>
+          </div>
+        </div>
+        <div class="chalk-tray" aria-hidden="true"><span class="chalk-stick is-white"></span><span class="chalk-stick is-amber"></span><span class="chalk-eraser"></span></div>
+      </div>
+      <aside class="wizard-dock" id="rocket-wizard" aria-labelledby="wizard-step-title" hidden>
+        <div class="wizard-nancy-stage" id="wizard-nancy-view" role="button" tabindex="0" data-i18n-aria="planner.wizard.nancyAria" aria-label="Dr. Nancy Grace Roman 3D instructor — click to gesture">
+          <div class="wizard-nancy-fallback" id="wizard-nancy-fallback" aria-hidden="true">
+            <svg viewBox="0 0 120 140" aria-hidden="true">
+              <polygon points="36,136 44,82 76,82 84,136" fill="#281147"/>
+              <polygon points="44,82 60,78 76,82 72,110 48,110" fill="#F2F0EC"/>
+              <polygon points="62,90 70,90 70,98 62,98" fill="#9B5DE5"/>
+              <polygon points="44,30 60,18 76,30 78,54 60,68 42,54" fill="#E6C6A8"/>
+              <polygon points="38,34 46,16 60,12 74,16 82,34 76,26 60,22 44,26" fill="#C4C7CE"/>
+              <polygon points="45,42 57,42 56,50 46,50" fill="#17183B"/>
+              <polygon points="63,42 75,42 74,50 64,50" fill="#17183B"/>
+              <polygon points="82,92 108,68 112,72 86,96" fill="#C28E4C"/>
+            </svg>
+          </div>
+          <div class="wizard-nancy-plate">
+            <strong data-i18n="planner.wizard.narratorName">Dr. Nancy Roman</strong>
+          </div>
+        </div>
+        <div class="chalkboard">
+          <div class="chalkboard-surface">
+            <div class="chalkboard-head">
+              <div class="chalkboard-title-wrap">
+                <span class="chalk-kicker" id="wizard-step-kicker">01 / 07</span>
+                <h3 id="wizard-step-title">Rocket Assembly</h3>
+              </div>
+              <div class="chalk-steps" id="wizard-steps-nav" role="tablist" data-i18n-aria="planner.wizard.stepsAria" aria-label="Wizard lessons"></div>
+              <button class="chalk-close" id="wizard-close" type="button" data-i18n-aria="planner.wizard.closeAria" aria-label="Close wizard">×</button>
+            </div>
+            <div class="chalkboard-body">
+              <p class="chalk-text" id="wizard-step-body"></p>
+              <div class="chalk-meta-row">
+                <code class="chalk-formula" id="wizard-formula"></code>
+                <span class="chalk-check" id="wizard-check" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="chalkboard-foot">
+              <div class="chalk-foot-left">
+                <button class="chalk-btn is-accent" id="wizard-action" type="button" hidden></button>
+              </div>
+              <div class="chalk-foot-right">
+                <button class="chalk-btn" id="wizard-skip" type="button" data-i18n="planner.wizard.skipBtn">Skip</button>
+                <button class="chalk-btn" id="wizard-prev" type="button" data-i18n="planner.wizard.prevBtn">← Back</button>
+                <button class="chalk-btn is-primary" id="wizard-next" type="button" data-i18n="planner.wizard.nextBtn">Next →</button>
+              </div>
+            </div>
+          </div>
+          <div class="chalk-tray" aria-hidden="true">
+            <span class="chalk-stick is-white"></span>
+            <span class="chalk-stick is-amber"></span>
+            <span class="chalk-eraser"></span>
+          </div>
+        </div>
+      </aside>
+      <div class="assembly-grid" aria-label="Rocket assembly">
       <section class="panel slab telemetry" aria-labelledby="telemetry-heading"><div class="panel-heading"><h3 id="telemetry-heading" data-i18n="planner.telemetryHeading">Engineering telemetry</h3><span class="dot" style="color:var(--safe)" aria-hidden="true"></span></div>
-        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.costLabel">Total cost</span><strong class="meter-value" id="cost-value">—</strong></div><div class="meter-track"><div class="meter-fill amber" id="cost-fill"></div></div><p class="meter-hint" data-i18n="planner.costHint">Every system draws from one budget (game balance).</p></div>
-        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.twrLabel">Liftoff thrust-to-weight</span><strong class="meter-value" id="twr-value">—</strong></div><div class="meter-track"><div class="meter-fill orange" id="twr-fill"></div></div><p class="meter-hint" id="twr-hint">Below 1.0, or with no working engine, the rocket stays on the pad and the mission fails.</p></div>
-        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.powerLabel">Cruise power</span><strong class="meter-value" id="power-value">—</strong></div><div class="meter-track"><div class="meter-fill" id="power-fill"></div></div><p class="meter-hint" data-i18n="planner.powerHint">Generation / draw. Engine pumps only draw power during the ascent and are left out.</p></div>
-        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.dvLabel">Δv to orbit</span><strong class="meter-value" id="dv-value">—</strong></div><div class="meter-track"><div class="meter-fill" id="dv-fill"></div></div><p class="meter-hint" id="dv-hint">Sum of every stage; each one drops away when empty. Target: low Earth orbit ≈ 9,400 m/s ⚠.</p></div>
-        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.marsLabel">Mars transfer</span><strong class="meter-value" id="mars-value">—</strong></div><div class="meter-track"><div class="meter-fill" id="mars-fill"></div></div><p class="meter-hint" id="mars-hint">Reach low Earth orbit first.</p></div>
+        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.costLabel">Total cost</span><span class="meter-value-wrap"><strong class="meter-value" id="cost-value">—</strong><button class="meter-info-btn" type="button" data-meter-info="cost-hint" aria-expanded="false" aria-controls="cost-hint" data-i18n-aria="planner.infoBtnAria" aria-label="Show telemetry details">i</button></span></div><div class="meter-track"><div class="meter-fill amber" id="cost-fill"></div></div><p class="meter-hint" id="cost-hint" data-i18n="planner.costHint" hidden>Every system draws from one budget (game balance).</p></div>
+        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.twrLabel">Liftoff thrust-to-weight</span><span class="meter-value-wrap"><strong class="meter-value" id="twr-value">—</strong><button class="meter-info-btn" type="button" data-meter-info="twr-hint" aria-expanded="false" aria-controls="twr-hint" data-i18n-aria="planner.infoBtnAria" aria-label="Show telemetry details">i</button></span></div><div class="meter-track"><div class="meter-fill orange" id="twr-fill"></div></div><p class="meter-hint" id="twr-hint" hidden>Below 1.0, or with no working engine, the rocket stays on the pad and the mission fails.</p></div>
+        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.powerLabel">Cruise power</span><span class="meter-value-wrap"><strong class="meter-value" id="power-value">—</strong><button class="meter-info-btn" type="button" data-meter-info="power-hint" aria-expanded="false" aria-controls="power-hint" data-i18n-aria="planner.infoBtnAria" aria-label="Show telemetry details">i</button></span></div><div class="meter-track"><div class="meter-fill" id="power-fill"></div></div><p class="meter-hint" id="power-hint" data-i18n="planner.powerHint" hidden>Generation / draw. Engine pumps only draw power during the ascent and are left out.</p></div>
+        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.dvLabel">Δv to orbit</span><span class="meter-value-wrap"><strong class="meter-value" id="dv-value">—</strong><button class="meter-info-btn" type="button" data-meter-info="dv-hint" aria-expanded="false" aria-controls="dv-hint" data-i18n-aria="planner.infoBtnAria" aria-label="Show telemetry details">i</button></span></div><div class="meter-track"><div class="meter-fill" id="dv-fill"></div></div><p class="meter-hint" id="dv-hint" hidden>Sum of every stage; each one drops away when empty. Target: low Earth orbit ≈ 9,400 m/s ⚠.</p></div>
+        <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.marsLabel">Mars transfer</span><span class="meter-value-wrap"><strong class="meter-value" id="mars-value">—</strong><button class="meter-info-btn" type="button" data-meter-info="mars-hint" aria-expanded="false" aria-controls="mars-hint" data-i18n-aria="planner.infoBtnAria" aria-label="Show telemetry details">i</button></span></div><div class="meter-track"><div class="meter-fill" id="mars-fill"></div></div><p class="meter-hint" id="mars-hint" hidden>Reach low Earth orbit first.</p></div>
         <div class="mass-row"><span class="meter-label" data-i18n="planner.massLabel">Liftoff mass</span><strong class="meter-value" id="mass-value">—</strong></div>
         <div class="telemetry-alerts">
           <div class="alert" id="booster-alert" role="alert">BOOSTER INCOMPLETE! Install an engine and a tank.</div>
