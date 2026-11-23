@@ -1,0 +1,11 @@
+/* M-S6 · Martian greenhouse. Greenhouse canvas (shared .mg-canvas), two gauges side by side, growth bar with
+   stage ticks (sprout, leaves) and three tap buttons. */
+.ms6-gauges{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ms6-gauge{display:grid;gap:4px;min-width:0}
+.ms6-gauge .mg-gauge-labels span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms6-growth{display:grid;gap:4px;padding:7px 9px;background:var(--f0)}
+.ms6-growth .mg-track{overflow:hidden}
+.ms6-tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--starlight-cream)}
+.ms6-controls{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px}
+.ms6-controls .button{min-height:50px;padding-inline:.7rem;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+@media (max-width:640px){.ms6-gauges{grid-template-columns:1fr}}

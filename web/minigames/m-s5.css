@@ -1,0 +1,9 @@
+/* M-S5 · Radiation alert */
+.ms5-tasks{display:flex;flex-wrap:wrap;gap:4px}
+.ms5-task{display:inline-flex;align-items:center;gap:4px;padding:.3rem .65rem .3rem .75rem;font:600 .64rem/1.1 var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--f1);clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
+.ms5-task b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--starlight-cream)}
+.ms5-task.is-active{background:var(--f3);color:var(--starlight-cream)}
+.ms5-task.is-active b{color:var(--solar-amber)}
+.ms5-task.is-done{background:#1e6357;color:var(--starlight-cream)}
+.ms5-task.is-done b{color:var(--safe)}
+.ms5-meters .mg-meter-label{text-transform:none;letter-spacing:.05em}

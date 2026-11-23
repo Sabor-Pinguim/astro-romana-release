@@ -5,7 +5,8 @@
 //   GET  /api/rooms             public rooms that are still open to new players
 //   GET  /api/rooms/:code       one room by code (private ones too): exists, full, hasPassword…
 //   GET  /api/leaderboard       ?tab=missions|players &difficulty=all|easy|normal|hard &site=all|jezero|gale &limit=1..50
-//   POST /api/leaderboard       a finished mission (the host sends it); deduplicated by its id
+//   POST /api/leaderboard       a finished mission (the host sends it); deduplicated by its id. Optional fields:
+//                               experiments [{ id, stars, bot? }], runSeed, scoreMultiplier (0.75 | 1 | 1.5)
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -28,6 +29,8 @@ const SITES = ['jezero', 'gale'];
 const SEATS = ['helena', 'lucas', 'oscar', 'maya'];
 const GRADES = ['S+', 'A', 'B', 'C', 'F'];
 const MODES = ['solo', 'multiplayer'];
+const EXPERIMENT_ID = /^[HLOM]-[OS][1-6]$/; // docs/minigames.md codes, e.g. H-S1, M-O3
+const SCORE_MULTIPLIERS = [0.75, 1, 1.5]; // game-balance: easy, normal, hard (docs/experiments-implementation.md §4.6)
 const MAX_SCORE = 100_000; // sanity cap on a submitted score (game scores are in the low thousands)
 
 export async function startServer(config = loadConfig(), { log = console.log } = {}) {
@@ -208,7 +211,22 @@ export function validateMission(body) {
   }
   if (new Set(players.map(p => p.seat)).size !== players.length) return null;
   const roomCode = typeof body.roomCode === 'string' && /^[A-Za-z0-9]{1,8}$/.test(body.roomCode) ? body.roomCode.toUpperCase() : null;
-  return { id, roomCode, mode: body.mode, site: body.site, difficulty: body.difficulty, grade: body.grade, teamScore: body.teamScore, tasksDone: body.tasksDone, tasksTotal: body.tasksTotal, strandedCount: body.strandedCount ?? 0, players, createdAt: Date.now() };
+  // Optional since the experiment draw: the drawn experiments with their stars (bot: done by the AI), the run
+  // seed and the difficulty score multiplier. Older clients send none of them.
+  let experiments = null;
+  if (body.experiments != null) {
+    if (!Array.isArray(body.experiments) || body.experiments.length > 16) return null;
+    experiments = [];
+    for (const e of body.experiments) {
+      if (!e || typeof e.id !== 'string' || !EXPERIMENT_ID.test(e.id) || !isInt(e.stars, 0, 3)) return null;
+      experiments.push(e.bot === true ? { id: e.id, stars: e.stars, bot: true } : { id: e.id, stars: e.stars });
+    }
+    if (new Set(experiments.map(e => e.id)).size !== experiments.length) return null;
+  }
+  if (body.runSeed != null && !isInt(body.runSeed, 0, 2 ** 31)) return null;
+  if (body.scoreMultiplier != null && !SCORE_MULTIPLIERS.includes(body.scoreMultiplier)) return null;
+  return { id, roomCode, mode: body.mode, site: body.site, difficulty: body.difficulty, grade: body.grade, teamScore: body.teamScore, tasksDone: body.tasksDone, tasksTotal: body.tasksTotal, strandedCount: body.strandedCount ?? 0, players,
+    experiments, runSeed: body.runSeed ?? null, scoreMultiplier: body.scoreMultiplier ?? null, createdAt: Date.now() };
 }
 
 function reply(res, status, type, body, extra = {}) {

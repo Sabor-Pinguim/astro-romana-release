@@ -77,7 +77,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 - **3D e dados na página:** vêm de `index.models.js` e de `index.terrain.<sítio>.js` (terreno de cada local de pouso, carregado no pouso), gerados por `npm run web:models` (o `file://` bloqueia `fetch`); `npm run models` já o roda.
 - **Números de balanceamento** (massa, potência, custo, velocidades) ficam em dados ou constantes nomeadas, nunca soltos no código. Cada valor diz se é real (com a fonte em `references/`) ou de jogo (`game-balance`).
 - **Superfície:** `index.html#surface-<sítio>` abre direto o pouso; `window.ASTRO_SURFACE` expõe estado e `goTo(id)` para testes.
-- **Teste** em 1440 px e 390 px de largura e com movimento reduzido.
+- **Teste** em 1440×900, 390×844 (retrato), 915×412, 844×390 e 667×375 (paisagem mobile) e com movimento reduzido (`npm run web:audit:mobile`).
 
 ### JavaScript (ferramentas)
 - Módulos ES puros (`.mjs`), sem etapa de build.
@@ -272,7 +272,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 
 - [ ] `npm run models` passa (se tocou em modelos).
 - [ ] `npm run audio` passa (se tocou em áudio); `npm run terrain` passa (se tocou em terreno).
-- [ ] O `index.html` abre sem erros no console em 1440 e 390 px (se tocou na página).
+- [ ] O `index.html` abre sem erros no console em 1440×900, 390×844 e paisagem mobile (915×412, 844×390, 667×375; `npm run web:audit:mobile`) se tocou na página.
 - [ ] O visualizador abre sem erros no console.
 - [ ] Nenhum número apresentado como real ficou sem fonte.
 - [ ] Versão incrementada (patch para pequenas alterações/correções, minor para features grandes, major só se pedido) em `package.json`, `index.html`, `web/locales/en.js` e `web/locales/pt.js`, e entrada adicionada em `CHANGELOG.md`.

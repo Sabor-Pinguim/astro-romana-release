@@ -1,0 +1,6 @@
+/* M-S3 · Listening for marsquakes */
+.ms3-chart{cursor:pointer;touch-action:pan-y}
+.ms3-swatch{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+.ms3-swatch.ms3-sw-quake{background:#1e5a50;box-shadow:inset 0 2px 0 var(--safe)}
+.ms3-swatch.ms3-sw-gust{background:#5a1c24;box-shadow:inset 0 2px 0 var(--coral-hover)}
+.ms3-swatch.ms3-sw-line{width:3px;background:var(--solar-amber)}

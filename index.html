@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#11071F">
   <meta name="description" content="An interactive mission design prototype for Space Mission Game.">
   <title>ASTRO ROMANA</title>
@@ -11,12 +11,31 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="web/styles.css">
+  <link rel="stylesheet" href="web/minigames.css">
+  <link rel="stylesheet" href="web/minigames/h-o1.css">
+  <link rel="stylesheet" href="web/minigames/h-o2.css">
+  <link rel="stylesheet" href="web/minigames/h-s1.css">
+  <link rel="stylesheet" href="web/minigames/h-s2.css">
+  <link rel="stylesheet" href="web/minigames/l-o2.css">
+  <link rel="stylesheet" href="web/minigames/m-o1.css">
+  <link rel="stylesheet" href="web/minigames/m-o2.css">
+  <link rel="stylesheet" href="web/minigames/m-o3.css">
+  <link rel="stylesheet" href="web/minigames/m-s1.css">
+  <link rel="stylesheet" href="web/minigames/m-s2.css">
+  <link rel="stylesheet" href="web/minigames/m-s3.css">
+  <link rel="stylesheet" href="web/minigames/m-s4.css">
+  <link rel="stylesheet" href="web/minigames/m-s5.css">
+  <link rel="stylesheet" href="web/minigames/m-s6.css">
+  <link rel="stylesheet" href="web/minigames/o-o1.css">
+  <link rel="stylesheet" href="web/minigames/o-o2.css">
+  <link rel="stylesheet" href="web/minigames/o-s1.css">
+  <link rel="stylesheet" href="web/minigames/o-s2.css">
 </head>
 <body>
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.5.1</div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button><button class="button quiet" id="dev-button" type="button" data-i18n="dev.openBtn">Dev Mode</button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.6.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -167,11 +186,11 @@
       </div>
     </header>
     <nav class="lobby-stepper" id="lobby-stepper" aria-label="Mission setup steps">
-      <button class="lobby-step-tab active" type="button" data-lobby-step="mode" aria-current="step"><span class="lobby-step-num">01</span><span class="lobby-step-copy"><strong>Play mode</strong><small id="step-summary-mode">Singleplayer</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="difficulty"><span class="lobby-step-num">02</span><span class="lobby-step-copy"><strong>Difficulty</strong><small id="step-summary-difficulty">Normal</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="destination"><span class="lobby-step-num">03</span><span class="lobby-step-copy"><strong>Destination</strong><small id="step-summary-destination">Mars</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="site"><span class="lobby-step-num">04</span><span class="lobby-step-copy"><strong>Landing site</strong><small id="step-summary-site">Jezero Crater</small></span></button>
-      <button class="lobby-step-tab" type="button" data-lobby-step="crew"><span class="lobby-step-num">05</span><span class="lobby-step-copy"><strong>Crew</strong><small id="step-summary-crew">1/4 players</small></span></button>
+      <button class="lobby-step-tab active" type="button" data-lobby-step="mode" aria-current="step"><span class="lobby-step-num">01</span><span class="lobby-step-copy"><strong data-i18n="lobby.stepShort.mode">Mode</strong><small id="step-summary-mode">Singleplayer</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="difficulty"><span class="lobby-step-num">02</span><span class="lobby-step-copy"><strong data-i18n="lobby.stepShort.difficulty">Difficulty</strong><small id="step-summary-difficulty">Normal</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="destination"><span class="lobby-step-num">03</span><span class="lobby-step-copy"><strong data-i18n="lobby.stepShort.destination">Destination</strong><small id="step-summary-destination">Mars</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="site"><span class="lobby-step-num">04</span><span class="lobby-step-copy"><strong data-i18n="lobby.stepShort.site">Site</strong><small id="step-summary-site">Jezero Crater</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="crew"><span class="lobby-step-num">05</span><span class="lobby-step-copy"><strong data-i18n="lobby.stepShort.crew">Crew</strong><small id="step-summary-crew">1/4 players</small></span></button>
     </nav>
     <div class="lobby-main">
       <div class="dossier slab lobby-step" id="lobby-step-mode">
@@ -475,7 +494,7 @@
       <div class="surface-hud">
         <div class="surface-site slab"><h2 class="eyebrow" id="surface-title" data-i18n="surface.evaTitle">Mars surface EVA</h2><div class="timer-readout" id="surface-timer" aria-live="polite">03:00</div></div>
         <div class="surface-compass" aria-hidden="true"><div class="compass-strip" id="surface-compass-strip"></div><span class="compass-needle"></span><span class="compass-readout" id="surface-compass-readout">HDG 000°</span></div>
-        <div class="surface-goals slab"><div class="block-label"><span class="micro" data-i18n="surface.experiments">Experiments</span><span class="tag" id="surface-count">0/4 DONE</span></div><ol id="surface-goals"></ol><div class="block-label surface-inv-label"><span class="micro" data-i18n="surface.inventory">Inventory</span></div><div class="surface-inventory" id="surface-inventory"></div></div>
+        <div class="surface-goals slab" id="surface-goals-box"><button type="button" class="block-label surface-goals-toggle" id="surface-goals-toggle" aria-expanded="true"><span class="micro" data-i18n="surface.experiments">Experiments</span><span class="tag" id="surface-count">0/4 DONE</span><span class="surface-goals-caret" aria-hidden="true">▾</span></button><ol id="surface-goals"></ol></div>
       </div>
       <div class="surface-tags" id="surface-tags" aria-hidden="true"></div>
       <button class="surface-prompt" id="surface-prompt" type="button" hidden></button>
@@ -606,18 +625,155 @@
       </div>
     </form>
   </dialog>
+  <dialog id="dev-dialog" class="dev-dialog" aria-labelledby="dev-title">
+    <div class="dialog-inner">
+      <div class="dev-head">
+        <div>
+          <span class="eyebrow" data-i18n="dev.eyebrow">Developer Tools · Shift+D</span>
+          <h3 id="dev-title" data-i18n="dev.title">Dev Mode Sandbox</h3>
+        </div>
+        <button class="button quiet" id="dev-close" type="button" data-i18n="dev.closeBtn">Close</button>
+      </div>
+      <p class="muted" data-i18n="dev.subtitle">Jump directly to any mission phase or launch any of the 21 science experiment minigames individually.</p>
+      <div class="dev-controls">
+        <label><span class="micro" data-i18n="dev.difficultyLabel">Difficulty</span>
+          <select id="dev-difficulty">
+            <option value="easy" data-i18n="difficulty.easy.label">Easy</option>
+            <option value="normal" selected data-i18n="difficulty.normal.label">Normal</option>
+            <option value="hard" data-i18n="difficulty.hard.label">Hard</option>
+          </select>
+        </label>
+        <label><span class="micro" data-i18n="dev.siteLabel">Landing site</span>
+          <select id="dev-site">
+            <option value="jezero" data-i18n="sites.jezero.name">Jezero Crater</option>
+            <option value="gale" data-i18n="sites.gale.name">Gale Crater</option>
+          </select>
+        </label>
+        <label><span class="micro" data-i18n="dev.seedLabel">Seed</span>
+          <div class="dev-seed-row">
+            <input id="dev-seed" class="mp-input" type="number" min="0" step="1">
+            <button class="button secondary" id="dev-seed-random" type="button" data-i18n="dev.newSeedBtn">New seed</button>
+          </div>
+        </label>
+      </div>
+      <section class="dev-section">
+        <h4 class="micro" data-i18n="dev.phasesHeading">Jump to game phase</h4>
+        <div class="dev-phases">
+          <button class="button secondary" type="button" data-dev-jump="lobby-mode" data-i18n="dev.phase.lobbyMode">Lobby · Mode</button>
+          <button class="button secondary" type="button" data-dev-jump="lobby-difficulty" data-i18n="dev.phase.lobbyDifficulty">Lobby · Difficulty</button>
+          <button class="button secondary" type="button" data-dev-jump="lobby-destination" data-i18n="dev.phase.lobbyDestination">Lobby · Destination</button>
+          <button class="button secondary" type="button" data-dev-jump="lobby-site" data-i18n="dev.phase.lobbySite">Lobby · Landing site</button>
+          <button class="button secondary" type="button" data-dev-jump="lobby-crew" data-i18n="dev.phase.lobbyCrew">Lobby · Crew</button>
+          <button class="button secondary" type="button" data-dev-jump="planner" data-i18n="dev.phase.planner">Rocket Assembly</button>
+          <button class="button secondary" type="button" data-dev-jump="launchpad" data-i18n="dev.phase.launchpad">Launch Pad</button>
+          <button class="button secondary" type="button" data-dev-jump="cockpit-0" data-i18n="dev.phase.cockpit0">Cockpit · Liftoff</button>
+          <button class="button secondary" type="button" data-dev-jump="cockpit-1" data-i18n="dev.phase.cockpit1">Cockpit · Cabin docking</button>
+          <button class="button secondary" type="button" data-dev-jump="cockpit-2" data-i18n="dev.phase.cockpit2">Cockpit · Orbital docking</button>
+          <button class="button secondary" type="button" data-dev-jump="cockpit-3" data-i18n="dev.phase.cockpit3">Cockpit · Mars landing</button>
+          <button class="button primary" type="button" data-dev-jump="surface" data-i18n="dev.phase.surface">Mars Surface EVA</button>
+          <button class="button amber" type="button" data-dev-jump="results" data-i18n="dev.phase.results">Results &amp; Podium</button>
+        </div>
+      </section>
+      <section class="dev-section">
+        <div class="dev-exp-bar">
+          <h4 class="micro" data-i18n="dev.experimentsHeading">Individual experiment minigames (21)</h4>
+          <div class="dev-filters">
+            <label><span class="micro" data-i18n="dev.filterCrew">Crew</span>
+              <select id="dev-filter-crew">
+                <option value="all" data-i18n="dev.filterAll">All</option>
+                <option value="helena">Helena</option>
+                <option value="lucas">Lucas</option>
+                <option value="oscar">Oscar</option>
+                <option value="maya">Maya</option>
+              </select>
+            </label>
+            <label><span class="micro" data-i18n="dev.filterPlace">Location</span>
+              <select id="dev-filter-place">
+                <option value="all" data-i18n="dev.filterAll">All</option>
+                <option value="orbit" data-i18n="dev.places.orbit">Mars orbit</option>
+                <option value="surface" data-i18n="dev.places.surface">Surface</option>
+                <option value="descent" data-i18n="dev.places.descent">Descent</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="dev-exp-grid" id="dev-exp-grid"></div>
+      </section>
+    </div>
+  </dialog>
+  <dialog id="dev-exp-dialog" aria-labelledby="dev-exp-title">
+    <div class="dialog-inner">
+      <span class="eyebrow" id="dev-exp-kicker">Experiment</span>
+      <h3 id="dev-exp-title">Experiment</h3>
+      <p id="dev-exp-brief"></p>
+      <div class="summary-list" id="dev-exp-summary"></div>
+      <div id="dev-exp-stage"></div>
+      <div class="dialog-actions dev-exp-done-actions">
+        <button class="button quiet" id="dev-exp-back" type="button" data-i18n="dev.backToDev">← Dev Mode</button>
+        <button class="button secondary" id="dev-exp-replay" type="button" data-i18n="dev.replayBtn">New seed / Replay</button>
+        <button class="button primary" id="dev-exp-close" type="button" data-i18n="dev.closeBtn">Close</button>
+      </div>
+    </div>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>
 <script src="web/locales/en.js"></script>
 <script src="web/locales/pt.js"></script>
+<script src="web/locales/experiments/_common.js"></script>
+<script src="web/locales/experiments/h-o1.js"></script>
+<script src="web/locales/experiments/h-o2.js"></script>
+<script src="web/locales/experiments/h-s1.js"></script>
+<script src="web/locales/experiments/h-s2.js"></script>
+<script src="web/locales/experiments/l-o1.js"></script>
+<script src="web/locales/experiments/l-o2.js"></script>
+<script src="web/locales/experiments/l-s1.js"></script>
+<script src="web/locales/experiments/l-s2.js"></script>
+<script src="web/locales/experiments/m-o1.js"></script>
+<script src="web/locales/experiments/m-o2.js"></script>
+<script src="web/locales/experiments/m-o3.js"></script>
+<script src="web/locales/experiments/m-s1.js"></script>
+<script src="web/locales/experiments/m-s2.js"></script>
+<script src="web/locales/experiments/m-s3.js"></script>
+<script src="web/locales/experiments/m-s4.js"></script>
+<script src="web/locales/experiments/m-s5.js"></script>
+<script src="web/locales/experiments/m-s6.js"></script>
+<script src="web/locales/experiments/o-o1.js"></script>
+<script src="web/locales/experiments/o-o2.js"></script>
+<script src="web/locales/experiments/o-s1.js"></script>
+<script src="web/locales/experiments/o-s2.js"></script>
 <script src="web/i18n.js"></script>
 <script src="web/units.js"></script>
+<script src="web/experiments.js"></script>
+<script src="web/minigames/core.js"></script>
+<script src="web/minigames/h-o1.js"></script>
+<script src="web/minigames/h-o2.js"></script>
+<script src="web/minigames/h-s1.js"></script>
+<script src="web/minigames/h-s2.js"></script>
+<script src="web/minigames/l-o1.js"></script>
+<script src="web/minigames/l-o2.js"></script>
+<script src="web/minigames/l-s1.js"></script>
+<script src="web/minigames/l-s2.js"></script>
+<script src="web/minigames/m-o1.js"></script>
+<script src="web/minigames/m-o2.js"></script>
+<script src="web/minigames/m-o3.js"></script>
+<script src="web/minigames/m-s1.js"></script>
+<script src="web/minigames/m-s2.js"></script>
+<script src="web/minigames/m-s3.js"></script>
+<script src="web/minigames/m-s4.js"></script>
+<script src="web/minigames/m-s5.js"></script>
+<script src="web/minigames/m-s6.js"></script>
+<script src="web/minigames/o-o1.js"></script>
+<script src="web/minigames/o-o2.js"></script>
+<script src="web/minigames/o-s1.js"></script>
+<script src="web/minigames/o-s2.js"></script>
+<script src="web/experiment-run.js"></script>
 <script src="index.models.js"></script>
 <script src="multiplayer/client/room-client.js"></script>
 <script src="web/net.js"></script>
 <script src="web/settings.js"></script>
 <script src="web/app.js"></script>
+<script src="web/dev.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
 <script src="web/orbit.js"></script>
 <script src="web/scout.js"></script>

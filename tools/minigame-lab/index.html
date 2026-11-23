@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minigame lab · Astro Romana</title>
+<!-- Validation tool for the experiment minigames (docs/experiments-implementation.md). It loads the same
+     files as the game (web/experiments.js, web/minigames/*, web/locales/*) and holds no game logic.
+     URL hash: #<id>/<level>/<seed>/<lang>, e.g. #H-S1/hard/1234/pt. Works from file://. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../web/styles.css">
+<link rel="stylesheet" href="../../web/minigames.css">
+<style>
+  body{min-height:100vh;padding:16px;background:var(--bg-void)}
+  .lab-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;max-width:980px;margin:0 auto 14px}
+  .lab-bar label{display:grid;gap:4px;font:600 .62rem var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .lab-bar select,.lab-bar input{min-height:40px;padding:.4rem .6rem;border:1px solid var(--amethyst);color:var(--starlight-cream);background:var(--f1);font:600 .8rem var(--heading)}
+  .lab-bar input{width:9rem}
+  .lab-bar .grow{flex:1 1 220px}
+  .lab-bar .grow select{width:100%}
+  .lab-panel{width:min(580px,100%);margin:0 auto;color:var(--text-white);background:linear-gradient(150deg,var(--f4) 0 26%,var(--f2) 26% 72%,var(--f1) 72%);clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
+  .lab-panel.wide{width:min(900px,100%)}
+  .lab-panel h3{font-size:1.6rem;color:var(--starlight-cream);text-transform:uppercase}
+  .lab-panel p{color:var(--muted)}
+  .lab-result{display:grid;gap:6px;padding:12px 14px;background:var(--f1);border-left:3px solid var(--safe)}
+  .lab-result[hidden]{display:none}
+  .lab-result strong{font:700 1.4rem var(--heading);letter-spacing:.1em;color:var(--solar-amber)}
+  .lab-missing{padding:14px;background:repeating-linear-gradient(-45deg,var(--f1) 0 10px,var(--f2) 10px 20px);color:var(--muted)}
+  .lab-log{max-width:980px;margin:10px auto 0;font:500 .72rem/1.4 var(--heading);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="lab-bar">
+  <label class="grow">Experiment<select id="lab-exp"></select></label>
+  <label>Level<select id="lab-level"><option value="easy">easy</option><option value="normal" selected>normal</option><option value="hard">hard</option></select></label>
+  <label>Seed<input id="lab-seed" type="number" min="0" step="1"></label>
+  <button class="button quiet" id="lab-random" type="button">New seed</button>
+  <label>Language<select id="lab-lang"><option value="en">en</option><option value="pt">pt</option></select></label>
+  <label>Width<select id="lab-width"><option value="">dialog</option><option value="wide">wide</option></select></label>
+  <button class="button quiet" id="lab-bot" type="button">Bot result</button>
+</div>
+<section class="lab-panel" id="lab-panel">
+  <div class="dialog-inner">
+    <span class="eyebrow" id="lab-kicker"></span>
+    <h3 id="lab-title"></h3>
+    <p id="lab-brief"></p>
+    <div class="summary-list" id="lab-summary"></div>
+    <div id="lab-stage"></div>
+    <div class="lab-result" id="lab-result" hidden><strong id="lab-stars"></strong><span id="lab-summary-line"></span><p id="lab-fact"></p></div>
+  </div>
+</section>
+<div class="lab-log" id="lab-log"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>
+<script src="../../web/locales/en.js"></script>
+<script src="../../web/locales/pt.js"></script>
+<script src="../../web/experiments.js"></script>
+<script>
+(() => {
+  'use strict';
+  const WEB = '../../web/';
+  const $ = id => document.getElementById(id);
+  const log = msg => { $('lab-log').textContent = msg; };
+  const loadScript = src => new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => resolve(true); s.onerror = () => resolve(false);
+    document.body.append(s);
+  });
+  const loadCss = href => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onerror = () => l.remove(); document.head.append(l); };
+
+  // Hash: #id/level/seed/lang
+  const [hId, hLevel, hSeed, hLang] = decodeURIComponent(location.hash.slice(1)).split('/');
+  if (hLang) { try { localStorage.setItem('astro-romana-settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('astro-romana-settings') || '{}'), language: hLang })); } catch { /* storage blocked */ } }
+
+  const EXP = window.ASTRO_EXPERIMENTS;
+  const built = new Set();
+  const state = { id: EXP.byId(hId) ? hId : 'H-S1', level: EXP.levelOf(hLevel), seed: Number.isFinite(+hSeed) && hSeed !== '' ? +hSeed : EXP.random.newSeed(), ctrl: null, result: null };
+
+  window.LAB = { state, ready: null, open, built };
+
+  window.LAB.ready = (async () => {
+    await loadScript(WEB + 'locales/experiments/_common.js');
+    for (const e of EXP.list) await loadScript(`${WEB}locales/experiments/${e.file}.js`);
+    await loadScript(WEB + 'i18n.js');
+    await loadScript(WEB + 'units.js');
+    await loadScript(WEB + 'minigames/core.js');
+    for (const e of EXP.list) {
+      loadCss(`${WEB}minigames/${e.file}.css`);
+      if (await loadScript(`${WEB}minigames/${e.file}.js`)) built.add(e.id);
+    }
+    const t = window.ASTRO_I18N.t;
+    $('lab-exp').innerHTML = EXP.list.map(e => `<option value="${e.id}">${e.id} · ${built.has(e.id) && window.ASTRO_MINIGAMES.has(e.id) ? t(`experiments.${e.id}.title`) : '(not built)'} · ${e.crew} · ${e.place}</option>`).join('');
+    $('lab-lang').value = window.ASTRO_I18N.language;
+    sync();
+    open();
+  })();
+
+  function sync() {
+    $('lab-exp').value = state.id; $('lab-level').value = state.level; $('lab-seed').value = state.seed;
+    history.replaceState(null, '', `#${state.id}/${state.level}/${state.seed}/${window.ASTRO_I18N?.language || 'en'}`);
+  }
+
+  function open() {
+    const t = window.ASTRO_I18N.t, MG = window.ASTRO_MINIGAMES, e = EXP.byId(state.id);
+    state.ctrl?.stop(); state.ctrl = null; state.result = null;
+    $('lab-result').hidden = true;
+    $('lab-kicker').textContent = `${e.id} · ${e.crew} · ${t(`experiments.places.${e.place}`)}`;
+    $('lab-title').textContent = t(`experiments.${e.id}.title`);
+    $('lab-brief').textContent = t(`experiments.${e.id}.desc`);
+    $('lab-summary').innerHTML = [[t('minigames.summaryMinigame'), t(`experiments.${e.id}.minigame`)], [t('minigames.summaryMechanic'), t(`experiments.mechanics.${e.mechanic}`)], [t('minigames.summaryBasis'), t(`experiments.${e.id}.basis`)]]
+      .map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
+    const stage = $('lab-stage');
+    if (!MG.has(e.id)) { stage.innerHTML = '<div class="lab-missing">This minigame is not built yet.</div>'; log(''); return; }
+    const made = MG.layout(e.id, state.seed, state.level);
+    log(`layout tries: ${made.tries}${made.unsolved ? ' · UNSOLVED' : ''} · mods: ${made.mods.join(', ') || 'none'}`);
+    state.ctrl = MG.open(e.id, {
+      root: stage, seed: state.seed, level: state.level,
+      onFinish(result) {
+        state.result = result;
+        $('lab-stars').textContent = MG.lib && result.gaveUp ? '☆☆☆' : '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars);
+        $('lab-summary-line').textContent = result.summary;
+        $('lab-fact').textContent = MG.fact(e.id);
+        $('lab-result').hidden = false;
+      },
+    });
+  }
+
+  $('lab-exp').addEventListener('change', e => { state.id = e.target.value; sync(); open(); });
+  $('lab-level').addEventListener('change', e => { state.level = e.target.value; sync(); open(); });
+  $('lab-seed').addEventListener('change', e => { state.seed = Math.max(0, Math.floor(+e.target.value || 0)); sync(); open(); });
+  $('lab-random').addEventListener('click', () => { state.seed = EXP.random.newSeed(); sync(); open(); });
+  $('lab-lang').addEventListener('change', async e => { await window.ASTRO_I18N.changeLanguage(e.target.value); sync(); open(); });
+  $('lab-width').addEventListener('change', e => { $('lab-panel').classList.toggle('wide', e.target.value === 'wide'); });
+  $('lab-bot').addEventListener('click', () => {
+    const r = window.ASTRO_MINIGAMES.botResult(state.id, state.seed, state.level);
+    log(`bot: ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)} in ~${r.seconds} s`);
+  });
+})();
+</script>
+</body>
+</html>

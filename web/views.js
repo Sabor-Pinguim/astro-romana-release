@@ -1341,6 +1341,20 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     else if (!wheel.hold) closeWheel(false); // a tap on the wheel's empty middle cancels
   });
   $s('surface-emote').addEventListener('click', () => (wheel.open ? closeWheel(false) : openWheel(false)));
+  const goalsBox = $s('surface-goals-box'), goalsToggle = $s('surface-goals-toggle');
+  function syncTouchLabels() {
+    if (touch) $s('surface-emote').textContent = t('surface.emotesTitle');
+  }
+  syncTouchLabels();
+  window.addEventListener('astro:lang', syncTouchLabels);
+  if (goalsBox && goalsToggle) {
+    const setGoalsCollapsed = collapsed => {
+      goalsBox.classList.toggle('is-collapsed', collapsed);
+      goalsToggle.setAttribute('aria-expanded', String(!collapsed));
+    };
+    if (matchMedia('(max-height:500px) and (orientation:landscape)').matches) setGoalsCollapsed(true);
+    goalsToggle.addEventListener('click', () => setGoalsCollapsed(!goalsBox.classList.contains('is-collapsed')));
+  }
   function playEmote(kind) {
     const a = world?.avatar;
     if (!a) return;
@@ -1773,12 +1787,20 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     }
   }
   function updateHud() {
+    let nearestId = null, nearestDist = Infinity;
     for (const b of world.blocks) {
       const e = b.userData.exp, li = document.querySelector(`[data-goal="${e.id}"]`), dx = b.position.x - s.pos.x, dz = b.position.z - s.pos.z, dist = Math.hypot(dx, dz);
-      li.classList.toggle('done', isDone(e.id)); li.classList.toggle('here', dist <= REACH);
-      if (isDone(e.id) && !b.userData.done) markDone(b); // also when another player finished it
-      li.querySelector('.goal-dist').textContent = isDone(e.id) ? t('surface.done') : U.distanceM(dist, 0);
+      const done = isDone(e.id);
+      if (!done && dist < nearestDist) { nearestDist = dist; nearestId = e.id; }
+      li.classList.toggle('done', done); li.classList.toggle('here', dist <= REACH);
+      if (done && !b.userData.done) markDone(b); // also when another player finished it
+      li.querySelector('.goal-dist').textContent = done ? t('surface.done') : U.distanceM(dist, 0);
       li.querySelector('.goal-arrow').style.rotate = `${Math.atan2(dx, -dz) + s.yaw}rad`; // bearing from north, relative to the view
+    }
+    if (!nearestId && world.blocks.length) nearestId = world.blocks[0].userData.exp.id;
+    for (const b of world.blocks) {
+      const e = b.userData.exp;
+      document.querySelector(`[data-goal="${e.id}"]`)?.classList.toggle('is-nearest', e.id === nearestId);
     }
     const surf = sim()?.surf;
     $s('surface-count').textContent = t('surface.countDone', { done: surf?.completed.size ?? 0, total: tasks().length });
@@ -1810,6 +1832,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     }
   }
   window.addEventListener('astro:settings', () => {
+    syncTouchLabels();
     const banner = $s('minigame-complete-banner');
     if (banner) banner.textContent = t('minigames.completeBanner');
     if (!world || !s.ready) return;

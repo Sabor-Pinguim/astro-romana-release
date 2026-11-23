@@ -1,0 +1,95 @@
+/* Experiment minigames (web/minigames/). Same faceted low-poly language as web/styles.css and
+   docs/visual-identity.md: flat tones, chamfers, hard stops, no blur, no rounded corners.
+   Shared components first (.mg-*); per-experiment blocks follow, marked by experiment id. */
+
+.mg{display:grid;gap:8px;min-width:0}
+.mg[hidden],.mg [hidden]{display:none!important}
+.mg-head{display:flex;flex-wrap:wrap;gap:4px}
+.mg-head .tag{padding:.3rem .6rem .3rem .7rem;font-size:.58rem}
+.mg-level{color:var(--bg-void)!important;background:var(--solar-amber)!important}
+.mg-mod{background:var(--crimson-alert)!important}
+.mg-body{display:grid;gap:8px;min-width:0}
+.mg-status{min-height:2.4em;margin:0;font-size:.8rem;color:var(--starlight-cream)}
+.mg-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start}
+.mg-foot[hidden]{display:none}
+.mg-fail{display:grid;gap:8px;padding:12px 14px;background:linear-gradient(150deg,#3a1220 0 30%,var(--f1) 30%);clip-path:var(--chamfer);box-shadow:inset 3px 0 0 var(--coral-hover)}
+.mg-fail[hidden]{display:none}
+.mg-fail-title{font:700 .9rem var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--coral-hover)}
+.mg-fail-reason{font-size:.82rem;color:var(--starlight-cream)}
+.mg-fail-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Readouts, meters, controls */
+.mg-readout{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;font:700 .7rem var(--heading);letter-spacing:.08em;font-variant-numeric:tabular-nums;color:var(--solar-amber)}
+.mg-readout .is-good{color:var(--safe)}
+.mg-readout .is-warn{color:var(--starlight-cream)}
+.mg-readout .is-danger{color:var(--coral-hover)}
+.mg-meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.mg-meter{display:grid;gap:4px;padding:7px 9px;background:var(--f0)}
+.mg-meter-label{font:600 .62rem/1.2 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.mg-track{position:relative;height:10px;background:var(--f2)}
+.mg-fill{height:100%;width:0;background:var(--safe)}
+.mg-fill.is-warn{background:var(--solar-amber)}
+.mg-fill.is-danger{background:var(--crimson-alert)}
+.mg-fill.is-info{background:var(--amethyst)}
+.mg-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mg-controls .button{flex:1 1 auto}
+.mg .button.is-held{--a:#fce8a6;--b:var(--solar-amber);--fg:var(--bg-void)}
+.mg-hint{font-size:.78rem;color:var(--muted)}
+.mg-badge{padding:.42rem .75rem;font:700 .72rem/1.15 var(--heading);letter-spacing:.08em;text-transform:uppercase;text-align:center;color:var(--starlight-cream);background:var(--f1);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.mg-badge.is-good{background:var(--safe);color:var(--bg-void)}
+.mg-badge.is-warn{background:var(--solar-amber);color:var(--bg-void)}
+.mg-badge.is-danger{background:var(--crimson-alert);color:var(--text-white)}
+.mg-badge.is-cold{background:#2b2752;color:#95B8F6}
+.mg-canvas{display:block;width:100%;background:var(--bg-viewport);touch-action:none;user-select:none;-webkit-user-select:none}
+
+/* Horizontal gauge with zones and a needle (keep-in-range games). Zones are positioned by inline left/width %. */
+.mg-gauge{position:relative;height:34px;background:var(--f2);overflow:hidden}
+.mg-gauge-zone{position:absolute;top:0;bottom:0;display:grid;place-items:center;font:700 .58rem/1 var(--heading);letter-spacing:.08em;color:var(--starlight-cream);pointer-events:none;white-space:nowrap;overflow:hidden}
+.mg-gauge-zone.is-cold{background:#2b2752;color:#95B8F6}
+.mg-gauge-zone.is-good{background:#1e6357;box-shadow:inset 2px 0 0 var(--safe),inset -2px 0 0 var(--safe);color:var(--safe)}
+.mg-gauge-zone.is-hot{background:var(--crimson-alert)}
+.mg-needle{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:var(--starlight-cream)}
+.mg-needle.is-good{background:var(--safe)}
+.mg-needle.is-hot{background:var(--mars-orange)}
+.mg-needle.is-cold{background:#95B8F6}
+.mg-gauge-labels{display:flex;justify-content:space-between;font:600 .6rem/1 var(--heading);letter-spacing:.08em;color:var(--muted)}
+
+/* Square cell grids (route, pattern search). --cols set inline. Cells keep a touch-friendly size. */
+.mg-grid{--cols:5;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:3px;padding:5px;background:var(--f0);width:min(100%,calc(var(--cols) * 46px));justify-self:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.mg-cell{position:relative;display:grid;place-items:center;aspect-ratio:1;min-width:0;padding:0;border:0;font:700 .72rem/1 var(--heading);color:var(--muted);background:var(--f3)}
+.mg-cell:disabled{cursor:not-allowed}
+
+/* Selectable list rows (choice under a limit) */
+.mg-list{display:grid;gap:4px;max-height:34vh;overflow-y:auto}
+.mg-item{display:grid;gap:4px;width:100%;padding:.46rem .75rem;border:0;text-align:left;color:var(--text-white);background:var(--f1);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.mg-item:hover:not(:disabled){background:var(--f3)}
+.mg-item[aria-pressed="true"]{background:linear-gradient(112deg,color-mix(in srgb,var(--solar-amber) 26%,var(--f3)) 0 30%,var(--f2) 30%);box-shadow:inset 3px 0 0 var(--solar-amber)}
+.mg-item:disabled{opacity:.6}
+.mg-item-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mg-item-name{display:grid;gap:2px;min-width:0}
+.mg-item-name strong{font:700 .78rem/1.2 var(--heading);letter-spacing:.04em;color:var(--starlight-cream)}
+.mg-item-name small,.mg-item-meta small{font:600 .6rem/1.2 var(--heading);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mg-item-meta{display:grid;justify-items:end;gap:2px;font:700 .78rem var(--heading);font-variant-numeric:tabular-nums;color:var(--solar-amber);white-space:nowrap}
+.mg-share{height:4px;background:var(--f0)}
+.mg-share span{display:block;height:100%;background:var(--amethyst)}
+
+/* Arrow pad for keyboard-less players */
+.mg-pad{display:grid;justify-items:center;gap:4px}
+.mg-pad div{display:flex;gap:4px}
+.mg-pad button{width:52px;height:44px;border:0;background:var(--f3);color:var(--starlight-cream);font:700 1.1rem var(--heading);clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.mg-pad button:active{background:var(--f4)}
+@media (pointer:fine){.mg-pad{display:none}}
+
+/* Legends */
+.mg-legend{display:flex;flex-wrap:wrap;gap:6px 12px;font:600 .62rem var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mg-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+
+/* Completion card in #minigame-dialog (web/experiment-run.js) */
+.minigame-stars{display:block;margin-top:8px;font:700 1.6rem/1 var(--heading);letter-spacing:.16em;color:var(--solar-amber)}
+.minigame-line{margin:8px auto 0;max-width:44ch;font:600 .8rem/1.4 var(--heading);letter-spacing:.04em;color:var(--starlight-cream)}
+
+@media (max-width:640px){
+  .mg-meters{grid-template-columns:1fr}
+  .mg-list{max-height:38vh}
+}
+@media (prefers-reduced-motion:reduce){.mg *{animation:none!important;transition:none!important}}

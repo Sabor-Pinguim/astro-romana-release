@@ -1,6 +1,6 @@
 {
   "name": "astro-romana-tools",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "private": true,
   "description": "Tooling for the astro-romana game: procedural low-poly avatar, rocket-part, planet and Mars terrain generators, data-driven audio generator and their validators.",
   "type": "module",
@@ -16,6 +16,7 @@
     "models": "npm run models:build && npm run models:build:parts && npm run models:build:bodies && npm run models:validate && npm run web:models",
     "web:models": "node tools/web/bundle-models.mjs",
     "web:sites": "node tools/web/site-photos.mjs",
+    "web:audit:mobile": "node tools/web/mobile-audit.mjs",
     "terrain:build": "node tools/terrain/build-terrain.mjs",
     "terrain:fetch": "node tools/terrain/build-terrain.mjs --fetch",
     "terrain:validate": "node tools/terrain/validate-terrain.mjs",

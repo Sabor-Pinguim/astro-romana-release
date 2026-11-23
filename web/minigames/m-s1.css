@@ -1,0 +1,22 @@
+/* M-S1 · Biosignature hunter */
+.ms1-tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ms1-tool{display:flex;flex-direction:column;gap:2px;min-height:44px;padding:.55rem .7rem;border:0;text-align:left;background:var(--f1);color:var(--muted);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.ms1-tool strong{font:700 .74rem/1.1 var(--heading);letter-spacing:.05em;text-transform:uppercase;color:var(--starlight-cream)}
+.ms1-tool span{font-size:.7rem;font-variant-numeric:tabular-nums}
+.ms1-tool[aria-pressed="true"]{color:var(--bg-void);background:var(--solar-amber)}
+.ms1-tool[aria-pressed="true"] strong{color:var(--bg-void)}
+.ms1-board{width:min(100%,calc(var(--cols) * 44px))}
+.ms1-cell{font-size:.8rem;color:var(--starlight-cream);background:linear-gradient(135deg,#4c2822 0 50%,#43231e 50%)}
+.ms1-cell:hover:not(:disabled){filter:brightness(1.2)}
+.ms1-cell.is-hover:not(:disabled){outline:2px solid var(--solar-amber);outline-offset:-2px}
+.ms1-cell.is-glow{background:#5d2899;box-shadow:inset 0 0 0 2px var(--amethyst)}
+.ms1-cell.is-uv{background:#211235;color:#82759b}
+.ms1-cell.is-empty{background:#634337;color:#c7aa9b}
+.ms1-cell.is-near{background:#5c3a6e;color:var(--starlight-cream)}
+.ms1-cell.is-decoy{background:#66391b;color:var(--solar-amber);box-shadow:inset 0 0 0 2px var(--mars-orange)}
+.ms1-cell.is-spot{background:#1d6355;color:#e9ffbe;box-shadow:inset 0 0 0 2px var(--safe)}
+.ms1-swatch.is-glow{background:#5d2899;box-shadow:inset 0 0 0 1px var(--amethyst)}
+.ms1-swatch.is-spot{background:#1d6355;box-shadow:inset 0 0 0 1px var(--safe)}
+.ms1-swatch.is-decoy{background:#66391b;box-shadow:inset 0 0 0 1px var(--mars-orange)}
+.ms1-swatch.is-near{background:#5c3a6e;box-shadow:inset 0 0 0 1px var(--starlight-cream)}
+@media (max-width:640px){.ms1-tools{grid-template-columns:1fr}}

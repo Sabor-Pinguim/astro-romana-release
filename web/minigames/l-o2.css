@@ -1,0 +1,28 @@
+/* L-O2 · Keep the detector cold. Observation timeline, temperature trend marker and the power split bar. */
+.lo2-timeline{position:relative;height:28px;background:var(--f0);overflow:hidden}
+.lo2-win{position:absolute;top:4px;bottom:4px;display:grid;place-items:center;background:var(--f3);box-shadow:inset 0 0 0 1px var(--amethyst);font:700 .62rem/1 var(--heading);color:var(--starlight-cream);overflow:hidden}
+.lo2-win span{position:relative}
+.lo2-win.is-big{box-shadow:inset 0 0 0 2px var(--amethyst)}
+.lo2-win.is-on{background:#4a3410;box-shadow:inset 0 0 0 2px var(--solar-amber)}
+.lo2-win.is-good{box-shadow:inset 0 0 0 1px var(--safe)}
+.lo2-win.is-warn{box-shadow:inset 0 0 0 1px var(--solar-amber)}
+.lo2-win.is-bad{box-shadow:inset 0 0 0 1px var(--coral-hover);background:#3a1220}
+.lo2-win-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:#1e6357}
+.lo2-storm{position:absolute;top:0;height:4px;background:repeating-linear-gradient(-45deg,var(--solar-amber) 0 4px,var(--bg-void) 4px 8px)}
+.lo2-playhead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--starlight-cream)}
+.lo2-trend{position:absolute;top:0;width:0;height:0;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--amethyst);pointer-events:none}
+
+/* Power split: cooler share (cold blue) grows from the left; the hatched reserve on the right belongs to the
+   spacecraft while observing; the end stop marks the most the cooler can take. */
+.lo2-split{position:relative;height:46px;background:var(--f3);cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
+.lo2-split:focus-visible{box-shadow:inset 0 0 0 2px var(--solar-amber);outline:none}
+.lo2-cool{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(165deg,#3a3570 0 52%,#2b2752 52%)}
+.lo2-reserve{position:absolute;top:0;bottom:0;right:0;background:repeating-linear-gradient(-45deg,var(--f2) 0 6px,var(--f1) 6px 12px);box-shadow:inset 2px 0 0 var(--muted)}
+.lo2-reserve.is-on{background:repeating-linear-gradient(-45deg,#4a3410 0 6px,var(--f1) 6px 12px);box-shadow:inset 3px 0 0 var(--solar-amber)}
+.lo2-max{position:absolute;top:0;bottom:0;width:2px;background:#95B8F6;opacity:.5}
+.lo2-handle{position:absolute;top:0;bottom:0;width:6px;margin-left:-3px;background:var(--starlight-cream)}
+.lo2-split.is-brown .lo2-handle{background:var(--coral-hover)}
+.lo2-cool-txt,.lo2-rest-txt{position:absolute;bottom:5px;font:700 .6rem/1 var(--heading);letter-spacing:.08em;pointer-events:none;white-space:nowrap}
+.lo2-cool-txt{left:8px;color:#95B8F6}
+.lo2-rest-txt{right:8px;color:var(--solar-amber)}
+.mg-controls .lo2-btn{flex:1 1 130px;min-height:46px;padding-inline:.9rem;touch-action:none;user-select:none;-webkit-user-select:none}

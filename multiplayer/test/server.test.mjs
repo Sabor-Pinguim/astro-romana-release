@@ -234,3 +234,27 @@ test('SQLite leaderboard records missions, deduplicates, filters, and ranks play
   assert.equal(health.dbOk, true);
   assert.equal(health.missionsRecorded, 2);
 }));
+
+test('Leaderboard keeps the drawn experiments, run seed and score multiplier; rejects bad ones', () => withServer({}, async server => {
+  const post = body => fetch(`${server.http}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const base = {
+    id: 'mission-exp-0001', mode: 'solo', site: 'gale', difficulty: 'hard', grade: 'A', teamScore: 1500, tasksDone: 8, tasksTotal: 8,
+    players: [{ playerName: 'Ana', seat: 'maya', score: 420, grade: 'A', stranded: false }],
+  };
+  const experiments = [{ id: 'H-O2', stars: 3 }, { id: 'H-S1', stars: 2 }, { id: 'L-O1', stars: 1, bot: true }, { id: 'M-S3', stars: 0 }];
+  assert.equal((await post({ ...base, experiments, runSeed: 123456, scoreMultiplier: 1.5 })).status, 201);
+  assert.equal((await post({ ...base, id: 'mission-exp-0002', experiments: [{ id: 'X-S9', stars: 2 }] })).status, 400);
+  assert.equal((await post({ ...base, id: 'mission-exp-0003', experiments: [{ id: 'H-S1', stars: 4 }] })).status, 400);
+  assert.equal((await post({ ...base, id: 'mission-exp-0004', experiments: [{ id: 'H-S1', stars: 1 }, { id: 'H-S1', stars: 2 }] })).status, 400);
+  assert.equal((await post({ ...base, id: 'mission-exp-0005', scoreMultiplier: 2 })).status, 400);
+  assert.equal((await post({ ...base, id: 'mission-exp-0006', runSeed: -1 })).status, 400);
+  assert.equal((await post({ ...base, id: 'mission-exp-0007', teamScore: 900 })).status, 201); // older clients: no new fields
+
+  const entries = (await (await fetch(`${server.http}/api/leaderboard?tab=missions`)).json()).entries;
+  assert.equal(entries.length, 2);
+  assert.deepEqual(entries[0].experiments, experiments);
+  assert.equal(entries[0].runSeed, 123456);
+  assert.equal(entries[0].scoreMultiplier, 1.5);
+  assert.equal(entries[1].experiments, null);
+  assert.equal(entries[1].scoreMultiplier, null);
+}));

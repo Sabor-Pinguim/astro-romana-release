@@ -1,0 +1,8 @@
+/* M-O2 · Ice radar */
+.mo2-chart{cursor:crosshair}
+.mo2-swatch{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+.mo2-swatch.mo2-sw-surface{background:#fce8a6}
+.mo2-swatch.mo2-sw-echo{background:#a283e6}
+.mo2-swatch.mo2-sw-mark{background:var(--solar-amber);clip-path:var(--diamond)}
+.mo2-swatch.mo2-sw-sim{box-shadow:inset 0 0 0 2px var(--coral-hover)}
+.mo2-swatch.mo2-sw-ice{box-shadow:inset 0 0 0 2px var(--safe)}

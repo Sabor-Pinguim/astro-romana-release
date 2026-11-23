@@ -1,0 +1,15 @@
+/* H-S2 · Precision landing */
+.hs2-canvas{cursor:crosshair}
+.hs2-canvas:focus-visible{outline:2px solid var(--solar-amber);outline-offset:-2px}
+.hs2-controls{flex-wrap:nowrap}
+.hs2-controls>.button{flex:1 1 auto;min-width:0}
+.hs2-pad{flex:none}
+.hs2-pad button{width:44px;height:44px}
+.hs2-pad button:disabled{opacity:.45}
+.hs2-legend i{border:0}
+.hs2-sw-target{background:var(--amethyst);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.hs2-sw-range{background:var(--solar-amber);clip-path:polygon(0 40%,100% 40%,100% 60%,0 60%)}
+.hs2-sw-aim{background:var(--starlight-cream);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%,25% 50%,50% 75%,75% 50%,50% 25%,25% 50%,0 50%)}
+.hs2-sw-hazard{background:linear-gradient(135deg,#b3a196 0 50%,#4d3d4c 50%)}
+.hs2-sw-shadow{background:#11071F;box-shadow:inset 0 0 0 1px var(--muted)}
+@media (max-width:420px){.hs2-pad button{width:40px}}

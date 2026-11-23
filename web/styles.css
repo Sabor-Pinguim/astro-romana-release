@@ -13,6 +13,7 @@
       --diamond:polygon(50% 0,100% 50%,50% 100%,0 50%);
       --honeycomb:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48.5' viewBox='0 0 28 48.5'%3E%3Cpath d='M0 8.08L14 0l14 8.08M0 8.08v16.17l14 8.08 14-8.08M14 32.33v16.17' fill='none' stroke='%23c4b7e4' stroke-width='0.4'/%3E%3C/svg%3E");
       --heading:'Chakra Petch',sans-serif;--body:'Barlow',Arial,sans-serif;
+      --header-h:76px;--stepper-h:54px;--foot-h:62px;
     }
     *{box-sizing:border-box}
     html{background:var(--bg-void)}
@@ -27,8 +28,8 @@
     /* clip-path hides outlines, so clipped controls show focus inside */
     :is(.button,.step,.lobby-step-tab,.difficulty-card,.site-card,.mars-pin,.crew-card,.site-thumb,.pick,.part button,.rocket-stage,.remove-stage,.category-tabs button,.segmented button,.switch,.invite,.icon-button,.relay-packet,.bio-tool,.alert-hint-go):focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .muted{color:var(--muted)}
-    #app{min-height:100vh;position:relative;overflow:hidden;z-index:1}
-    .screen{display:none;min-height:100vh;flex-direction:column}
+    #app{min-height:100vh;min-height:100dvh;position:relative;overflow:hidden;z-index:1}
+    .screen{display:none;min-height:100vh;min-height:100dvh;flex-direction:column}
     .screen.active{display:flex;animation:wipe .55s cubic-bezier(.7,0,.2,1) backwards}
 
     /* Shared pieces */
@@ -76,7 +77,7 @@
     .mars polyline{fill:none;stroke:var(--solar-amber);stroke-width:.012;stroke-dasharray:.05 .035}
     .mars .orbit-back{opacity:.3}
     .saturn-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-    .menu-shell{position:relative;display:flex;align-items:center;width:min(1440px,100%);min-height:100vh;margin:0 auto;padding:clamp(24px,5vw,80px)}
+    .menu-shell{position:relative;display:flex;align-items:center;width:min(1440px,100%);min-height:100vh;min-height:100dvh;margin:0 auto;padding:clamp(24px,5vw,80px)}
     .menu-copy{position:relative;max-width:640px}
     .menu-kicker{margin-bottom:1.6rem}
     .menu-kicker::before{display:none}
@@ -90,6 +91,7 @@
     .menu-actions .button{min-height:54px;padding-inline:2.2rem;font-size:.86rem}
     .menu-actions #play-button{width:min(100%,360px)}
     .menu-actions #leaderboard-button,.menu-actions #settings-button{width:min(86%,310px)}
+    .menu-actions #dev-button{width:min(70%,240px);min-height:36px;padding:.45rem 1.2rem;font-size:.72rem;letter-spacing:.14em}
     .settings-glyph{width:11px;height:10px;background:currentColor;clip-path:polygon(evenodd,25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%,25% 0,38% 24%,18% 50%,38% 76%,62% 76%,82% 50%,62% 24%,38% 24%)}
     .menu-footer{position:absolute;left:clamp(24px,5vw,80px);bottom:28px;display:flex;align-items:center;font:600 .7rem var(--heading);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
     .menu-footer span+span::before{content:"";display:inline-block;width:6px;height:8px;margin:0 .9rem;background:var(--mars-orange);clip-path:polygon(0 0,100% 50%,0 100%)}
@@ -383,7 +385,7 @@
     .perk p{margin-top:.2rem;font-size:.86rem;color:var(--muted)}
 
     /* Planner: modular rocket */
-    .assembly-grid{display:grid;grid-template-columns:minmax(220px,.95fr) minmax(300px,1.3fr) minmax(260px,1.05fr);gap:14px;height:clamp(620px,calc(100vh - 190px),900px)}
+    .assembly-grid{display:grid;grid-template-columns:minmax(220px,.95fr) minmax(300px,1.3fr) minmax(260px,1.05fr);gap:14px;height:clamp(620px,calc(100vh - 190px),900px);height:clamp(620px,calc(100dvh - 190px),900px)}
     .mass-row{display:flex;justify-content:space-between;align-items:baseline;padding-top:.6rem;border-top:1px solid #ffffff14}
     .meter-fill.short{background:var(--solar-amber)}
     .telemetry-note code{font-size:.95em;color:var(--starlight-cream)}
@@ -449,7 +451,7 @@
     .wizard-prompt-actions{display:flex;align-items:center;gap:8px;flex:none}
     .wizard-dock{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;margin-bottom:10px;align-items:stretch}
     .wizard-dock[hidden]{display:none}
-    #planner.has-wizard .assembly-grid{height:clamp(540px,calc(100vh - 340px),820px)}
+    #planner.has-wizard .assembly-grid{height:clamp(540px,calc(100vh - 340px),820px);height:clamp(540px,calc(100dvh - 340px),820px)}
     .wizard-nancy-stage{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:132px;overflow:hidden;cursor:pointer;background:linear-gradient(118deg,#2a1647 0 24%,#1a1338 24% 72%,#120a24 72%);clip-path:var(--chamfer);box-shadow:inset 0 1px 0 #ffffff1c,inset 0 -3px 0 var(--amethyst)}
     .wizard-nancy-stage:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .wizard-nancy-stage::before{content:"";position:absolute;left:50%;bottom:24px;width:72%;height:10px;translate:-50% 0;background:color-mix(in srgb,var(--amethyst) 40%,var(--f1));clip-path:polygon(16% 0,84% 0,100% 50%,84% 100%,16% 100%,0 50%);pointer-events:none}
@@ -884,9 +886,6 @@
     .surface-site{display:flex;align-items:center;gap:14px;padding:10px 12px 10px 18px}
     .surface-site h2{margin:0}
     .surface-hud button{pointer-events:auto}
-    .surface-inv-label{margin:10px 0 6px}
-    .surface-inventory{display:flex;flex-wrap:wrap;gap:3px}
-    .surface-inventory .inv-slot{flex:0 1 auto;min-width:0;padding:.3rem .5rem;font-size:.58rem}
     .surface-compass{position:relative;flex:1 1 0;min-width:160px;max-width:520px;margin:0 auto}
     .compass-strip{position:relative;height:34px;overflow:hidden;background:#11071fd9;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
     .compass-strip span{position:absolute;top:0;translate:-50% 0}
@@ -906,6 +905,11 @@
     .emote-wheel button.on{color:var(--bg-void);background:var(--solar-amber)}
     .emote-name{position:absolute;left:50%;top:50%;translate:-50% -50%;font:700 .72rem var(--heading);letter-spacing:.14em;text-transform:uppercase;color:var(--starlight-cream)}
     .surface-goals{width:min(330px,46vw);padding:14px 14px 12px}
+    .surface-goals-toggle{width:100%;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer}
+    .surface-goals-caret{font-size:.7rem;color:var(--solar-amber);transition:rotate .15s}
+    .surface-goals.is-collapsed .surface-goals-toggle{margin-bottom:4px}
+    .surface-goals.is-collapsed .surface-goals-caret{rotate:-90deg}
+    .surface-goals.is-collapsed ol li:not(.is-nearest){display:none}
     .surface-goals ol{display:grid;gap:3px;margin:0;padding:0;list-style:none}
     .surface-goals li{--crew:var(--muted);display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:.55rem;padding:.42rem .55rem;background:var(--f1);font-size:.74rem;line-height:1.25}
     .surface-goals li.here{background:var(--f4)}
@@ -997,6 +1001,32 @@
     .results-lb-status{font-size:.76rem}
     #results-server-lb .lb-row{padding:.48rem .75rem}
 
+    /* Dev Mode sandbox dialog */
+    .dev-dialog{width:min(860px,calc(100vw - 24px))}
+    .dev-head,.dev-exp-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .dev-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;padding:10px 12px;background:var(--f1);clip-path:var(--chamfer)}
+    .dev-controls label,.dev-filters label{display:flex;flex-direction:column;gap:4px}
+    .dev-controls select,.dev-filters select{min-height:36px;padding:.35rem 1.8rem .35rem .65rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:600 .74rem var(--heading);letter-spacing:.05em;cursor:pointer}
+    .dev-seed-row{display:flex;gap:6px;align-items:stretch}
+    .dev-seed-row input{flex:1;min-width:0}
+    .dev-seed-row .button{min-height:36px;padding:.35rem .75rem;font-size:.66rem}
+    .dev-section{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid #ffffff14}
+    .dev-phases{display:flex;flex-wrap:wrap;gap:6px}
+    .dev-phases .button{min-height:36px;padding:.45rem .85rem;font-size:.68rem}
+    .dev-filters{display:flex;gap:8px;flex-wrap:wrap}
+    .dev-exp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+    .dev-exp-card{--crew:var(--amethyst);display:flex;flex-direction:column;gap:5px;padding:9px 11px;border:0;text-align:left;color:var(--text-white);background:var(--f1);clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:inset 3px 0 0 var(--crew);transition:background .12s,translate .12s}
+    .dev-exp-card:hover:not(:disabled){background:var(--f3);translate:0 -1px}
+    .dev-exp-card:focus-visible{outline:none;box-shadow:inset 3px 0 0 var(--crew),inset 0 0 0 2px var(--solar-amber)}
+    .dev-exp-head{display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%}
+    .dev-exp-head strong{font:700 .78rem var(--heading);letter-spacing:.08em;color:var(--solar-amber)}
+    .dev-exp-crew{font:600 .6rem var(--heading);letter-spacing:.08em;text-transform:uppercase;color:var(--crew)}
+    .dev-exp-title{font:600 .8rem/1.25 var(--body);color:var(--starlight-cream)}
+    .dev-exp-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:2px}
+    .dev-exp-meta .tag{padding:.2rem .48rem;font-size:.54rem}
+    #dev-exp-dialog.is-complete .dialog-inner > :not(.minigame-complete):not(.dev-exp-done-actions){display:none}
+    #dev-exp-dialog.is-complete .minigame-complete{display:block}
+
     @media (max-width:1200px){
       .assembly-grid,#planner.has-wizard .assembly-grid{grid-template-columns:1fr 1fr;height:auto}
       .blueprint.slab{min-height:560px}
@@ -1005,7 +1035,7 @@
       .chalkboard-body{grid-template-columns:1fr}
     }
     @media (max-width:900px){
-      #lobby{height:auto;min-height:100vh;overflow:visible}
+      #lobby{height:auto;min-height:100vh;min-height:100dvh;overflow:visible}
       .lobby-main,.dossier{overflow:visible}
       .orbit-layout{grid-template-columns:1fr}
       .orbit-map.slab,.lobby-step-orbit .orbit-map.slab{min-height:420px;height:auto}
@@ -1018,20 +1048,30 @@
       .cockpit-layout,.results-grid{grid-template-columns:1fr}
     }
     @media (max-width:640px){
+      :root{--header-h:56px;--stepper-h:44px;--foot-h:56px}
       .menu-shell{align-items:flex-end;padding-bottom:96px}
       .mars{right:-45vw;top:26%;width:118vw;opacity:.6}
       .menu-actions .button{flex:1;padding-inline:1rem}
       .coordinates{display:block;bottom:10px;font-size:.55rem}
       .header-title{gap:.5rem}
       .lobby-header-controls{width:100%;justify-content:space-between}
-      .lobby-stepper{grid-template-columns:1fr;gap:4px}
-      .lobby-step-tab,.lobby-step-tab:first-child{min-height:44px;padding:.5rem .9rem;clip-path:var(--chamfer)}
+      .lobby-stepper{display:flex;align-items:center;gap:4px;padding:0 12px}
+      .lobby-step-tab,.lobby-step-tab:first-child{flex:0 0 auto;min-height:42px;padding:.35rem .55rem;clip-path:var(--chamfer);justify-content:center}
+      .lobby-step-tab:not(.active) .lobby-step-copy{display:none}
+      .lobby-step-tab.active{flex:1;justify-content:flex-start;padding:.35rem .75rem}
+      .lobby-step-tab.active .lobby-step-copy small{display:none}
+      #lobby .app-foot,#planner .app-foot{position:sticky;bottom:0;z-index:6;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px))}
+      #lobby .app-foot .hint{display:none}
+      #lobby .app-foot:has(#lobby-next[hidden]){display:none}
       .mode-join-row{flex-direction:column}
-      .site-card-media{min-height:160px}
-      .mars-globe-stage{min-height:300px}
+      .site-card-media{min-height:0;aspect-ratio:16/9}
+      .mars-globe-stage{min-height:260px;height:260px}
+      .orbit-map.slab,.lobby-step-orbit .orbit-map.slab{min-height:280px;height:280px}
       .difficulty .micro{display:none}
-      .crew-stage{height:166px}
-      .astronaut{width:112px;height:160px}
+      .crew-card{grid-template-columns:56px minmax(0,1fr);gap:6px 8px;padding:8px}
+      .crew-card .crew-stage{height:82px}
+      .crew-card .astronaut{width:52px;height:76px}
+      .crew-name{font-size:.92rem;letter-spacing:.03em;overflow-wrap:anywhere}
       .assembly-grid,#planner.has-wizard .assembly-grid{grid-template-columns:1fr}
       .wizard-prompt-surface{flex-direction:column;align-items:stretch}
       .wizard-prompt-actions{justify-content:flex-end}
@@ -1042,13 +1082,18 @@
       .chalk-steps{order:3;width:100%;margin-left:0}
       .chalk-foot-left,.chalk-foot-right{width:100%;justify-content:space-between}
       .chalk-btn{flex:1;text-align:center}
-      .blueprint.slab{min-height:500px}
+      .blueprint.slab{min-height:340px}
       .flight-stepper{grid-template-columns:repeat(2,1fr)}
-      .cockpit-viewport.slab,.podium-viewport.slab{min-height:360px}
+      .cockpit-layout{padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));gap:8px}
+      .cockpit-viewport.slab{min-height:220px;height:38dvh}
+      .cockpit-deck{padding:10px 12px;gap:8px}
+      .flight-metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+      .metric-box{padding:.35rem .45rem}
+      .metric-box strong{font-size:.78rem}
+      .podium-viewport.slab{min-height:360px}
       .app-foot{flex-wrap:wrap}
       .app-foot .hint{order:2;width:100%}
       .scout-order{gap:4px;padding:6px 8px}.scout-order-chip{min-width:28px;padding:.22rem .45rem}
-      .orbit-map.slab{min-height:380px}
       .orbit-map h3{top:18px;left:20px;font-size:1.15rem}
       .orbit-marker{display:none}
       .stage-node{max-width:46%}
@@ -1063,12 +1108,12 @@
       .emote-wheel{top:64%}
       .surface-goals li{padding:.3rem .5rem}
       .goal-name small{display:none}
-      .surface-crew{left:10px;bottom:62px}
+      .surface-crew{left:10px;bottom:calc(62px + env(safe-area-inset-bottom,0px))}
       .surface-crew button{min-width:0;padding:.5rem .55rem .45rem}
-      .surface-actions{left:10px;right:10px;bottom:10px}
+      .surface-actions{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
       .surface-actions .button{flex:1}
-      .surface-prompt{bottom:118px}
-      .surface-jump{bottom:62px;right:10px;width:60px;height:60px}
+      .surface-prompt{bottom:calc(118px + env(safe-area-inset-bottom,0px))}
+      .surface-jump{bottom:calc(62px + env(safe-area-inset-bottom,0px));right:10px;width:60px;height:60px}
       .dialog-inner{padding:18px 16px;gap:.55rem}
       .moxie-bars,.bio-tools{grid-template-columns:1fr}
       .bio-cell{min-height:32px;font-size:.54rem}
@@ -1088,4 +1133,125 @@
       .lb-row{grid-template-columns:36px minmax(0,1fr) auto auto;gap:6px;padding:.5rem .65rem}
     }
     @media (max-width:360px){.scout-order-label{display:none}}
+    @media (max-height:500px) and (orientation:landscape){
+      :root{--header-h:38px;--stepper-h:36px;--foot-h:38px}
+      .app-header,#lobby .app-header{min-height:36px;padding:3px max(12px,env(safe-area-inset-right,0px)) 3px max(12px,env(safe-area-inset-left,0px));gap:.5rem}
+      .app-header .eyebrow,.app-foot .hint,.dossier-title-wrap .micro,.dossier-title-wrap .setup-lead{display:none}
+      .app-header h2{font-size:1rem}
+      .app-header .button.quiet{min-height:32px;padding:.3rem .7rem;font-size:.7rem}
+      #lobby .lobby-stepper{display:flex;align-items:center;gap:3px;margin:4px auto 0;padding:0 max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))}
+      .lobby-step-tab,.lobby-step-tab:first-child{flex:0 0 auto;min-height:34px;padding:.24rem .6rem;clip-path:var(--chamfer);justify-content:center}
+      .lobby-step-tab:not(.active) .lobby-step-copy{display:none}
+      .lobby-step-tab.active{flex:1;justify-content:flex-start;padding:.24rem .75rem}
+      .lobby-step-tab.active .lobby-step-copy small{display:none}
+      .lobby-step-num{width:22px;height:20px;font-size:.6rem}
+      #lobby,#planner{height:auto;min-height:100vh;min-height:100dvh;overflow:visible}
+      .lobby-main,.dossier{overflow:visible;padding:6px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px))}
+      .dossier{padding:8px 12px;gap:6px}
+      .dossier-title{font-size:1.02rem}
+      #lobby .app-foot,#planner .app-foot{position:sticky;bottom:0;z-index:6;min-height:36px;padding:3px max(12px,env(safe-area-inset-right,0px)) calc(3px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+      #lobby .app-foot:has(#lobby-next[hidden]){display:none}
+      #lobby .app-foot .button,#planner .app-foot .button{min-height:34px;padding:.35rem 1rem;font-size:.72rem}
+      .menu-shell{padding:12px clamp(16px,4vw,40px);align-items:center}
+      .menu-copy{max-width:100%}
+      .menu-title{font-size:clamp(1.9rem,8.5dvh,3rem);flex-direction:row;align-items:baseline;gap:.3em}
+      .menu-title span:nth-child(2){padding-left:0}
+      .menu-subtitle{margin-top:.45rem;font-size:.68rem}
+      .menu-desc{font-size:.86rem;margin-top:.35rem}
+      .menu-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-start;margin-top:.85rem;gap:.5rem}
+      .menu-actions .button{min-height:40px;padding:.45rem 1.05rem;font-size:.74rem;width:auto!important}
+      .menu-footer,.coordinates{bottom:8px;font-size:.56rem}
+      .mars{right:-8vw;top:50%;width:min(82vh,38vw);opacity:.85}
+      .mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .setup-card{padding:8px 10px;gap:6px;grid-template-rows:auto auto auto auto}
+      .setup-card h4{font-size:1.05rem}
+      .setup-card p{font-size:.74rem}
+      .mode-visual{padding:6px 8px;overflow:visible}
+      .mode-visual:not(.is-browser){min-height:56px}
+      .mode-avatar .astronaut{height:44px}
+      .mode-avatar.is-hero .astronaut{height:50px}
+      .mode-badge-top{display:none}
+      .room-browser-list{min-height:48px;max-height:112px}
+      .mode-join-row{flex-direction:row}
+      .difficulty-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .difficulty-card{padding:8px 10px;gap:6px}
+      .difficulty-card h4{font-size:1.15rem}
+      .difficulty-card .diff-about{display:none}
+      .setup-specs li{font-size:.72rem}
+      .orbit-layout{grid-template-columns:minmax(0,1.35fr) minmax(210px,.85fr);gap:10px}
+      .orbit-map.slab,.lobby-step-orbit .orbit-map.slab{min-height:calc(100dvh - var(--header-h) - var(--stepper-h) - var(--foot-h) - 24px);height:auto}
+      .orbit-map h3{top:10px;left:12px;font-size:.95rem}
+      .objective-card{padding:10px 12px;gap:.4rem}
+      .objective-card h3{font-size:1.15rem}
+      .objective-card p{font-size:.76rem}
+      .site-select-grid{grid-template-columns:minmax(0,1.25fr) minmax(210px,.85fr);gap:10px}
+      .site-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .site-card-media{min-height:0;aspect-ratio:16/9;flex:none}
+      .site-card-badges{top:6px;left:6px;right:6px}
+      .site-card-badges .tag:first-child{display:none}
+      .site-card-body{padding:6px 8px;gap:2px}
+      .site-card h4{font-size:.84rem}
+      .site-card p{font-size:.7rem;line-height:1.25}
+      .site-preview-credit{display:none}
+      .mars-globe-stage{min-height:200px;height:auto;max-height:none}
+      .mars-globe-hud-top{top:6px;left:6px;right:6px}
+      .mars-globe-hud-top .tag:first-child,.mars-globe-hud-bottom{display:none}
+      .dossier-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:10px}
+      .crew-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+      .crew-card{grid-template-columns:46px minmax(0,1fr);gap:4px 6px;padding:6px}
+      .crew-card .crew-stage{height:68px}
+      .crew-card .astronaut{width:44px;height:64px}
+      .crew-name{font-size:.82rem;overflow-wrap:anywhere}
+      .detail-head h4{font-size:1.2rem}
+      .detail-view{min-height:130px}
+      .planner-content{padding:6px 12px 8px}
+      #planner .header-side .tag{display:none}
+      .budget-readout strong{font-size:1.05rem}
+      .assembly-grid,#planner.has-wizard .assembly-grid{grid-template-columns:1fr 1fr;gap:8px;height:auto}
+      .telemetry{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 10px;padding:8px 10px;overflow:visible}
+      .telemetry .panel-heading,.telemetry .telemetry-note{display:none}
+      .telemetry .telemetry-alerts{grid-column:1/-1;min-height:0;max-height:80px}
+      .blueprint.slab{min-height:260px;height:calc(100dvh - 110px)}
+      .viewport-label{top:10px;left:12px;right:105px}
+      .viewport-label span{display:none}
+      .catalog{grid-column:auto;padding:10px;gap:8px}
+      .parts-list{max-height:calc(100dvh - 180px)}
+      #cockpit{height:100vh;height:100dvh;min-height:0;overflow:hidden}
+      .flight-stepper{margin:4px auto 0;padding:0 12px;gap:3px;grid-template-columns:repeat(4,minmax(0,1fr))}
+      .flight-phase{min-height:26px;padding:.18rem .65rem .18rem .45rem;font-size:.52rem}
+      .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
+      .cockpit-layout{flex:1;min-height:0;grid-template-columns:minmax(0,1.25fr) minmax(250px,330px);gap:8px;padding:6px 12px 8px}
+      .cockpit-viewport.slab{min-height:0;height:100%}
+      .cockpit-hud-bottom{display:none}
+      .cockpit-deck{padding:8px 10px;gap:6px;overflow-y:auto;min-height:0}
+      .cockpit-deck .panel-heading,.cockpit-deck .flight-metrics{display:none}
+      .minigame-card{padding:8px 10px;gap:6px}
+      .minigame-card p{font-size:.72rem;line-height:1.25}
+      .kir.kir-2d{max-height:108px}
+      .kir-pad{width:124px}
+      .kir-pad .button{min-height:30px;font-size:.76rem}
+      .surface-hud{top:8px;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));gap:8px;flex-direction:row}
+      .surface-site{padding:6px 8px 6px 12px;gap:8px}
+      .timer-readout{padding:.3rem .65rem;font-size:.95rem}
+      .surface-goals{width:min(230px,36vw);padding:8px 10px}
+      .surface-goals li{padding:.28rem .4rem;font-size:.66rem}
+      .surface-crew{left:max(8px,env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+      .surface-actions{left:auto;right:max(8px,env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+      .surface-actions .button{flex:none}
+      .surface-jump{right:max(12px,env(safe-area-inset-right,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));width:56px;height:56px;z-index:5}
+    }
+    @media (pointer:coarse){
+      .meter-info-btn{min-width:44px;min-height:44px;width:44px;height:44px;font-size:.9rem}
+      .add-stage{width:44px;height:44px;font-size:1.2rem}
+      .rocket-stage{min-height:44px}
+      .remove-stage{width:44px;min-height:44px}
+      .category-tabs button{min-height:44px;padding:.55rem .9rem}
+      .mp-name-edit-btn,.mp-server-bar .button{min-width:44px;min-height:44px}
+      .invite,.pick{min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+      .orbit-system.is-3d .orbit-world{min-width:44px;min-height:44px}
+      .surface-goals-toggle,.surface-crew button{min-height:36px}
+      .mars-pin{min-height:40px;padding:.45rem .8rem}
+      .mars-globe-hud-bottom{display:none}
+      .kir-ctrl kbd,.dock-depth-grid kbd,.launchpad-skip kbd{display:none}
+    }
     @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}

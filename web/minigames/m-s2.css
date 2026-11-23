@@ -1,0 +1,4 @@
+/* M-S2 · Laser on rocks */
+.ms2-view{cursor:crosshair}
+.mg .mg-controls .ms2-fire{flex:1 1 100%}
+@media (max-height:500px){.ms2-view{max-width:420px;margin-inline:auto}}

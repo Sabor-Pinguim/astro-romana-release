@@ -145,7 +145,7 @@
     mode: { eyebrow: 'Mission setup / 01', title: 'Play mode', back: '← Menu', next: null, hint: 'Choose solo play or start a co-op room before configuring mission rules.' },
     difficulty: { eyebrow: 'Mission setup / 02', title: 'Difficulty', back: '← Play mode', next: 'Continue to destination →', hint: 'Review the budget, Mars surface window, and telemetry rules before choosing a destination.' },
     destination: { eyebrow: 'Mission setup / 03', title: 'Choose your destination', back: '← Difficulty', next: 'Continue to landing site →', hint: 'Select Mars on the solar system map to plan your crewed surface expedition.' },
-    site: { eyebrow: 'Mission setup / 04', title: 'Landing site', back: '← Destination', next: 'Continue to crew →', hint: 'Click a crater on the 3D Mars globe or pick a landing site card on the left.' },
+    site: { eyebrow: 'Mission setup / 04', title: 'Landing site', back: '← Destination', next: 'Continue to crew →', hint: 'Select a crater card or click a landing site marker on the 3D Mars globe.' },
     crew: { eyebrow: 'Mission dossier / 05', title: 'Crew selection', back: '← Landing site', next: 'Proceed to rocket assembly →', hint: 'Mission design works best when every specialty has a voice.' },
   };
   const formatSurfaceClock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -2889,6 +2889,8 @@
 
     return { startFlight, failLaunch, handleCockpitAction, setPilotHold, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,
+      jumpCockpit: step => { startFlight(); if (step > 0) setFlightStep(step); },
+      jumpResults: () => { flight.active = false; cancelAnimationFrame(flight.raf); if (!flight.design) flight.design = captureDesign(); surf.tasks = surf.tasks?.length ? surf.tasks : SURFACE_TASKS(); showResults(false); },
       refreshUI: () => { if (flight.active) renderFlightUI(); },
       get isMuted() { return radAudio.muted; },
       surfaceLoaded: () => { if (net.isGuest) net.act('loaded'); } };
@@ -2897,7 +2899,7 @@
   // Shared with the 3D modules below.
   function renderBadge(){const lv=LV(),s=lv.surfaceS,badge=$('#modifier-badge');badge.textContent=`${lv.label.toUpperCase()} · ${t('lobby.badge',{budget:money(budgetOf(state.difficulty)),time:formatSurfaceClock(s),rules:lv.rules})}`;badge.title=lv.about;}
   window.ASTRO_ART={RAMPS,PLANETS};
-  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),wizard:{open:(step=0)=>setWizardOpen(true,{step,gesture:true}),close:()=>setWizardOpen(false),goTo:step=>setWizardStep(step),isOpen:()=>wizardState.open},CREW_MODELS,COCKPIT_MODEL};
+  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,setDifficulty:id=>{if(difficulty[id])setDifficulty(id);},setLobbyStep,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),jumpCockpit:step=>SIM.jumpCockpit(step),jumpResults:()=>SIM.jumpResults(),launchPad:()=>window.ASTRO_LAUNCHPAD?.({ok:true,accel:1.4}),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),wizard:{open:(step=0)=>setWizardOpen(true,{step,gesture:true}),close:()=>setWizardOpen(false),goTo:step=>setWizardStep(step),isOpen:()=>wizardState.open},CREW_MODELS,COCKPIT_MODEL};
   // ---- Multiplayer: lobby, screens and the shared planner (docs/multiplayer.md, items 1–4; 5–7 live in SIM) ------
   // The host sends the mission setup (state 'setup') whenever it changes; guests copy it. Only what everyone must
   // agree on travels: the selection, the tab and the open details stay on each screen.

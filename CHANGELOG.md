@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.6.0] - 2026-11-23
+
+### Added
+- **Mobile responsiveness (Phases 0–4):** added short-height landscape breakpoints (`@media (max-height:500px) and (orientation:landscape)`), portrait compact hex stepper (`<= 640px`), `100dvh` fallbacks, `viewport-fit=cover` + `env(safe-area-inset-*)` sticky bars, `pointer:coarse` >= 36–44 px touch targets, collapsible surface experiment goals showing the nearest incomplete task (`web/views.js`), localized `lobby.stepShort.*` labels, `tools/web/mobile-audit.mjs` (`npm run web:audit:mobile`), and updated documentation (`docs/mobile-responsiveness.md`, `AGENTS.md`).
+- **Dev Mode sandbox (`#dev-dialog`, `#dev-exp-dialog`):** added `web/dev.js` with Menu button (`#dev-button`), `Shift+D` shortcut, and `?dev=1` / `#dev` launcher to override difficulty/site/seed, jump straight to any mission screen/phase, and test all 21 science experiment minigames individually via `ASTRO_RUN.play`.
+- **21 science experiment minigames & multiplayer schema:** added `web/experiments.js`, `web/experiment-run.js`, the 21 minigame modules/styles (`web/minigames/`, `web/minigames.css`), EN/PT experiment locales (`web/locales/experiments/`), validation/lab tools (`tools/minigame-lab/`, `tools/web/check-experiments.mjs`, `docs/experiments-implementation.md`), and optional leaderboard experiment tracking (`multiplayer/`).
+
+### Removed
+- **Dead EVA inventory UI:** removed leftover empty `#surface-inventory` markup and `.surface-inv-label` / `.surface-inventory` styles from `index.html` and `web/styles.css`.
+
 ## [1.5.1] - 2026-11-23
 
 ### Changed

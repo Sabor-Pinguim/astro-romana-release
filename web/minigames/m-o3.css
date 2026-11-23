@@ -1,0 +1,23 @@
+/* M-O3 · Methane hunter */
+.mo3-chart{touch-action:pan-y}
+.mo3-gases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mo3-gas{position:relative;display:grid;gap:5px;min-height:62px;padding:.5rem .6rem .5rem 1.7rem;border:0;text-align:left;color:var(--muted);background:var(--f1);clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.mo3-gas:hover:not(:disabled){background:var(--f3)}
+.mo3-gas:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
+.mo3-gas[aria-pressed="true"]{background:linear-gradient(150deg,#3b2a63 0 40%,var(--f3) 40%);box-shadow:inset 0 -3px 0 var(--starlight-cream)}
+.mo3-gas.is-claimed{box-shadow:inset 3px 0 0 var(--solar-amber)}
+.mo3-gas.is-claimed[aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--solar-amber),inset 0 -3px 0 var(--solar-amber)}
+.mo3-gas.is-right{background:#1d4f47;box-shadow:inset 3px 0 0 var(--safe)}
+.mo3-gas.is-wrong{background:#4a1820;box-shadow:inset 3px 0 0 var(--coral-hover)}
+.mo3-gas.is-missed{background:#3a2a12;box-shadow:inset 3px 0 0 var(--solar-amber)}
+.mo3-gas:disabled{cursor:default}
+.mo3-key{position:absolute;left:.45rem;top:.5rem;font:700 .7rem/1 var(--heading);color:var(--solar-amber)}
+.mo3-gas-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;min-width:0}
+.mo3-gas-head strong{font:700 .95rem/1 var(--heading);color:var(--starlight-cream)}
+.mo3-gas-head small{font:600 .6rem/1.15 var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mo3-state{flex-basis:100%;font:700 .58rem/1 var(--heading);font-style:normal;letter-spacing:.08em;color:var(--solar-amber)}
+.mo3-gas.is-right .mo3-state{color:var(--safe)}
+.mo3-gas.is-wrong .mo3-state{color:var(--coral-hover)}
+.mo3-print{position:relative;display:block;height:12px;background:var(--f0)}
+.mo3-print i{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--starlight-cream)}
+@media (max-width:520px){.mo3-gases{grid-template-columns:repeat(2,minmax(0,1fr))}}
