@@ -11,7 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { createAvatar, PIVOT_NAMES } from './lib/avatar.mjs';
-import { buildClip, idlePose, walkPose, wavePose } from './lib/animations.mjs';
+import { buildClip, idlePose, walkPose, wavePose, salutePose } from './lib/animations.mjs';
 import { FX_PRESETS } from './lib/fx-presets.mjs';
 import characters from './characters/index.mjs';
 
@@ -20,7 +20,7 @@ const OUT_DIR = path.join(ROOT, 'assets/models');
 const MANIFEST = path.join(OUT_DIR, 'manifest.json');
 
 export const TRIANGLE_BUDGET = 3000;
-export const REQUIRED_CLIPS = ['idle_loop', 'walk_loop', 'wave', 'action_loop'];
+export const REQUIRED_CLIPS = ['idle_loop', 'walk_loop', 'wave', 'salute', 'action_loop'];
 
 // Real reference photos (NASA Image and Video Library, public domain).
 const REFERENCES = [
@@ -58,6 +58,7 @@ async function buildCharacter(character, exporter) {
     buildClip(avatar, 'idle_loop', { duration: 3.0, samples: 12, pose: idlePose }),
     buildClip(avatar, 'walk_loop', { duration: 1.1, samples: 16, pose: walkPose }),
     buildClip(avatar, 'wave', { duration: 2.2, samples: 33, pose: wavePose }),
+    buildClip(avatar, 'salute', { duration: 2.2, samples: 33, pose: salutePose }),
     buildClip(avatar, 'action_loop', character.action),
   ];
 

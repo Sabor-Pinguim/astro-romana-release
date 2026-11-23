@@ -614,8 +614,18 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       const ghostTail = createGhostTail(CREW_COLORS[id]);
       hips.add(ghostTail);
       const meshMats = [];
+      const gearMeshes = [];
       model.traverse(child => {
+        if (child.name.startsWith('Prop_')) {
+          child.visible = false;
+          gearMeshes.push(child);
+          return;
+        }
         if (!child.isMesh || child === ghostTail) return;
+        // Hide equipment/backpack/pouches/LEDs on ghosts so only the clean legless suit & helmet silhouette remains.
+        if (/_(Pack|Bag|LedGreen|LedRed|LedAmber|Screen|Display)$/.test(child.name)) {
+          gearMeshes.push(child);
+        }
         const origMat = child.material;
         const ghostMat = origMat.clone();
         ghostMat.transparent = true;
@@ -639,7 +649,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         actions.wave = mixer.clipAction(wave);
         actions.wave.setLoop(THREE.LoopRepeat, Infinity);
       }
-      const actor = { id, model, mixer, actions, current: null, legL, legR, ghostTail, meshMats, isGhost: false, slotH: 0.5, rankIdx: 0 };
+      const actor = { id, model, mixer, actions, current: null, legL, legR, ghostTail, meshMats, gearMeshes, isGhost: false, slotH: 0.5, rankIdx: 0 };
       playClip(actor, 'idle', 0);
       actors[id] = actor;
     }));
@@ -663,6 +673,9 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         if (actor.legL) actor.legL.visible = !isGhost;
         if (actor.legR) actor.legR.visible = !isGhost;
         if (actor.ghostTail) actor.ghostTail.visible = isGhost;
+        for (const g of actor.gearMeshes) {
+          g.visible = g.name.startsWith('Prop_') ? false : !isGhost;
+        }
         for (const m of actor.meshMats) {
           m.mesh.material = isGhost ? m.ghostMat : m.origMat;
         }

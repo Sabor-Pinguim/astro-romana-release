@@ -778,9 +778,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function makeLander() {
     const g = new THREE.Group(), steel = flat(0x9ea4ad, .45, .75), titanium = flat(0x8f9196, .4, .8),
       foil = flat(0xd4a72c, .3, .9), dark = flat(0x1e2024, .55), nozzleMat = flat(0x3a3633, .6, .6);
-    const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; };
-    const strut = (geo, mat, a, b) => {
-      const dir = b.clone().sub(a), m = add(geo(dir.length()), mat, 0, 0, 0);
+    const addTo = (parent, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
+    const add = (geo, mat, x, y, z) => addTo(g, geo, mat, x, y, z);
+    const strutTo = (parent, geo, mat, a, b) => {
+      const dir = b.clone().sub(a), m = addTo(parent, geo(dir.length()), mat, 0, 0, 0);
       m.position.copy(a).add(b).multiplyScalar(.5);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
       return m;
@@ -798,22 +799,34 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     add(new THREE.CylinderGeometry(.36, .42, .18, 10), foil, 0, .98, 0);
     add(new THREE.ConeGeometry(.58, .72, 10), nozzleMat, 0, .68, 0).rotation.x = Math.PI;
     // Four deployed landing legs with primary telescopic struts, A-frame braces & hexagonal footpads.
+    // Each leg lives in a hinged pivot group at its upper hull mount so it folds upward during liftoff.
+    const legs = [];
     for (let k = 0; k < 4; k++) {
-      const a = Math.PI / 4 + k * Math.PI / 2, sin = Math.sin(a), cos = Math.cos(a);
-      const top = new THREE.Vector3(sin * 1.50, 1.24, cos * 1.50);
-      const low = new THREE.Vector3(sin * 1.38, 1.02, cos * 1.38);
-      const foot = new THREE.Vector3(sin * 2.48, .08, cos * 2.48);
+      const a = Math.PI / 4 + k * Math.PI / 2;
+      const yaw = new THREE.Group();
+      yaw.rotation.y = a;
+      const leg = new THREE.Group();
+      leg.position.set(0, 1.24, 1.48);
+      yaw.add(leg);
+      g.add(yaw);
+      const top = new THREE.Vector3(0, 0, 0.02);
+      const low = new THREE.Vector3(0, -0.22, -0.10);
+      const foot = new THREE.Vector3(0, -1.16, 1.00);
       const mid = top.clone().add(foot).multiplyScalar(.5);
-      strut(len => new THREE.CylinderGeometry(.06, .07, len, 6), steel, top, foot);
-      strut(len => new THREE.CylinderGeometry(.045, .045, len, 5), titanium, low, mid);
-      add(new THREE.CylinderGeometry(.28, .34, .09, 6), steel, foot.x, .045, foot.z);
+      strutTo(leg, len => new THREE.CylinderGeometry(.06, .07, len, 6), steel, top, foot);
+      strutTo(leg, len => new THREE.CylinderGeometry(.045, .045, len, 5), titanium, low, mid);
+      addTo(leg, new THREE.CylinderGeometry(.28, .34, .09, 6), steel, foot.x, foot.y - .035, foot.z);
+      legs.push(leg);
     }
-    // Boarding ladder on +Z leading up to the crew hatch threshold.
-    add(new THREE.BoxGeometry(.56, .04, .22), titanium, 0, 2.06, 1.56);
-    for (const sx of [-.24, .24]) strut(len => new THREE.CylinderGeometry(.024, .024, len, 6), steel, new THREE.Vector3(sx, 2.06, 1.50), new THREE.Vector3(sx, .04, 2.18));
+    // Boarding ladder on +Z leading up to the crew hatch threshold, hinged at the threshold so it retracts on liftoff.
+    const ladder = new THREE.Group();
+    ladder.position.set(0, 2.06, 1.50);
+    g.add(ladder);
+    addTo(ladder, new THREE.BoxGeometry(.56, .04, .22), titanium, 0, 0, 0.06);
+    for (const sx of [-.24, .24]) strutTo(ladder, len => new THREE.CylinderGeometry(.024, .024, len, 6), steel, new THREE.Vector3(sx, 0, 0), new THREE.Vector3(sx, -2.02, 0.68));
     for (let i = 0; i < 7; i++) {
-      const t = (i + .6) / 7.2, y = 2.06 * (1 - t) + .04 * t, z = 1.50 * (1 - t) + 2.18 * t;
-      const rung = add(new THREE.CylinderGeometry(.016, .016, .48, 5), steel, 0, y, z);
+      const u = (i + .6) / 7.2, y = -2.02 * u, z = 0.68 * u;
+      const rung = addTo(ladder, new THREE.CylinderGeometry(.016, .016, .48, 5), steel, 0, y, z);
       rung.rotation.z = Math.PI / 2;
     }
     // Engine exhaust plume & point light for the timeout ascent sequence.
@@ -833,6 +846,18 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     g.add(engineLight);
     g.userData.plume = plume;
     g.userData.engineLight = engineLight;
+    g.userData.legs = legs;
+    g.userData.ladder = ladder;
+    g.userData.setGear = (retract = 0) => {
+      const e = clamp(retract, 0, 1), s = e * e * (3 - 2 * e);
+      for (const leg of legs) {
+        leg.rotation.x = -s * 1.38;
+        leg.scale.set(1, 1 - s * 0.25, 1 - s * 0.25);
+      }
+      ladder.rotation.x = -s * 1.48;
+      ladder.scale.set(1, 1 - s * 0.55, 1 - s * 0.45);
+      ladder.visible = e < 0.98;
+    };
     return g;
   }
 
@@ -950,9 +975,11 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const gltf = await loadGLTF(`characters/${id}.glb`), body = gltf.scene.clone(true); // pivot rig, no skinning
     const mixer = new THREE.AnimationMixer(body), clip = name => gltf.animations.find(a => a.name === name);
     const idle = mixer.clipAction(clip('idle_loop')), walk = mixer.clipAction(clip('walk_loop'));
-    const wave = mixer.clipAction(clip('wave')), action = mixer.clipAction(clip('action_loop'));
+    const wave = mixer.clipAction(clip('wave')), saluteClip = clip('salute') || clip('wave'), salute = mixer.clipAction(saluteClip);
+    const action = mixer.clipAction(clip('action_loop'));
     idle.play(); walk.play(); walk.setEffectiveWeight(0);
     wave.setLoop(THREE.LoopOnce, 1);
+    salute.setLoop(THREE.LoopOnce, 1);
     const props = [];
     body.traverse(o => {
       if (o.isMesh) o.castShadow = true;
@@ -962,17 +989,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     head.traverse(o => { if (o.isMesh) { o.userData.mat = o.material; helmet.push(o); } });
     body.updateMatrixWorld(true);
     const idx = world.avatars.size;
-    const a = { id, body, mixer, idle, walk, wave, action, props, emoteAction: null, emoteW: 0, actW: 0, head, helmet, walkW: 0,
+    const a = { id, body, mixer, idle, walk, wave, salute, action, props, emoteAction: null, emoteW: 0, actW: 0, head, helmet, walkW: 0,
       upperArmL: body.getObjectByName('UpperArm_L'), lowerArmL: body.getObjectByName('LowerArm_L'),
       upperArmR: body.getObjectByName('UpperArm_R'), lowerArmR: body.getObjectByName('LowerArm_R'),
       torso: body.getObjectByName('Torso'),
       eyeY: head.getWorldPosition(new THREE.Vector3()).y, pos: new THREE.Vector3(), bodyYaw: 0,
       ai: { state: 'idle', last: 'idle', timer: 1.5 + idx * 0.9, tx: 0, tz: 0, waveCd: 0 } };
     mixer.addEventListener('finished', e => {
-      if (e.action !== wave) return;
-      if (world.avatar?.id === id && s.emote?.kind === 'wave') endEmote();
-      else if (world.avatar?.id !== id && a.ai.state === 'wave') {
-        wave.stop();
+      if (e.action !== wave && e.action !== salute) return;
+      if (world.avatar?.id === id && (s.emote?.kind === 'wave' || s.emote?.kind === 'salute')) endEmote();
+      else if (world.avatar?.id !== id && (a.ai.state === 'wave' || a.ai.state === 'salute')) {
+        wave.stop(); salute.stop();
         idle.setEffectiveWeight(1);
         a.ai.state = 'idle'; a.ai.timer = 1.8 + Math.random() * 2;
       }
@@ -989,12 +1016,12 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     if (s.crew !== id) return;
     if (prev && prev !== a) {
       prev.pos.copy(s.pos); prev.bodyYaw = s.bodyYaw;
-      prev.action.stop(); prev.wave.stop();
+      prev.action.stop(); prev.wave.stop(); prev.salute.stop();
       prev.emoteAction = null; prev.emoteW = 0; prev.actW = 0;
       for (const p of prev.props) p.visible = false;
       prev.ai = { state: 'idle', last: 'idle', timer: 2 + Math.random() * 2, tx: prev.pos.x, tz: prev.pos.z, waveCd: 3 };
     }
-    a.action.stop(); a.wave.stop();
+    a.action.stop(); a.wave.stop(); a.salute.stop();
     a.emoteAction = null; a.emoteW = 0; a.actW = 0;
     for (const p of a.props) p.visible = false;
     a.ai.state = 'idle';
@@ -1093,6 +1120,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       setTerrain(terrain);
       s.departing = null;
       world.lander.position.set(0, terrain.hf.at(0, 0), 0);
+      world.lander.userData.setGear?.(0);
       if (world.lander.userData.plume) world.lander.userData.plume.visible = false;
       if (world.lander.userData.engineLight) world.lander.userData.engineLight.intensity = 0;
       world.camera.fov = 72; world.camera.updateProjectionMatrix();
@@ -1104,7 +1132,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         a.body.visible = true;
         a.pos.set(x, terrain.hf.at(x, z), z); a.bodyYaw = 0;
         a.body.rotation.set(0, 0, 0);
-        a.action.stop(); a.wave.stop(); a.emoteAction = null; a.emoteW = 0; a.actW = 0; a.walkW = 0;
+        a.action.stop(); a.wave.stop(); a.salute.stop(); a.emoteAction = null; a.emoteW = 0; a.actW = 0; a.walkW = 0;
         for (const p of a.props) p.visible = false;
         a.ai = { state: 'idle', last: 'idle', timer: 1.2 + idx++ * 0.85, tx: x, tz: z, waveCd: 1.5 };
       }
@@ -1134,39 +1162,70 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const wheelEl = $s('emote-wheel');
   const emotes = () => [
     ['wave', '👋', t('surface.emoteLabels.wave')],
+    ['salute', '🫡', t('surface.emoteLabels.salute')],
     ...(ACTION_EMOTE[s.crew] ? [['action', ACTION_EMOTE[s.crew][0], ACTION_EMOTE[s.crew][1]()]] : []),
     ['walk', '🚶', t('surface.emoteLabels.walk')],
     ['idle', '🧍', t('surface.emoteLabels.idle')],
   ];
-  const wheel = { open: false, hold: false, pick: -1, x: 0, y: 0 };
+  // Controls: hold Q, aim (mouse direction, arrows/WASD) and release Q; or click a slot, a digit, Enter/Space/E,
+  // or a click while the mouse is captured. Esc, Q again (when opened by the button) or a click outside cancels.
+  // The list is fixed while the wheel is open, so the picked index always names the slot on screen.
+  const wheel = { open: false, hold: false, pick: -1, x: 0, y: 0, list: [] };
+  const WHEEL_DEAD_PX = 18, WHEEL_AIM_PX = 60; // UI feel: dead zone and the cap on the captured-mouse aim vector (px)
+  const wheelButtons = () => [...wheelEl.querySelectorAll('button')];
+  function setPick(i) {
+    wheel.pick = i;
+    wheelButtons().forEach((b, j) => b.classList.toggle('on', j === i));
+    $s('emote-name').textContent = i >= 0 ? wheel.list[i][2] : t('surface.emotesTitle');
+  }
+  function pickToward(dx, dy) { // a direction from the centre picks the nearest slot (slot 0 at the top, clockwise)
+    if (Math.hypot(dx, dy) < WHEEL_DEAD_PX) return;
+    const n = wheel.list.length, ang = (Math.atan2(dx, -dy) + Math.PI * 2) % (Math.PI * 2);
+    setPick(Math.round(ang / (Math.PI * 2 / n)) % n);
+  }
   function openWheel(hold) {
-    if (!world?.avatar || dlg.open) return;
-    const list = emotes();
-    wheelEl.querySelectorAll('button').forEach(b => b.remove());
-    list.forEach(([kind, icon, label], i) => wheelEl.insertAdjacentHTML('beforeend', `<button type="button" role="menuitem" data-emote="${kind}" style="--a:${i * 360 / list.length}deg">${icon}<small>${label}</small></button>`));
-    Object.assign(wheel, { open: true, hold, pick: -1, x: 0, y: 0 });
-    $s('emote-name').textContent = t('surface.emotesTitle'); wheelEl.hidden = false; s.keys.clear();
+    if (!world?.avatar || dlg.open || s.departing) return;
+    wheel.list = emotes();
+    wheelButtons().forEach(b => b.remove());
+    wheel.list.forEach(([kind, icon, label], i) => wheelEl.insertAdjacentHTML('beforeend', `<button type="button" role="menuitem" data-emote="${kind}" style="--a:${i * 360 / wheel.list.length}deg">${icon}<small>${label}</small></button>`));
+    Object.assign(wheel, { open: true, hold, x: 0, y: 0 });
+    setPick(-1);
+    wheelEl.hidden = false; s.keys.clear(); s.drag = null;
   }
   function closeWheel(play) {
     if (!wheel.open) return;
-    const kind = wheel.pick >= 0 ? emotes()[wheel.pick][0] : null;
-    wheel.open = false; wheelEl.hidden = true;
+    const kind = wheel.list[wheel.pick]?.[0];
+    wheel.open = false; wheel.hold = false; wheelEl.hidden = true;
     if (play && kind) playEmote(kind);
   }
-  function aimWheel(dx, dy) { // mouse direction picks the nearest slot (slot 0 at the top, clockwise)
+  function aimWheel(dx, dy) { // captured mouse: add up the motion, capped so turning back answers at once
     wheel.x += dx; wheel.y += dy;
-    if (Math.hypot(wheel.x, wheel.y) < 20) return;
-    const n = emotes().length, ang = (Math.atan2(wheel.x, -wheel.y) + Math.PI * 2) % (Math.PI * 2);
-    wheel.pick = Math.round(ang / (Math.PI * 2 / n)) % n;
-    wheelEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === wheel.pick));
-    $s('emote-name').textContent = emotes()[wheel.pick][2];
+    const r = Math.hypot(wheel.x, wheel.y);
+    if (r > WHEEL_AIM_PX) { wheel.x *= WHEEL_AIM_PX / r; wheel.y *= WHEEL_AIM_PX / r; }
+    pickToward(wheel.x, wheel.y);
   }
-  wheelEl.addEventListener('pointerover', e => { // without pointer lock, hovering a slot picks it (hold Q, hover, release)
-    const b = e.target.closest('[data-emote]'), all = [...wheelEl.querySelectorAll('button')];
-    if (!b) return;
-    wheel.pick = all.indexOf(b); all.forEach((x, i) => x.classList.toggle('on', i === wheel.pick)); $s('emote-name').textContent = emotes()[wheel.pick][2];
+  function aimWheelAt(x, y) { // free cursor: the direction from the wheel's centre, even with the cursor outside it
+    const r = wheelEl.getBoundingClientRect();
+    pickToward(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+  }
+  const WHEEL_KEYS = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowRight: [1, 0], KeyD: [1, 0], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0] };
+  function wheelKey(e) { // keys while the wheel is open; everything else stays blocked so the astronaut does not move
+    if (e.code === 'Escape') return closeWheel(false);
+    const dir = WHEEL_KEYS[e.code];
+    if (dir) { e.preventDefault(); return pickToward(dir[0] * 100, dir[1] * 100); }
+    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyE') { e.preventDefault(); return closeWheel(true); }
+    const n = +(/^(?:Digit|Numpad)([1-9])$/.exec(e.code)?.[1] ?? 0);
+    if (n && n <= wheel.list.length) { e.preventDefault(); setPick(n - 1); closeWheel(true); }
+  }
+  wheelEl.addEventListener('pointerover', e => { // hovering a slot picks it (touch, pen, and a mouse over the wheel)
+    const b = e.target.closest('[data-emote]');
+    if (b) setPick(wheelButtons().indexOf(b));
   });
-  wheelEl.addEventListener('click', e => { const b = e.target.closest('[data-emote]'); if (b) { wheel.pick = [...wheelEl.querySelectorAll('button')].indexOf(b); closeWheel(true); } });
+  wheelEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-emote]');
+    if (b) { setPick(wheelButtons().indexOf(b)); closeWheel(true); }
+    else if (!wheel.hold) closeWheel(false); // a tap on the wheel's empty middle cancels
+  });
   $s('surface-emote').addEventListener('click', () => (wheel.open ? closeWheel(false) : openWheel(false)));
   function playEmote(kind) {
     const a = world?.avatar;
@@ -1175,7 +1234,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     if (kind === 'idle') return;
     s.emote = { kind };
     for (const p of a.props) p.visible = (kind === 'action');
-    if (kind === 'wave' || kind === 'action') { a.emoteAction = a[kind]; a.emoteAction.reset().play(); }
+    if (kind === 'wave' || kind === 'salute' || kind === 'action') { a.emoteAction = a[kind]; a.emoteAction.reset().play(); }
     if (s.mode === 'first') { s.emoteCam = true; setMode('third'); }
   }
   function endEmote() {
@@ -1218,8 +1277,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const live = () => isActive('surface') && s.ready && !dlg.open;
     addEventListener('keydown', e => {
       if (!live()) return;
-      if (e.code === 'KeyQ') { if (!e.repeat) openWheel(true); return; }
-      if (wheel.open) { if (e.code === 'Escape') closeWheel(false); return; }
+      if (e.code === 'KeyQ') { if (!e.repeat) { if (!wheel.open) openWheel(true); else if (!wheel.hold) closeWheel(false); } return; }
+      if (wheel.open) return wheelKey(e);
       s.keys.add(e.code);
       if (e.code === 'Space') { s.jump = true; e.preventDefault(); }
       if (e.code.startsWith('Arrow')) e.preventDefault();
@@ -1228,8 +1287,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const n = /^Digit([1-4])$/.exec(e.code)?.[1];
       if (n) switchCrew(ui.crew[n - 1].id);
     });
-    addEventListener('keyup', e => { s.keys.delete(e.code); if (e.code === 'KeyQ' && wheel.hold) closeWheel(true); });
-    addEventListener('blur', () => s.keys.clear());
+    addEventListener('keyup', e => { s.keys.delete(e.code); if (e.code === 'KeyQ' && wheel.open && wheel.hold) closeWheel(true); });
+    // Leaving the window while holding Q never sends its keyup: drop the wheel instead of leaving it stuck open.
+    addEventListener('blur', () => { s.keys.clear(); if (wheel.open && wheel.hold) closeWheel(false); });
     const turn = (dx, dy, k) => { s.yaw -= dx * k; s.pitch -= dy * k; clampPitch(); };
     // Chrome can send a lone, huge movement right after locking and now and then while locked. Drop only that
     // outlier: a fast turn grows over several events and is kept. (A flat 200 px cut froze the view on quick
@@ -1249,9 +1309,12 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         if (wheel.open) return aimWheel(e.movementX, e.movementY);
         turn(e.movementX, e.movementY, .0022);
       }
+      else if (wheel.open) aimWheelAt(e.clientX, e.clientY); // the view does not turn while the wheel is up
       else if (s.drag) { turn(e.clientX - s.drag.x, e.clientY - s.drag.y, .004); s.drag = { x: e.clientX, y: e.clientY }; }
     });
     canvas.addEventListener('mousedown', e => {
+      // Wheel open: with the mouse captured (hidden cursor) a click confirms the aimed slot; a free click outside cancels.
+      if (wheel.open) { if (e.button === 0) closeWheel(document.pointerLockElement === canvas); return; }
       if (e.button !== 0 || document.pointerLockElement === canvas) return;
       s.drag = { x: e.clientX, y: e.clientY };
       if (!touch && live()) try { canvas.requestPointerLock()?.catch?.(() => {}); } catch { /* drag to look instead */ }
@@ -1260,6 +1323,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const stickEl = $s('surface-stick');
     canvas.addEventListener('pointerdown', e => {
       if (e.pointerType !== 'touch' || !live()) return;
+      if (wheel.open) { closeWheel(false); return; } // a tap outside the wheel closes it instead of moving
+
       const r = viewEl.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
       if (x < r.width * .45 && !s.stick) {
         s.stick = { id: e.pointerId, ox: x, oy: y, x: 0, y: 0 };
@@ -1424,12 +1489,12 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     for (const o of world.avatars.values()) { // teammates wander, work in role animations, and wave back when looked at while stopped
       if (o === a) continue;
       if (driverOf(o.id) !== 'ai') { followRemote(o, dt); poseAvatar(o, dt); continue; } // another screen moves it
-      if (o.wasRemote) { o.wasRemote = false; o.ai = { state: 'idle', last: 'idle', timer: 1.5, tx: o.pos.x, tz: o.pos.z, waveCd: 3 }; o.wave.stop(); }
+      if (o.wasRemote) { o.wasRemote = false; o.ai = { state: 'idle', last: 'idle', timer: 1.5, tx: o.pos.x, tz: o.pos.z, waveCd: 3 }; o.wave.stop(); o.salute.stop(); }
       if (rushing) {
         const [bx, bz] = CREW_BOARD[o.id] || [0, 3.2];
         o.ai.tx = bx; o.ai.tz = bz;
         const bdist = Math.hypot(bx - o.pos.x, bz - o.pos.z);
-        if (o.ai.state === 'wave' || o.ai.state === 'action') { o.wave.stop(); o.action.stop(); o.actW = 0; }
+        if (o.ai.state === 'wave' || o.ai.state === 'salute' || o.ai.state === 'action') { o.wave.stop(); o.salute.stop(); o.action.stop(); o.actW = 0; }
         o.ai.state = bdist > 0.65 ? 'walk' : 'idle';
         o.ai.timer = 15;
       }
@@ -1546,19 +1611,20 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const far = Math.hypot(t.x - o.pos.x, t.z - o.pos.z) > SNAP_M, f = far ? 1 : 1 - Math.exp(-dt * FOLLOW_RATE);
       o.pos.x += (t.x - o.pos.x) * f; o.pos.y += (t.y - o.pos.y) * f; o.pos.z += (t.z - o.pos.z) * f;
       o.bodyYaw = far ? t.yaw : stepYaw(o.bodyYaw, t.yaw, dt * 10);
-      const anim = ['idle', 'walk', 'wave', 'action'].includes(t.anim) ? t.anim : 'idle';
+      const anim = ['idle', 'walk', 'wave', 'salute', 'action'].includes(t.anim) ? t.anim : 'idle';
       if (anim !== o.ai.state) {
-        if (anim === 'wave') { o.action.stop(); o.wave.reset().play(); } else o.wave.stop();
+        if (anim === 'wave') { o.action.stop(); o.salute.stop(); o.wave.reset().play(); } else o.wave.stop();
+        if (anim === 'salute') { o.action.stop(); o.wave.stop(); o.salute.reset().play(); } else o.salute.stop();
         if (anim === 'action') o.action.reset().play();
         o.ai.state = anim;
       }
     }
-    const waveW = o.ai.state === 'wave' ? 1 : 0, rest = 1 - waveW;
+    const waveW = o.ai.state === 'wave' ? 1 : 0, saluteW = o.ai.state === 'salute' ? 1 : 0, rest = 1 - Math.max(waveW, saluteW);
     o.walkW += ((o.ai.state === 'walk' ? 1 : 0) - o.walkW) * Math.min(1, dt * 8);
     o.actW += ((o.ai.state === 'action' ? 1 : 0) - o.actW) * Math.min(1, dt * 8);
     if (o.ai.state !== 'action' && o.actW < .02) { o.action.stop(); o.actW = 0; }
     o.walk.setEffectiveWeight(o.walkW * (1 - o.actW) * rest); o.idle.setEffectiveWeight((1 - o.walkW) * (1 - o.actW) * rest);
-    o.action.setEffectiveWeight(o.actW * rest); o.wave.setEffectiveWeight(waveW);
+    o.action.setEffectiveWeight(o.actW * rest); o.wave.setEffectiveWeight(waveW); o.salute.setEffectiveWeight(saluteW);
     o.walk.timeScale = clamp((t?.spd || STRIDE) / STRIDE, .6, 2.6);
   }
   const r2 = v => Math.round(v * 100) / 100;
@@ -1566,7 +1632,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function sendPoses(now) {
     const a = world.avatar, av = {}, kind = s.emote?.kind;
     av[a.id] = { x: r2(s.pos.x), y: r2(s.pos.y), z: r2(s.pos.z), yaw: r2(s.bodyYaw),
-      anim: kind === 'wave' || kind === 'action' ? kind : kind === 'walk' || s.speed > 0 ? 'walk' : 'idle', spd: r2(kind === 'walk' ? STRIDE : s.speed) };
+      anim: kind === 'wave' || kind === 'salute' || kind === 'action' ? kind : kind === 'walk' || s.speed > 0 ? 'walk' : 'idle', spd: r2(kind === 'walk' ? STRIDE : s.speed) };
     if (net().isHost) for (const o of world.avatars.values()) {
       if (o !== a && driverOf(o.id) === 'ai') av[o.id] = { x: r2(o.pos.x), y: r2(o.pos.y), z: r2(o.pos.z), yaw: r2(o.bodyYaw), anim: o.ai.state, spd: o.ai.state === 'walk' ? r2(WALK * .68) : 0 };
     }
@@ -1656,7 +1722,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       for (const [id, a] of world.avatars) {
         for (const m of a.helmet) m.material = m.userData.mat;
         for (const p of a.props) p.visible = false;
-        a.action.stop(); a.wave.stop();
+        a.action.stop(); a.wave.stop(); a.salute.stop();
         a.walk.setEffectiveWeight(0); a.idle.setEffectiveWeight(1);
         if (!strandedSet.has(id)) {
           a.body.visible = false;
@@ -1696,6 +1762,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const climb = Math.max(0, d.t - 0.25);
       const rocketY = d.groundY + climb * climb * 2.5;
       world.lander.position.set((Math.random() - .5) * .03, rocketY, (Math.random() - .5) * .03);
+      // Retract the boarding ladder and fold up the landing legs as the lander lifts off the pad.
+      world.lander.userData.setGear?.((d.t - 0.15) / 1.55);
       const plume = world.lander.userData.plume, engineLight = world.lander.userData.engineLight;
       if (plume) {
         plume.visible = true;
@@ -1756,6 +1824,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         s.departing = null;
         if (plume) plume.visible = false;
         if (engineLight) engineLight.intensity = 0;
+        world.lander.userData.setGear?.(0);
         camera.fov = 72; camera.updateProjectionMatrix();
         for (const a of world.avatars.values()) a.body.visible = true;
         done();

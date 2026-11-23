@@ -123,3 +123,21 @@ export function wavePose(u) {
     UpperArm_R: { r: [0, 0, 4 * e] },
   };
 }
+
+/** Crisp astronaut/military salute with the LEFT hand (🫡, one-shot in the game). */
+export function salutePose(u) {
+  const e = smooth(0.0, 0.18, u) * (1 - smooth(0.82, 1.0, u));
+  const breath = wave(u, 1) * e;
+  return {
+    Hips: { p: [0, 0.008 * e, 0] },
+    Torso: { r: [-4 * e + 0.6 * breath, 0, -2 * e] },
+    Head: { r: [-3 * e, 4 * e, 0] },
+    UpperArm_L: { r: [10 * e, -30 * e, 110 * e] },
+    LowerArm_L: { r: [-120 * e, 0, 70 * e] },
+    Hand_L: { r: [4 * e, 0, 10 * e] },
+    UpperArm_R: { r: [2 * e, 0, 6 * e] },
+    LowerArm_R: { r: [8 * e, 0, 0] },
+    UpperLeg_L: { r: [0, 0, -2 * e] },
+    UpperLeg_R: { r: [0, 0, 2 * e] },
+  };
+}

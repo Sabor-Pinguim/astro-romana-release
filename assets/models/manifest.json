@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T22:32:57.287Z",
+  "generatedAt": "2026-11-23T05:46:19.280Z",
   "generator": "tools/modeling/build-avatars.mjs",
   "conventions": {
     "units": "meters",
@@ -27,6 +27,7 @@
       "idle_loop",
       "walk_loop",
       "wave",
+      "salute",
       "action_loop"
     ],
     "fxAnchorPrefix": "FX_"
@@ -351,6 +352,7 @@
         "idle_loop": "Parada, respirando",
         "walk_loop": "Caminhada em baixa gravidade",
         "wave": "Aceno",
+        "salute": "Continência",
         "action_loop": "Usa a chave de fenda para ajustar um painel de manutenção da nave"
       },
       "fx": [
@@ -382,7 +384,7 @@
       "stats": {
         "triangles": 2952,
         "meshes": 49,
-        "bytes": 284924
+        "bytes": 296424
       }
     },
     {
@@ -422,6 +424,7 @@
         "idle_loop": "Parado, respirando",
         "walk_loop": "Caminhada em baixa gravidade",
         "wave": "Aceno",
+        "salute": "Continência",
         "action_loop": "Segura o computador portátil de campo e digita comandos de diagnóstico"
       },
       "fx": [
@@ -446,7 +449,7 @@
       "stats": {
         "triangles": 2936,
         "meshes": 50,
-        "bytes": 284180
+        "bytes": 295684
       }
     },
     {
@@ -486,6 +489,7 @@
         "idle_loop": "Parado, respirando",
         "walk_loop": "Caminhada em baixa gravidade",
         "wave": "Aceno",
+        "salute": "Continência",
         "action_loop": "Agacha para alinhar uma antena portátil de solo"
       },
       "fx": [
@@ -517,7 +521,7 @@
       "stats": {
         "triangles": 2972,
         "meshes": 50,
-        "bytes": 285504
+        "bytes": 297004
       }
     },
     {
@@ -553,6 +557,7 @@
         "idle_loop": "Parada, respirando",
         "walk_loop": "Caminhada em baixa gravidade",
         "wave": "Aceno",
+        "salute": "Continência",
         "action_loop": "Agachando para coletar amostra (poeira na pá)"
       },
       "fx": [
@@ -584,7 +589,7 @@
       "stats": {
         "triangles": 2892,
         "meshes": 50,
-        "bytes": 279812
+        "bytes": 291312
       }
     }
   ],

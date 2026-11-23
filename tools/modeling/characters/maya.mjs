@@ -38,6 +38,7 @@ export default {
     idle_loop: 'Parada, respirando',
     walk_loop: 'Caminhada em baixa gravidade',
     wave: 'Aceno',
+    salute: 'Continência',
     action_loop: 'Agachando para coletar amostra (poeira na pá)',
   },
 

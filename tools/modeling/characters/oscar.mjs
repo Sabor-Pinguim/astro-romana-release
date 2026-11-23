@@ -22,6 +22,7 @@ export default {
     idle_loop: 'Parado, respirando',
     walk_loop: 'Caminhada em baixa gravidade',
     wave: 'Aceno',
+    salute: 'Continência',
     action_loop: 'Agacha para alinhar uma antena portátil de solo',
   },
 

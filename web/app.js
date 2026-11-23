@@ -106,9 +106,9 @@
   const warn = (id,key) => String(spec(id).sources?.[key]||'').includes('⚠')?` <span class="warn" title="${t('planner.metrics.sourcesDisagree')}">⚠</span>`:'';
   const shortName = id => (part(id)?.name||id).replace(/\s*\(.*\)\s*$/,'');
   // Low-poly astronaut: flat polygons; s* = suit tones, c* = crew colour, v* = visor, d1 = dark gear.
-  // When isGhost = true (left behind on Mars), legs and boots are replaced by a translucent legless wavy ghost tail (👻).
+  // When isGhost = true (left behind on Mars), backpack/chest equipment and legs/boots are removed and replaced by a translucent legless wavy ghost tail (👻).
   const astronaut = (person, isGhost = false) => `<svg class="astronaut${isGhost ? ' is-ghost' : ''}" style="--crew:${person.color}" viewBox="0 0 150 215" aria-hidden="true">${[
-    ['d1','40,62 110,62 114,120 36,120'],
+    ...(!isGhost ? [['d1','40,62 110,62 114,120 36,120']] : []),
     ...(isGhost ? [
       ['s1','50,138 75,138 75,196 61,180 46,194'],
       ['s2','75,138 100,138 104,194 89,180 75,196'],
@@ -120,7 +120,7 @@
     ]),
     ['s1','52,64 75,64 75,140 50,140 44,108'],['s2','75,64 98,64 106,108 100,140 75,140'],['s3','98,64 106,108 86,92'],
     ['c2','49,128 101,128 100,138 50,138'],
-    ['d1','62,84 88,84 90,108 60,108'],['c1','64,96 86,96 86,100 64,100'],['c1','75,87 78,90 75,93 72,90'],
+    ...(!isGhost ? [['d1','62,84 88,84 90,108 60,108'],['c1','64,96 86,96 86,100 64,100'],['c1','75,87 78,90 75,93 72,90']] : []),
     ['c1','44,66 58,62 56,78 40,82'],['c2','92,62 106,66 110,82 94,78'],
     ['s2','40,68 54,70 50,104 36,102'],['s1','36,102 50,104 46,128 32,126'],['d1','31,126 47,128 46,140 33,140'],['c1','32,123 47,125 47,130 32,128'],
     ['s3','110,68 96,70 100,104 114,102'],['s2','114,102 100,104 104,128 118,126'],['d1','119,126 103,128 104,140 117,140'],['c1','118,123 103,125 103,130 118,128'],
@@ -1864,15 +1864,27 @@
       surf.stranded = surf.strandedIds.map(id => crew.find(c => c.id === id)?.name ?? id);
       const strandedSet = new Set(surf.strandedIds);
       const strandedCount = strandedSet.size;
-      // game-balance: leaving any crew member behind penalizes the entire team's mission score and every member's score.
-      const teamPenalty = strandedCount * 100;
-      const memberPenalty = strandedCount * 40;
       const tasksDone = surf.completed.size;
       const scienceBonus = (d.hasDrill ? 6 : 0) + (d.hasSpec ? 6 : 0) + (d.hasDna ? 6 : 0) + (d.hasDish ? 5 : 0);
-      const returnBonus = forcedTimeout ? (strandedCount ? -18 : 4) : 18;
       const edlBonus = (d.hasLoftid && d.hasTrn) ? 14 : (d.hasLoftid || d.hasTrn) ? 9 : 4;
       const timeBonus = Math.round(surf.timerSec * 0.08);
-      const total = Math.max(150, Math.round((flight.score * 6.5) + tasksDone * 140 + scienceBonus * 5 + edlBonus * 6 + returnBonus * 6 + timeBonus - teamPenalty));
+
+      // Each astronaut computes their individual score first. If an astronaut is left behind on Mars,
+      // their score is zeroed (0 pts), and the team total is the sum of the astronauts' points plus shared flight/time bonuses,
+      // so the team's score drops strictly through the stranded astronaut's lost points.
+      const rawScores = {
+        helena: Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0)),
+        lucas: Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25)),
+        oscar: Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25)),
+        maya: Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25)),
+      };
+      const helenaPts = strandedSet.has('helena') ? 0 : rawScores.helena;
+      const lucasPts = strandedSet.has('lucas') ? 0 : rawScores.lucas;
+      const oscarPts = strandedSet.has('oscar') ? 0 : rawScores.oscar;
+      const mayaPts = strandedSet.has('maya') ? 0 : rawScores.maya;
+      const lostFromStranded = (rawScores.helena - helenaPts) + (rawScores.lucas - lucasPts) + (rawScores.oscar - oscarPts) + (rawScores.maya - mayaPts);
+      const crewSum = helenaPts + lucasPts + oscarPts + mayaPts;
+      const total = Math.max(0, Math.round(crewSum + flight.score * 2.5 + timeBonus));
       const grade = total >= 1150 ? 'S+' : total >= 950 ? 'A' : total >= 740 ? 'B' : 'C';
 
       $('#results-rank-letter').textContent = grade;
@@ -1881,21 +1893,16 @@
       $('#results-headline').textContent = strandedCount ? t('results.headlinePartial') : grade === 'S+' ? t('results.headlineTriumph') : t('results.headlineComplete');
       $('#podium-site-tag').textContent = t('results.podiumTagSuccess', { site: SITES_INFO[state.site].name.toUpperCase(), grade });
 
-      const helenaPts = Math.max(50, Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0) - memberPenalty));
-      const lucasPts = Math.max(50, Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25) - memberPenalty));
-      const oscarPts = Math.max(50, Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25) - memberPenalty));
-      const mayaPts = Math.max(50, Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25) - memberPenalty));
       const positions = t('results.positions');
       const ranked = [
-        { ...crew[0], pts: helenaPts },
-        { ...crew[1], pts: lucasPts },
-        { ...crew[2], pts: oscarPts },
-        { ...crew[3], pts: mayaPts },
-      ].sort((a, b) => b.pts - a.pts).map((c, idx) => ({
+        { ...crew[0], pts: helenaPts, stranded: strandedSet.has('helena') },
+        { ...crew[1], pts: lucasPts, stranded: strandedSet.has('lucas') },
+        { ...crew[2], pts: oscarPts, stranded: strandedSet.has('oscar') },
+        { ...crew[3], pts: mayaPts, stranded: strandedSet.has('maya') },
+      ].sort((a, b) => (a.stranded !== b.stranded ? (a.stranded ? 1 : -1) : b.pts - a.pts)).map((c, idx) => ({
         ...c,
         pos: positions[idx],
-        stranded: strandedSet.has(c.id),
-        grade: c.pts >= 360 ? 'S+' : c.pts >= 310 ? 'A' : c.pts >= 240 ? 'B' : 'C',
+        grade: c.stranded ? 'F' : c.pts >= 360 ? 'S+' : c.pts >= 310 ? 'A' : c.pts >= 240 ? 'B' : 'C',
       }));
 
       $('#results-leaderboard').innerHTML = ranked.map(r => `
@@ -1909,8 +1916,7 @@
       $('#results-breakdown').innerHTML = [
         [t('results.breakdown.budgetTwr'), `${d.overBudget ? (d.budgetPenalty ? t('results.breakdown.exceeded') : t('results.breakdown.exceededWarn')) : t('results.breakdown.onBudget')} · ${d.lowTwr ? (d.overweight ? t('results.breakdown.lowTwrBuffet') : t('results.breakdown.lowTwrWarn')) : t('results.breakdown.twrNominal')}`],
         [t('results.breakdown.edlLanding'), t('results.breakdown.edlValue', { pct: flight.landingShare ?? 0, suite: hasEdlLabel(d) })],
-        [t('results.breakdown.radLabel'), t('results.breakdown.radValue', { shelter: d.hasShelter ? t('results.breakdown.shelterYes') : t('results.breakdown.shelterNo') })],
-        [t('results.breakdown.surfaceWindow'), forcedTimeout ? (strandedCount ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', '), pts: teamPenalty }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
+        [t('results.breakdown.surfaceWindow'), forcedTimeout ? (strandedCount ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', '), pts: lostFromStranded }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
       ].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
 
       $('#podium-fallback').innerHTML = ranked.map((r, i) => `

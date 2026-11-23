@@ -28,7 +28,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.1.0',
+        version: 'v1.2.0',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',
@@ -595,6 +595,7 @@
         promptLocked: '{{id}} · Somente {{name}}',
         emoteLabels: {
           wave: 'Acenar',
+          salute: 'Continência',
           walk: 'Andar',
           idle: 'Parado',
           helena: 'Ferramenta',

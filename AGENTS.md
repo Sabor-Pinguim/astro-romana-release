@@ -138,8 +138,8 @@ Hips > Torso > Head
 - Não use escala negativa (inverte as faces): espelhe pela posição.
 
 ### 5.5 Animações
-- **Obrigatórias:** `idle_loop`, `walk_loop`, `wave`, `action_loop` (a ação própria de cada personagem).
-- **Sufixo `_loop`:** o jogo toca em loop as animações terminadas em `_loop` (`idle_loop`, `walk_loop`, `action_loop`); `wave` toca uma vez.
+- **Obrigatórias:** `idle_loop`, `walk_loop`, `wave`, `salute`, `action_loop` (a ação própria de cada personagem).
+- **Sufixo `_loop`:** o jogo toca em loop as animações terminadas em `_loop` (`idle_loop`, `walk_loop`, `action_loop`); `wave` e `salute` tocam uma vez.
 - **Definição:** cada animação é uma função `pose(u)` com `u ∈ [0, 1]`, com rotações em graus e posições em metros relativas ao repouso. Em loops, `pose(0)` precisa ser igual a `pose(1)`.
 - **Sinais de rotação:**
 

@@ -8,6 +8,21 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.2.0] - 2026-11-23
+
+### Added
+- **Salute emote (`🫡 Salute` / `Continência`):**
+  - Added procedural `salute` 3D animation clip (`salutePose` in `tools/modeling/lib/animations.mjs`) to all 4 astronaut GLBs (`helena.glb`, `lucas.glb`, `oscar.glb`, `maya.glb`), `assets/models/manifest.json`, and `index.models.js`.
+  - Added `🫡 Salute` / `Continência` to the Mars surface emote wheel (`web/views.js`, `web/locales/en.js`, `web/locales/pt.js`) with multiplayer pose synchronization.
+- **Lander gear retraction on Mars liftoff (`web/views.js`):**
+  - Articulated the lander's 4 landing legs and boarding ladder so they fold and retract smoothly against the hull as the ascent engine lifts off from Mars.
+
+### Changed
+- **Ghost podium & stranded crew scoring (`web/app.js`, `web/flight.js`):**
+  - Hidden all backpacks, sample bags, chest modules, screens, LEDs, and tool props on ghost astronauts (`👻`) in both the 3D podium and 2D fallback SVG so only the clean legless ghost suit silhouette remains.
+  - Stranded astronauts now have their individual score zeroed (`0 pts`, grade `F`) and are always ranked last on the leaderboard and podium; the team's total score is computed directly from the sum of the crew members' individual points so the team penalty comes strictly from the stranded astronaut's lost points.
+  - Removed the redundant `Radiation (RAD)` row from the final results breakdown (`#results-breakdown`).
+
 ## [1.1.0] - 2026-11-23
 
 ### Added

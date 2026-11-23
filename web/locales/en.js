@@ -28,7 +28,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.1.0',
+        version: 'v1.2.0',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -595,6 +595,7 @@
         promptLocked: '{{id}} · {{name}} only',
         emoteLabels: {
           wave: 'Wave',
+          salute: 'Salute',
           walk: 'Walk',
           idle: 'Idle',
           helena: 'Tinker',

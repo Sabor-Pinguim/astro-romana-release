@@ -22,6 +22,7 @@ export default {
     idle_loop: 'Parada, respirando',
     walk_loop: 'Caminhada em baixa gravidade',
     wave: 'Aceno',
+    salute: 'Continência',
     action_loop: 'Usa a chave de fenda para ajustar um painel de manutenção da nave',
   },
 
