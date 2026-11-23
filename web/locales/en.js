@@ -217,6 +217,7 @@
           tabBrowse: 'Find a room',
           tabCreate: 'Host a room',
           createHint: 'You become the host. Others join from the room browser or with your code.',
+          confirmNameBtn: 'Confirm',
         },
       },
       crew: {
@@ -626,8 +627,8 @@
           helenaDockEyebrow: 'Helena · Station docking',
           helenaDockTitle: 'Align the cabin hatch',
           helenaDockDesc: 'Align the cabin hatch with the rotating station port on the centre monitor. Tap/drag the 3D monitor or controllers, use the on-screen controls, or press <b>← → / A D</b>, <b>↑ ↓</b>, and <b>E Q / W S</b>. Every movement uses fuel.',
-          dockForwardBtn: '⏫ Close In<kbd>W · E</kbd>',
-          dockBackBtn: '⏬ Brake<kbd>S · Q</kbd>',
+          dockForwardBtn: '▲ Close In<kbd>W · E</kbd>',
+          dockBackBtn: '▼ Brake<kbd>S · Q</kbd>',
           edlDeployBtn: 'Deploy EDL Parachute',
           edlDeployedBtn: 'EDL Parachute Deployed ✓',
           dockFuelLabel: 'Docking fuel',

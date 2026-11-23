@@ -217,6 +217,7 @@
           tabBrowse: 'Procurar sala',
           tabCreate: 'Criar sala',
           createHint: 'Você vira o anfitrião. Os outros entram pelo navegador de salas ou com o seu código.',
+          confirmNameBtn: 'Confirmar',
         },
       },
       crew: {
@@ -626,8 +627,8 @@
           helenaDockEyebrow: 'Helena · Acoplagem à estação',
           helenaDockTitle: 'Alinhe a escotilha da cabine',
           helenaDockDesc: 'Alinhe a escotilha com a porta giratória da estação no monitor central. Toque/arraste no monitor ou manches 3D, use os botões na tela, ou pressione <b>← → / A D</b>, <b>↑ ↓</b> e <b>E Q / W S</b>. Cada movimento gasta combustível.',
-          dockForwardBtn: '⏫ Aproximar<kbd>W · E</kbd>',
-          dockBackBtn: '⏬ Frear<kbd>S · Q</kbd>',
+          dockForwardBtn: '▲ Aproximar<kbd>W · E</kbd>',
+          dockBackBtn: '▼ Frear<kbd>S · Q</kbd>',
           edlDeployBtn: 'Abrir Paraquedas EDL',
           edlDeployedBtn: 'Paraquedas EDL Aberto ✓',
           dockFuelLabel: 'Combustível de acoplagem',

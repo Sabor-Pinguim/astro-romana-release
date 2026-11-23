@@ -132,7 +132,7 @@
     ['v1','50,30 62,22 88,22 100,30 98,52 75,60 52,52'],['v2','50,30 62,22 88,22 52,52'],['v3','55,31 63,26 77,26 59,37']
   ].map(([c,p])=>`<polygon class="${c}" points="${p}"/>`).join('')}</svg>`;
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
-  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
+  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,isPlayerNameLocked:()=>false,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
   const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser();net.setPhase(id);lockGuest();};
   let toastTimer;
@@ -248,17 +248,23 @@
   const ROBOT_ICON = `<svg viewBox="0 0 40 34" aria-hidden="true"><polygon points="18,0 22,0 21,7 19,7" fill="#F59E0B"/><polygon points="17,0 23,0 20,4" fill="#FCE8A6"/><polygon points="6,7 34,7 38,13 38,27 32,33 8,33 2,27 2,13" fill="#281147"/><polygon points="6,7 20,7 20,33 8,33 2,27 2,13" fill="#3a2163"/><polygon points="7,14 33,14 31,24 9,24" fill="#17183B"/><polygon points="11,17 17,17 16,21 12,21" fill="#7EDAC2"/><polygon points="23,17 29,17 28,21 24,21" fill="#7EDAC2"/><polygon points="14,27 26,27 25,30 15,30" fill="#9B5DE5"/></svg>`;
   const COOP_ICON = `<svg viewBox="0 0 44 34" aria-hidden="true"><polygon points="22,2 30,10 22,18 14,10" fill="#F59E0B"/><polygon points="22,2 26,10 22,18 14,10" fill="#FCE8A6"/><polygon points="8,16 16,24 8,32 0,24" fill="#7EDAC2"/><polygon points="36,16 44,24 36,32 28,24" fill="#1FA2FF"/><polygon points="14,13 18,16 12,22 9,19" fill="#9B5DE5"/><polygon points="30,13 35,19 32,22 26,16" fill="#9B5DE5"/></svg>`;
   const browserState = { status: 'idle', rooms: [], fetchedAt: 0 };
-  let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '';
+  let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '', draftPlayerName = '';
   let mpTab = 'browse'; // 'browse' | 'create'
 
   function ensurePlayerName() {
+    if (net.isPlayerNameLocked?.()) return net.getPlayerName();
     const input = $('#mp-player-name');
-    if (input && net.setPlayerName) net.setPlayerName(input.value);
-    const name = net.getPlayerName?.() || '';
-    if (name.length >= 2) return name;
-    toast(t('lobby.roomBrowser.nameRequired'));
-    input?.focus();
-    return null;
+    const raw = input ? input.value : draftPlayerName;
+    const clean = net.sanitizePlayerName ? net.sanitizePlayerName(raw) : String(raw || '').trim();
+    if (clean.length < 2) {
+      toast(t('lobby.roomBrowser.nameRequired'));
+      input?.focus();
+      return null;
+    }
+    const locked = net.setPlayerName?.(clean) || clean;
+    draftPlayerName = locked;
+    renderModeStep();
+    return locked;
   }
 
   function promptRoomPassword(code) {
@@ -332,7 +338,7 @@
       const host = rm.hostName ? esc(t('lobby.roomBrowser.hostLabel', { name: rm.hostName })) : esc(rm.code);
       return `<div class="room-browser-item">
         <div class="room-browser-info">
-          <strong>${rm.hasPassword ? '🔒 ' : ''}${esc(rm.name || rm.code)}</strong>
+          <strong>${esc(rm.name || rm.code)}</strong>
           <div class="room-browser-meta">
             <span>${esc(rm.code)}</span><span>· ${host}</span>
             <span class="tag">${esc(t('lobby.roomBrowser.slots', { players: rm.players, max: rm.maxPlayers }))}</span>
@@ -382,7 +388,8 @@
 
     const netReady = net.enabled && net.available();
     const langCode = window.ASTRO_I18N?.language || 'en';
-    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}`;
+    const lockedName = net.isPlayerNameLocked?.() ? net.getPlayerName() : '';
+    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}|${lockedName}`;
 
     if(!netReady){
       mpVis.classList.remove('is-browser');
@@ -399,17 +406,19 @@
       mpVis.classList.add('is-browser');
       if(mpCta.dataset.viewKey !== viewKey){
         mpCta.dataset.viewKey = viewKey;
-        const savedName = net.getPlayerName?.() || '';
+        const nameLocked = !!net.isPlayerNameLocked?.();
+        const savedName = nameLocked ? net.getPlayerName() : draftPlayerName;
         const serverHost = (net.httpBase?.() || net.url || '').replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '');
         const header = `
           <div class="mp-server-bar">
             <span class="micro">${t('lobby.roomBrowser.serverLabel')}</span>
             <strong class="mp-server-url" title="${esc(net.url)}">${esc(serverHost)}</strong>
-            <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}">⚙</button>
+            <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}"><span class="settings-glyph" aria-hidden="true"></span></button>
           </div>
           <div class="mp-name-bar">
-            <label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label>
-            <input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">
+            ${nameLocked
+              ? `<span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><strong class="mp-name-locked">${esc(savedName)}</strong>`
+              : `<label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">`}
           </div>
           <div class="segmented mp-tabs" role="group">
             <button type="button" data-mp-tab="browse" aria-pressed="${mpTab === 'browse'}">${t('lobby.roomBrowser.tabBrowse')}</button>
@@ -436,8 +445,9 @@
         }
 
         $('#mp-server-settings').addEventListener('click', () => { window.ASTRO_SETTINGS?.syncUI(); showScreen('settings'); });
-        $('#mp-player-name').addEventListener('input', e => { net.setPlayerName?.(e.target.value); });
-        $('#mp-player-name').addEventListener('blur', e => { e.target.value = net.setPlayerName?.(e.target.value) ?? e.target.value; });
+        if (!nameLocked) {
+          $('#mp-player-name').addEventListener('input', e => { draftPlayerName = e.target.value; });
+        }
         $$('[data-mp-tab]', mpVis).forEach(btn => btn.addEventListener('click', () => {
           if(mpTab === btn.dataset.mpTab) return;
           mpTab = btn.dataset.mpTab;
@@ -478,7 +488,7 @@
         <span class="micro">${t('lobby.room.label')}</span>
         <strong class="room-code">${esc(net.code)}</strong>
         ${net.roomName ? `<span class="tag">${esc(net.roomName)}</span>` : ''}
-        ${net.hasPassword ? `<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
+        ${net.hasPassword ? `<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
         ${net.isPrivate ? `<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>` : ''}
         <button class="button quiet" type="button" id="mode-copy-btn">${t('lobby.roomBrowser.copyLinkShort')}</button>
         <button class="button quiet" type="button" id="mode-leave-btn">${t('lobby.room.leave')}</button>
@@ -533,22 +543,29 @@
     return {player:true,text:pName?`${pName} · ${roleText}`:roleText};
   }
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
-  // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus editable name if joined by link).
+  // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus one-time name entry if joined via invite link).
   function renderRoom(){
     const panel=$('#room-panel');if(!panel)return;
     if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';return;}
     if(panel.contains(document.activeElement)) return;
     panel.hidden=false;
     const lost=net.status!=='open';
-    const curName=net.getPlayerName?.()||'';
-    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button><div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" value="${esc(curName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    const nameLocked=!!net.isPlayerNameLocked?.();
+    const curName=nameLocked?net.getPlayerName():'';
+    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button>${nameLocked?`<span class="tag">${esc(curName)}</span>`:`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`}<span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{net.leave();});
-    $('#room-player-name').addEventListener('change',e=>{
-      const clean=net.setPlayerName?.(e.target.value)??e.target.value;
-      e.target.value=clean;
-      renderLobby();
-    });
+    if(!nameLocked){
+      const saveOnce=()=>{
+        const input=$('#room-player-name');
+        const clean=net.sanitizePlayerName?.(input?.value)||'';
+        if(clean.length<2){toast(t('lobby.roomBrowser.nameRequired'));input?.focus();return;}
+        net.setPlayerName?.(clean);
+        renderLobby();
+      };
+      $('#room-name-confirm')?.addEventListener('click',saveOnce);
+      $('#room-player-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')saveOnce();});
+    }
   }
   async function enterRoom(go, onSuccess, rethrow = false){
     $$('#mode-mp-cta button, #mode-mp-foot button, #room-panel button, [data-join-room]').forEach(b=>{b.disabled=true;});
@@ -1689,6 +1706,7 @@
     // Gusts grow at Max-Q and with a low TWR; fins damp them (design.finsDrift). All numbers are game-balance.
     // The climb lasts phaseDuration(0), set by the liftoff TWR; maxQ is the share of it where the gusts peak.
     const LIFTOFF = { band: 3, limit: 12, authority: 8, maxQ: [0.4, 0.67], throttle: 0.7 };
+    const PORT_DOCK = { band: 0.18, scope: 1.0, zStart: 5.0, zLatch: 0.36 }; // game-balance: cabin docking capture radius (m), 2D scope half-range (m), initial and latch distances (m)
     function startLiftoff() {
       const d = flight.design, s1 = Math.random() * 100, s2 = Math.random() * 100, duration = phaseDuration(0);
       const gust = (d.overweight ? 1.6 : 1) * (d.finsDrift ?? 1); // low TWR: the stack wallows more
@@ -2114,18 +2132,40 @@
       $('#flight-progress-val').textContent = Math.round(flight.progress) + '%';
       const dockFuel = $('#port-dock-fuel');
       if (dockFuel && flight.portDock) {
-        const fuel = Math.max(0, flight.portDock.fuel);
+        const d = flight.portDock;
+        const fuel = Math.max(0, d.fuel);
         dockFuel.style.width = `${fuel}%`;
         dockFuel.classList.toggle('amber', fuel <= 45 && fuel > 20);
         dockFuel.classList.toggle('danger', fuel <= 20);
         $('#port-dock-fuel-value').textContent = `${Math.ceil(fuel)}%`;
-        $('#port-dock-distance').textContent = U.distanceM(flight.portDock.z, 1);
+        $('#port-dock-distance').textContent = U.distanceM(d.z, 1);
+        const err = Math.hypot(d.x, d.y);
+        const aligned = err < PORT_DOCK.band;
         const offsetEl = $('#port-dock-offset');
         if (offsetEl) {
-          const err = Math.hypot(flight.portDock.x, flight.portDock.y);
-          offsetEl.textContent = err < 0.18
+          offsetEl.textContent = aligned
             ? t('cockpit.cards.dockLocked', { dist: U.distanceM(err, 2) })
             : t('cockpit.cards.dockOffset', { dist: U.distanceM(err, 2) });
+        }
+        const dockMark = $('#kir-mark');
+        if (dockMark && flight.step === 1) {
+          const nx = Math.max(-1, Math.min(1, d.x / PORT_DOCK.scope));
+          const ny = Math.max(-1, Math.min(1, d.y / PORT_DOCK.scope));
+          dockMark.style.left = `${50 + nx * 50}%`;
+          dockMark.style.top = `${50 - ny * 50}%`;
+          dockMark.classList.toggle('out', !aligned);
+        }
+        const zProg = Math.max(0, Math.min(1, (PORT_DOCK.zStart - d.z) / (PORT_DOCK.zStart - PORT_DOCK.zLatch)));
+        const ringEl = $('#port-dock-ring');
+        if (ringEl) {
+          const minPct = (PORT_DOCK.band / PORT_DOCK.scope) * 100;
+          ringEl.style.width = `${(88 - (88 - minPct) * zProg).toFixed(1)}%`;
+          ringEl.classList.toggle('aligned', aligned);
+        }
+        const zFill = $('#port-dock-z-fill');
+        if (zFill) {
+          zFill.style.width = `${(zProg * 100).toFixed(1)}%`;
+          zFill.classList.toggle('aligned', aligned);
         }
       }
       $('#flight-alt-val').textContent = U.altitudeKm(flight.altKm);
@@ -2226,15 +2266,17 @@
           <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
           <p>${t('cockpit.cards.helenaDockDesc')}</p>
           <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
-          <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(5.0, 1)}</strong></div>
-          <div class="kir-row dock-controls-row">
+          <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(PORT_DOCK.zStart, 1)}</strong></div>
+          <div class="kir-row">
+            <div class="kir kir-2d dock-kir${dockActive ? '' : ' is-disabled'}" style="--band:${(PORT_DOCK.band / PORT_DOCK.scope) * 100}%"><span class="dock-kir-axis x" aria-hidden="true"></span><span class="dock-kir-axis y" aria-hidden="true"></span><div class="dock-kir-ring" id="port-dock-ring" aria-hidden="true"></div><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up" ${dockActive ? '' : 'disabled'}>▲<kbd>↑</kbd></button><button class="button secondary left" type="button" data-hold="left" ${dockActive ? '' : 'disabled'}>◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right" ${dockActive ? '' : 'disabled'}>▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down" ${dockActive ? '' : 'disabled'}>▼<kbd>↓</kbd></button></div>
-            <div class="kir-ctrl dock-depth-ctrl">
-              <button class="button primary" type="button" data-hold="forward" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockForwardBtn')}</button>
-              <button class="button secondary" type="button" data-hold="back" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockBackBtn')}</button>
-            </div>
           </div>
-          <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(0.36, 2) })}</p>`;
+          <div class="dock-z-track" aria-hidden="true"><div class="dock-z-fill" id="port-dock-z-fill"></div></div>
+          <div class="control-grid dock-depth-grid">
+            <button class="button primary" type="button" data-hold="forward" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockForwardBtn')}</button>
+            <button class="button secondary" type="button" data-hold="back" ${dockActive ? '' : 'disabled'}>${t('cockpit.cards.dockBackBtn')}</button>
+          </div>
+          <p>${flight.portDock?.status === 'failed' ? t('cockpit.cards.dockFailedMsg') : flight.portDock?.status === 'success' ? t('cockpit.cards.dockSuccessMsg') : t('cockpit.cards.dockHelpMsg', { dist: U.distanceM(PORT_DOCK.zLatch, 2) })}</p>`;
       } else if (flight.step === 2) {
         const g = flight.docking, aligned = g ? Math.round(g.share() * 100) : 0;
         box.innerHTML = `
@@ -2281,7 +2323,9 @@
       const kirPad = $('.kir-2d', box);
       if (kirPad) {
         let kirDragging = false;
+        const canDragKir = () => (flight.step !== 1 || flight.portDock?.status === 'approach') && (net.mode === 'solo' || canAct(STEP_CREW[flight.step] || []));
         const steerFromKir = e => {
+          if (!canDragKir()) return;
           const r = kirPad.getBoundingClientRect();
           const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
           const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -2292,6 +2336,7 @@
           sendInput();
         };
         kirPad.addEventListener('pointerdown', e => {
+          if (!canDragKir()) return;
           e.preventDefault();
           kirDragging = true;
           try { kirPad.setPointerCapture(e.pointerId); } catch {}

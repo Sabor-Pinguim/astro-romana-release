@@ -241,7 +241,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 
 ## 10. Git, versionamento e changelog
 
-- **Repositório exclusivo (`astro-romana-v2`):** Nunca, jamais toque em outro repositório que não seja o `astro-romana-v2` (`Sabor-Pinguim/astro-romana-v2`). O repositório antigo (`astro-romana` sem `-v2`) **não pode ser tocado em hipótese alguma** (nem `push`, nem `pull`, nem `fetch`, nem leitura/edição local).
+- **Repositório exclusivo (`astro-romana-release`):** Nunca, jamais toque em outro repositório que não seja o `Sabor-Pinguim/astro-romana-release` (pasta local `astro-romana-v2`). O repositório antigo (`astro-romana`) **não pode ser tocado em hipótese alguma** (nem `push`, nem `pull`, nem `fetch`, nem leitura/edição local).
 - **Coordenação entre agentes (`SHARED_CONTEXT.md`, no `.gitignore`):**
   - Antes de editar ou commitar, leia `SHARED_CONTEXT.md` (se existir) para ver o que outro agente está alterando.
   - Registre sua frente, horário e lista de arquivos em uso; nunca toque em arquivos listados por outro agente nem use `git add .` (faça `git add` explícito dos seus arquivos).

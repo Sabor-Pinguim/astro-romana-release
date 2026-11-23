@@ -22,6 +22,24 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 - **Collapsible Telemetry Details (`.meter-info-btn`):** hid verbose `.meter-hint` explanations under all 5 telemetry gauges by default behind an amber hexagonal `i` info button beside each metric value.
 - **Unified Full-Image HiRISE Crater Cards (Step 04):** removed the non-interactive middle Satellite View card and merged the full-bleed HiRISE satellite imagery + `512 m walk area` overlay directly into the clickable crater selection cards alongside the 3D Mars globe.
 
+## [1.4.6] - 2026-11-23
+
+### Added
+- **2D cabin docking scope:** added a simplified `.kir.kir-2d` docking scope (`#port-dock-ring`, `#kir-mark`) beside the directional pad, a Z-approach progress bar (`#port-dock-z-fill`), and side-by-side depth buttons (`.dock-depth-grid`) to the right cockpit panel during Phase 05B (`web/app.js`, `web/styles.css`).
+
+### Changed
+- **Repository documentation:** updated the exclusive repository reference in `AGENTS.md` to `Sabor-Pinguim/astro-romana-release`.
+
+## [1.4.5] - 2026-11-23
+
+### Removed
+- **Multiplayer & cockpit UI emojis:** removed lock (`🔒`), gear (`⚙`), and double-arrow (`⏫`, `⏬`) emojis from the lobby room browser, locked name badges, and cockpit docking buttons (`web/app.js`, `web/locales/en.js`, `web/locales/pt.js`), replacing them with flat triangles (`▲`, `▼`) and the CSS `.settings-glyph` icon.
+
+## [1.4.4] - 2026-11-23
+
+### Changed
+- **Astronaut name locked after first selection:** once a valid name (2–20 chars) is confirmed in `localStorage`, `ASTRO_NET.setPlayerName` ignores overwrites and the multiplayer lobby replaces the input with a read-only badge (with a one-time confirm prompt when joining directly via an invite link without a saved name).
+
 ## [1.4.3] - 2026-11-23
 
 ### Fixed

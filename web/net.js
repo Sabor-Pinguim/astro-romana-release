@@ -33,13 +33,15 @@
     try { return sanitizePlayerName(localStorage.getItem(PLAYER_NAME_KEY) || ''); } catch { return ''; }
   }
 
+  const isPlayerNameLocked = () => getPlayerName().length >= 2;
+
   function setPlayerName(raw) {
+    const existing = getPlayerName();
+    if (existing.length >= 2) return existing;
     const clean = sanitizePlayerName(raw);
-    try {
-      if (clean) localStorage.setItem(PLAYER_NAME_KEY, clean);
-      else localStorage.removeItem(PLAYER_NAME_KEY);
-    } catch { /* blocked storage */ }
-    if (inRoom() && clean.length >= 2) {
+    if (clean.length < 2) return '';
+    try { localStorage.setItem(PLAYER_NAME_KEY, clean); } catch { /* blocked storage */ }
+    if (inRoom()) {
       room.setMeta({ ...(room.meta || {}), name: clean });
     }
     return clean;
@@ -187,6 +189,7 @@
     sanitizePlayerName,
     getPlayerName,
     setPlayerName,
+    isPlayerNameLocked,
     JOINABLE,
     get mode() { return inRoom() ? (room.isHost ? 'host' : 'guest') : 'solo'; },
     get isHost() { return inRoom() && room.isHost; },
