@@ -233,7 +233,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 | O quê | Idioma |
 |---|---|
 | Docs de design do time (`docs/`) | PT-BR |
-| Textos vistos pelo jogador (telas, nomes e descrições das peças) | Inglês (padrão) e Português (`web/locales/`, via `i18next`) |
+| Textos vistos pelo jogador (telas, nomes e descrições das peças) | Inglês (padrão), Português-BR e Espanhol (`web/locales/{en,pt,es}.js`, via `i18next`) |
 | Enunciado do desafio e `references/` | Inglês |
 | Código, identificadores, nomes de nós, arquivos e commits | Inglês |
 
@@ -256,6 +256,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
     2. `index.html` (`<div class="coordinates" data-i18n="menu.version">vX.Y.Z</div>`)
     3. `web/locales/en.js` (`menu.version: 'vX.Y.Z'`)
     4. `web/locales/pt.js` (`menu.version: 'vX.Y.Z'`)
+    5. `web/locales/es.js` (`menu.version: 'vX.Y.Z'`)
 - **Changelog obrigatório (`CHANGELOG.md`):**
   - Todo commit deve adicionar no topo do [CHANGELOG.md](CHANGELOG.md) a seção da nova versão (`## [X.Y.Z] - YYYY-MM-DD`) listando de forma clara o que foi adicionado, alterado ou corrigido.
 - **Commits:** no padrão já usado pelo time (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), em inglês.

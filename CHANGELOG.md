@@ -11,15 +11,35 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.6.1] - 2026-11-23
+
+### Changed
+- **Merge integration (i18n + mobile + Dev Mode + 21 experiments):** synced Spanish (`web/locales/es.js`) translations for `lobby.stepShort.*` and `dev.*`, loaded `web/locales/es.js` alongside the experiment locale packs, merged localized `lobbyStepMeta()` with neutral landing-site hint across EN/PT-BR/ES, and adapted `#menu-lang-bar` touch target height (`>= 36 px`) and landscape positioning.
+
 ## [1.6.0] - 2026-11-23
 
 ### Added
+- **Full i18n support across English (`en`), Brazilian Portuguese (`pt-BR`), and Spanish (`es`):**
+  - Added complete Spanish locale pack ([web/locales/es.js](web/locales/es.js)) with 100% key and rocket-part parity.
+  - Added automatic browser language detection (`navigator.languages` / `navigator.language`) on first visit in `web/i18n.js`, respecting manual overrides saved in Settings.
+  - Added a quick flag language switcher (`#menu-lang-bar`) with geometric SVG flags (`EN`, `PT-BR`, `ES`) on the main menu and in Settings (`web/settings.js`, `web/styles.css`).
+  - Added `npm run i18n:check` (`tools/web/check-i18n.mjs`) to validate key parity, `{{placeholder}}` parity, and coverage of all 55 rocket parts across every locale pack.
+- **Translated all 55 rocket parts (`parts.*`)** in `web/locales/en.js`, `web/locales/pt.js`, and `web/locales/es.js`, wired into `web/app.js` via `partName()` / `partRole()`.
 - **Mobile responsiveness (Phases 0–4):** added short-height landscape breakpoints (`@media (max-height:500px) and (orientation:landscape)`), portrait compact hex stepper (`<= 640px`), `100dvh` fallbacks, `viewport-fit=cover` + `env(safe-area-inset-*)` sticky bars, `pointer:coarse` >= 36–44 px touch targets, collapsible surface experiment goals showing the nearest incomplete task (`web/views.js`), localized `lobby.stepShort.*` labels, `tools/web/mobile-audit.mjs` (`npm run web:audit:mobile`), and updated documentation (`docs/mobile-responsiveness.md`, `AGENTS.md`).
 - **Dev Mode sandbox (`#dev-dialog`, `#dev-exp-dialog`):** added `web/dev.js` with Menu button (`#dev-button`), `Shift+D` shortcut, and `?dev=1` / `#dev` launcher to override difficulty/site/seed, jump straight to any mission screen/phase, and test all 21 science experiment minigames individually via `ASTRO_RUN.play`.
 - **21 science experiment minigames & multiplayer schema:** added `web/experiments.js`, `web/experiment-run.js`, the 21 minigame modules/styles (`web/minigames/`, `web/minigames.css`), EN/PT experiment locales (`web/locales/experiments/`), validation/lab tools (`tools/minigame-lab/`, `tools/web/check-experiments.mjs`, `docs/experiments-implementation.md`), and optional leaderboard experiment tracking (`multiplayer/`).
 
+### Changed
+- **Eliminated remaining hardcoded English UI strings:** added `data-i18n` / `data-i18n-aria` across the 5-step Lobby (`index.html`), migrated `lobbyStepMeta()`, difficulty specs, mode badges, and cockpit docking readouts (`web/app.js`), and added an `astro:lang` listener to live-refresh every dynamic view on language change.
+- **Clearer mission-abort and ocean-landing terminology in PT-BR and ES:** replaced `"Aborto"` with `"Abortar missão"` / `"Abortar misión"` and `"Amerissagem"` / `"Amerizaje"` with `"Pouso no mar"` / `"Descenso en el mar"` in `web/locales/pt.js` and `web/locales/es.js`.
+
 ### Removed
 - **Dead EVA inventory UI:** removed leftover empty `#surface-inventory` markup and `.surface-inv-label` / `.surface-inventory` styles from `index.html` and `web/styles.css`.
+
+## [1.5.2] - 2026-11-23
+
+### Changed
+- **AI Crew robot icon (`ROBOT_ICON` in `web/app.js`):** redesigned the low-poly SVG robot icon with a lighter silver faceted head, side ear bolts, diamond-tipped antenna, bright cyan visor eyes, and metallic mouth grille for clearer recognition and contrast.
 
 ## [1.5.1] - 2026-11-23
 

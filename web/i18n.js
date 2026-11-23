@@ -6,14 +6,27 @@
   const locales = window.ASTRO_LOCALES || {};
   const fallbackLng = 'en';
 
+  function detectBrowserLang() {
+    const candidates = [
+      ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+      navigator.language,
+    ].filter(Boolean);
+    for (const raw of candidates) {
+      const base = String(raw).toLowerCase().split('-')[0];
+      if (locales[base]) return base;
+    }
+    return fallbackLng;
+  }
+
   function readStoredLang() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      return parsed?.language && locales[parsed.language] ? parsed.language : fallbackLng;
+      if (parsed?.language && locales[parsed.language]) return parsed.language;
     } catch {
-      return fallbackLng;
+      /* ignore storage errors */
     }
+    return detectBrowserLang();
   }
 
   // Fallback interpolation/lookup when i18next CDN script could not load (e.g. offline file://).
