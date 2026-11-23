@@ -16,7 +16,7 @@
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button><button class="button secondary" id="quit-button" type="button"><span data-i18n="menu.quit">Quit</span><span aria-hidden="true">×</span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">DEMO · v0.1.0</div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">DEMO · v0.1.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -89,29 +89,156 @@
     </footer>
   </section>
 
-  <section id="orbit" class="screen" aria-labelledby="orbit-title">
-    <header class="app-header"><div class="header-title"><button class="button quiet" id="orbit-back" type="button" data-i18n="orbit.back">← Menu</button><div><div class="eyebrow" data-i18n="orbit.eyebrow">Mission objective / 01</div><h2 id="orbit-title" data-i18n="orbit.title">Choose your destination</h2></div></div><span class="badge" data-i18n="orbit.badge">SOLAR SYSTEM MAP</span></header>
-    <div class="orbit-layout"><div class="orbit-map slab"><h3 data-i18n="orbit.mapHeading">Where will your crew go?</h3><div class="orbit-system" data-i18n-aria="orbit.mapAria" aria-label="Stylized solar system map"><div class="orbit-sun"></div><span class="orbit-marker" data-i18n="orbit.launchOriginMarker">LAUNCH / EARTH</span><button class="orbit-world mercury extra" type="button" data-world="mercury" aria-label="Mercury, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mercury">Mercury</span></button><button class="orbit-world venus extra" type="button" data-world="venus" aria-label="Venus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.venus">Venus</span></button><button class="orbit-world earth" type="button" data-world="earth" aria-label="Earth, launch origin"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.earth">Earth</span></button><button class="orbit-world mars-target selected" type="button" data-world="mars" aria-label="Mars, mission destination" aria-pressed="true"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mars">Mars</span></button><button class="orbit-world jupiter" type="button" data-world="jupiter" aria-label="Jupiter, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.jupiter">Jupiter</span></button><button class="orbit-world saturn extra" type="button" data-world="saturn" aria-label="Saturn, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.saturn">Saturn</span></button><button class="orbit-world uranus extra" type="button" data-world="uranus" aria-label="Uranus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.uranus">Uranus</span></button><button class="orbit-world neptune extra" type="button" data-world="neptune" aria-label="Neptune, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.neptune">Neptune</span></button></div></div><div class="orbit-sidebar"><section class="objective-card slab"><span class="eyebrow" data-i18n="orbit.selectedEyebrow">Selected objective</span><h3 id="objective-title">Explore Mars</h3><p id="objective-description">Land a crew, investigate ancient environments, and return discoveries to Earth.</p><div class="objective-stat"><span data-i18n="orbit.statProfile">Mission profile</span><strong id="objective-profile">CREWED · SURFACE</strong></div><div class="objective-stat"><span data-i18n="orbit.statConstraint">Key constraint</span><strong id="objective-constraint">MASS · POWER · DATA</strong></div><div class="objective-stat"><span data-i18n="orbit.statStatus">Status</span><strong id="objective-status">READY TO PLAN</strong></div><button class="button primary" id="objective-next" type="button">Plan this mission →</button></section><section class="route-card slab"><h4 data-i18n="orbit.routeTitle">Mission route</h4><div class="route-steps"><span class="current" data-i18n-html="orbit.step1">01<br>OBJECTIVE</span><span data-i18n-html="orbit.step2">02<br>CREW &amp; SITE</span><span data-i18n-html="orbit.step3">03<br>BUILD</span></div></section></div></div>
-  </section>
-
   <section id="lobby" class="screen" aria-labelledby="lobby-title">
-    <header class="app-header"><div class="header-title"><button class="button quiet" id="lobby-back" type="button" data-i18n="lobby.back">← Objective</button><div><div class="eyebrow" data-i18n="lobby.eyebrow">Mission dossier / 02</div><h2 id="lobby-title" data-i18n="lobby.title">Crew and landing site</h2></div></div><div class="lobby-header-controls"><div class="difficulty"><span class="micro" style="color:var(--solar-amber)" data-i18n="lobby.hostControl">Host control</span><fieldset><legend data-i18n="lobby.difficultyLegend">Mission difficulty</legend><div class="segmented" id="difficulty-buttons" data-i18n-aria="lobby.difficultyLegend" aria-label="Mission difficulty"><button type="button" data-difficulty="easy" aria-pressed="false" data-i18n="difficulty.easy.label">Easy</button><button type="button" data-difficulty="normal" aria-pressed="true" data-i18n="difficulty.normal.label">Normal</button><button type="button" data-difficulty="hard" aria-pressed="false" data-i18n="difficulty.hard.label">Hard</button></div></fieldset></div><span class="badge" id="modifier-badge" aria-live="polite">$250M · 3:00 on Mars · Δv −20%</span></div></header>
-    <div class="lobby-main"><div class="dossier slab">
-      <div class="dossier-title-wrap"><span class="micro" data-i18n="lobby.missionNameLabel">Mission name</span><h3 class="dossier-title" id="mission-name">Biosignature Hunters</h3></div>
-      <div class="dossier-grid">
-        <div class="dossier-left">
-          <div class="dossier-row"><span class="micro" data-i18n="lobby.planetLabel">Planet</span><strong data-i18n="orbit.worlds.mars">Mars</strong></div>
-          <div class="dossier-block"><div class="block-label"><span class="micro" data-i18n="lobby.landingSiteLabel">Landing site</span></div><div class="site-thumbs"><button class="site-thumb" type="button" data-site="jezero" aria-pressed="true"><span class="thumb-art"></span><span class="thumb-name">Jezero</span></button><button class="site-thumb" type="button" data-site="gale" aria-pressed="false"><span class="thumb-art"></span><span class="thumb-name">Gale</span></button></div></div>
-          <div class="dossier-block"><div class="block-label"><span class="micro" data-i18n="lobby.crewLabel">Crew</span><span class="tag" id="crew-count">1/4 PLAYERS</span></div><div class="crew-grid" id="crew-grid"></div><div class="room-panel" id="room-panel" aria-live="polite"></div></div>
-        </div>
-        <div class="dossier-right">
-          <div class="detail-head"><span class="eyebrow" id="detail-kind">Crew member</span><h4 id="detail-name">Helena</h4><span id="detail-role"></span><p id="detail-desc"></p><div class="detail-status"><span class="micro" data-i18n="lobby.statusLabel">Status</span><strong id="detail-status"></strong></div></div>
-          <div class="detail-view" id="detail-view"><div class="detail-site" id="detail-site"></div></div>
-          <div class="detail-extra" id="detail-extra"></div>
+    <header class="app-header">
+      <div class="header-title">
+        <button class="button quiet" id="lobby-back" type="button">← Menu</button>
+        <div>
+          <div class="eyebrow" id="lobby-eyebrow">Mission setup / 01</div>
+          <h2 id="lobby-title">Play mode</h2>
         </div>
       </div>
-    </div></div>
-    <footer class="app-foot"><div class="hint" data-i18n="lobby.footHint">Mission design works best when every specialty has a voice.</div><div class="foot-actions"><button class="button primary" id="to-assembly" type="button" data-i18n-html="lobby.toAssembly">Proceed to rocket assembly <span aria-hidden="true">→</span></button></div></footer>
+      <div class="lobby-header-controls">
+        <span class="badge" id="modifier-badge" aria-live="polite">NORMAL · $250M · 3:00 on Mars · Δv −20%</span>
+        <button class="button quiet lobby-change-diff" id="lobby-change-difficulty" type="button" hidden>Change difficulty</button>
+      </div>
+    </header>
+    <nav class="lobby-stepper" id="lobby-stepper" aria-label="Mission setup steps">
+      <button class="lobby-step-tab active" type="button" data-lobby-step="mode" aria-current="step"><span class="lobby-step-num">01</span><span class="lobby-step-copy"><strong>Play mode</strong><small id="step-summary-mode">Singleplayer</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="difficulty"><span class="lobby-step-num">02</span><span class="lobby-step-copy"><strong>Difficulty</strong><small id="step-summary-difficulty">Normal</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="destination"><span class="lobby-step-num">03</span><span class="lobby-step-copy"><strong>Destination</strong><small id="step-summary-destination">Mars</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="site"><span class="lobby-step-num">04</span><span class="lobby-step-copy"><strong>Landing site</strong><small id="step-summary-site">Jezero Crater</small></span></button>
+      <button class="lobby-step-tab" type="button" data-lobby-step="crew"><span class="lobby-step-num">05</span><span class="lobby-step-copy"><strong>Crew</strong><small id="step-summary-crew">1/4 players</small></span></button>
+    </nav>
+    <div class="lobby-main">
+      <div class="dossier slab lobby-step" id="lobby-step-mode">
+        <div class="dossier-title-wrap">
+          <span class="micro">Step 01 · Crew connection</span>
+          <h3 class="dossier-title">How will your crew fly?</h3>
+          <p class="setup-lead">Play solo with 3 AI specialists or open a co-op room for up to 4 players.</p>
+        </div>
+        <div class="mode-grid" id="mode-grid">
+          <article class="setup-card mode-card" data-mode-card="solo">
+            <div class="mode-card-top">
+              <div class="setup-card-head">
+                <span class="eyebrow">Solo mission</span>
+                <span class="tag">1 PLAYER · 3 AI</span>
+              </div>
+              <h4>Singleplayer</h4>
+              <p class="muted">Play as Helena with 3 AI specialists backing you up.</p>
+            </div>
+            <div class="mode-visual" id="mode-solo-visual" aria-hidden="true"></div>
+            <div class="mode-cta-row">
+              <button class="button primary" type="button" id="mode-solo-btn">Play Singleplayer <span aria-hidden="true">→</span></button>
+            </div>
+            <div class="mode-card-foot">
+              <span class="tag">OFFLINE READY</span>
+              <span class="mode-foot-note">All seats available · pauses in minigames</span>
+            </div>
+          </article>
+          <article class="setup-card mode-card" data-mode-card="multiplayer">
+            <div class="mode-card-top">
+              <div class="setup-card-head">
+                <span class="eyebrow">Online co-op</span>
+                <span class="tag">1–4 PLAYERS</span>
+              </div>
+              <h4>Multiplayer</h4>
+              <p class="muted">Invite up to 3 friends to share assembly, flight, and Mars EVA.</p>
+            </div>
+            <div class="mode-visual" id="mode-mp-visual" aria-hidden="true"></div>
+            <div class="mode-cta-row" id="mode-mp-cta"></div>
+            <div class="mode-card-foot" id="mode-mp-foot"></div>
+          </article>
+        </div>
+      </div>
+
+      <div class="dossier slab lobby-step" id="lobby-step-difficulty" hidden>
+        <div class="dossier-title-wrap">
+          <span class="micro">Step 02 · Host control</span>
+          <h3 class="dossier-title">Choose mission difficulty</h3>
+          <p class="setup-lead">Difficulty sets your mission budget, Mars surface window, and how strictly engineering telemetry is enforced.</p>
+        </div>
+        <div class="difficulty-grid" id="difficulty-buttons" role="radiogroup" data-i18n-aria="lobby.difficultyLegend" aria-label="Mission difficulty"></div>
+      </div>
+
+      <div class="lobby-step lobby-step-orbit" id="lobby-step-destination" hidden>
+        <div class="orbit-layout">
+          <div class="orbit-map slab">
+            <h3 data-i18n="orbit.mapHeading">Where will your crew go?</h3>
+            <div class="orbit-system" data-i18n-aria="orbit.mapAria" aria-label="Stylized solar system map">
+              <div class="orbit-sun"></div>
+              <span class="orbit-marker" data-i18n="orbit.launchOriginMarker">LAUNCH / EARTH</span>
+              <button class="orbit-world mercury extra" type="button" data-world="mercury" aria-label="Mercury, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mercury">Mercury</span></button>
+              <button class="orbit-world venus extra" type="button" data-world="venus" aria-label="Venus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.venus">Venus</span></button>
+              <button class="orbit-world earth" type="button" data-world="earth" aria-label="Earth, launch origin"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.earth">Earth</span></button>
+              <button class="orbit-world mars-target selected" type="button" data-world="mars" aria-label="Mars, mission destination" aria-pressed="true"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mars">Mars</span></button>
+              <button class="orbit-world jupiter" type="button" data-world="jupiter" aria-label="Jupiter, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.jupiter">Jupiter</span></button>
+              <button class="orbit-world saturn extra" type="button" data-world="saturn" aria-label="Saturn, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.saturn">Saturn</span></button>
+              <button class="orbit-world uranus extra" type="button" data-world="uranus" aria-label="Uranus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.uranus">Uranus</span></button>
+              <button class="orbit-world neptune extra" type="button" data-world="neptune" aria-label="Neptune, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.neptune">Neptune</span></button>
+            </div>
+          </div>
+          <div class="orbit-sidebar">
+            <section class="objective-card slab">
+              <span class="eyebrow" data-i18n="orbit.selectedEyebrow">Selected objective</span>
+              <h3 id="objective-title">Explore Mars</h3>
+              <p id="objective-description">Land a crew, investigate ancient environments, and return discoveries to Earth.</p>
+              <div class="objective-stat"><span data-i18n="orbit.statProfile">Mission profile</span><strong id="objective-profile">CREWED · SURFACE</strong></div>
+              <div class="objective-stat"><span data-i18n="orbit.statConstraint">Key constraint</span><strong id="objective-constraint">MASS · POWER · DATA</strong></div>
+              <div class="objective-stat"><span data-i18n="orbit.statStatus">Status</span><strong id="objective-status">READY TO PLAN</strong></div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier slab lobby-step" id="lobby-step-site" hidden>
+        <div class="dossier-title-wrap">
+          <span class="micro">Step 04 · Target coordinates</span>
+          <h3 class="dossier-title" id="site-step-mission">Biosignature Hunters</h3>
+          <p class="setup-lead">Select a crater below or click directly on a landing site marker on the 3D Mars globe.</p>
+        </div>
+        <div class="site-select-grid">
+          <div class="site-select-left">
+            <div class="site-cards" id="site-cards" role="radiogroup" aria-label="Mars landing sites"></div>
+          </div>
+          <div class="site-preview-card" id="site-preview-card">
+            <div class="site-preview-head"><span class="micro">Satellite view · HiRISE</span><span class="tag" id="site-preview-tag">1.5 KM · NORTH UP</span></div>
+            <div class="site-preview-frame" id="site-preview-box"></div>
+            <span class="site-preview-credit">HiRISE (MRO) · NASA/JPL/UArizona, USGS (CC0)</span>
+          </div>
+          <div class="mars-globe-stage" id="mars-globe-view" aria-label="Interactive 3D Mars globe">
+            <div class="mars-globe-hud-top">
+              <span class="tag">PLANET MARS · 3D ORBITAL SURVEY</span>
+              <span class="tag" id="mars-globe-coords">18.4° N, 77.5° E</span>
+            </div>
+            <div class="mars-globe-fallback" id="mars-globe-fallback" aria-hidden="true"></div>
+            <div class="mars-pins" id="mars-pins">
+              <button class="mars-pin selected" type="button" data-mars-pin="jezero" aria-pressed="true"><span class="mars-pin-dot"></span><span class="mars-pin-label">Jezero Crater</span></button>
+              <button class="mars-pin" type="button" data-mars-pin="gale" aria-pressed="false"><span class="mars-pin-dot"></span><span class="mars-pin-label">Gale Crater</span></button>
+            </div>
+            <div class="mars-globe-hud-bottom">
+              <span class="tag">Click a crater marker to select · Drag to rotate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier slab lobby-step" id="lobby-step-crew" hidden>
+        <div class="dossier-title-wrap"><span class="micro" data-i18n="lobby.missionNameLabel">Mission name</span><h3 class="dossier-title" id="mission-name">Biosignature Hunters</h3></div>
+        <div class="dossier-grid">
+          <div class="dossier-left">
+            <div class="dossier-row"><span class="micro">Destination</span><strong id="crew-site-readout">Mars · Jezero Crater</strong></div>
+            <div class="dossier-block"><div class="block-label"><span class="micro" data-i18n="lobby.crewLabel">Crew</span><span class="tag" id="crew-count">1/4 PLAYERS</span></div><div class="crew-grid" id="crew-grid"></div><div class="room-panel" id="room-panel" aria-live="polite" hidden></div></div>
+          </div>
+          <div class="dossier-right">
+            <div class="detail-head"><span class="eyebrow" id="detail-kind">Crew member</span><h4 id="detail-name">Helena</h4><span id="detail-role"></span><p id="detail-desc"></p><div class="detail-status"><span class="micro" data-i18n="lobby.statusLabel">Status</span><strong id="detail-status"></strong></div></div>
+            <div class="detail-view" id="detail-view"><div class="detail-site" id="detail-site"></div></div>
+            <div class="detail-extra" id="detail-extra"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="app-foot"><div class="hint" id="lobby-hint">Choose solo play or start a co-op room before configuring mission rules.</div><div class="foot-actions"><button class="button primary" id="lobby-next" type="button" hidden>Continue <span aria-hidden="true">→</span></button></div></footer>
   </section>
 
   <section id="planner" class="screen" aria-labelledby="planner-title">
@@ -329,7 +456,6 @@
       <div class="dialog-actions"><button class="button quiet" id="minigame-close" type="button" data-i18n="common.back">Back</button><button class="button primary" id="minigame-done" type="button" data-i18n="minigames.completeBtn">Complete experiment</button></div>
     </div>
   </dialog>
-  <dialog id="quit-dialog" aria-labelledby="quit-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="menu.quitEyebrow">Quit mission</span><h3 id="quit-title" data-i18n="menu.quitTitle">Leave the mission?</h3><p data-i18n="menu.quitBody">This is a local prototype. You can close the tab at any time.</p><div class="dialog-actions"><button class="button quiet" id="quit-cancel" type="button" data-i18n="menu.quitStay">Stay</button><button class="button secondary" id="quit-confirm" type="button" data-i18n="menu.quitConfirm">Close notice</button></div></div></dialog>
   <dialog id="launch-dialog" aria-labelledby="launch-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="launch.reviewEyebrow">Launch review</span><h3 id="launch-title">Mission ready for review</h3><p id="launch-message"></p><div class="summary-list" id="launch-summary"></div><div class="dialog-actions"><button class="button quiet" id="launch-close" type="button" data-i18n="launch.keepEditing">Keep editing</button><button class="button primary" id="launch-confirm" type="button">Launch mission →</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>

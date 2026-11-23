@@ -142,6 +142,244 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   requestAnimationFrame(frame);
 })().catch(err => console.warn('Avatar not shown:', err));
 
+// Lobby Step 04: interactive 3D low-poly Mars globe with real Martian geography and accurate crater markers.
+(async () => {
+  const box = document.getElementById('mars-globe-view'), art = window.ASTRO_ART, ui = window.ASTRO;
+  const view = box && art && ui && makeView(box, { fov: 30 });
+  if (!view) return;
+  box.classList.add('is-3d');
+  const { scene, camera, renderer } = view;
+  const globe = new THREE.Group();
+  scene.add(globe);
+  // Fit Mars cleanly inside the box regardless of aspect ratio, with a smooth zoom-in when entering Step 04.
+  let baseZ = 5.1, camZ = 5.1;
+  view.onResize = () => {
+    const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
+    const hHalf = Math.atan(Math.tan(vHalf) * Math.max(0.5, camera.aspect));
+    baseZ = Math.max(1.55 / Math.tan(vHalf), 1.55 / Math.tan(hHalf));
+    if (camZ < baseZ) camZ = baseZ;
+  };
+  camera.position.set(0, 0.12, baseZ);
+  camera.lookAt(0, 0, 0);
+
+  // Planetocentric coordinates (+Y north pole, +Z lat 0°/lon 0°, +X 90° E — AGENTS.md section 5.8).
+  const latLonVec = (latDeg, lonDeg, r = 1) => {
+    const lat = THREE.MathUtils.degToRad(latDeg), lon = THREE.MathUtils.degToRad(lonDeg);
+    return new THREE.Vector3(r * Math.cos(lat) * Math.sin(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.cos(lon));
+  };
+  const angDistDeg = (lat1, lon1, lat2, lon2) => {
+    const p1 = latLonVec(lat1, lon1, 1), p2 = latLonVec(lat2, lon2, 1);
+    return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(p1.dot(p2), -1, 1)));
+  };
+
+  // Real major Martian albedo & topographic regions (planetocentric lat/lon, East positive):
+  // Syrtis Major sits immediately WSW of Jezero (18.4°N, 77.5°E); Isidis Planitia is to its SE;
+  // Hellas Basin is south of Syrtis Major; Gale (4.6°S, 137.4°E) sits on the dichotomy boundary south of Elysium.
+  const DARK_MARIA = [
+    { lat: 8.4, lon: 69.5, r: 16 },   // Syrtis Major
+    { lat: -18, lon: 138, r: 22 },    // Terra Cimmeria / southern highlands south of Gale
+    { lat: -24, lon: 168, r: 20 },    // Mare Sirenum
+    { lat: 48, lon: -21, r: 24 },     // Acidalia Planitia
+    { lat: -14, lon: -59, r: 15 },    // Valles Marineris
+    { lat: -22, lon: -32, r: 20 },    // Mare Erythraeum
+    { lat: 46, lon: 115, r: 18 },     // Utopia Planitia
+  ];
+  const BRIGHT_REGIONS = [
+    { lat: 12.9, lon: 87.0, r: 11 },  // Isidis Planitia (adjacent to Jezero)
+    { lat: -42.4, lon: 70.5, r: 20 }, // Hellas Planitia
+    { lat: 24.8, lon: 147.2, r: 15 }, // Elysium Planitia / Mons
+    { lat: 18.6, lon: -133.8, r: 20 },// Olympus Mons / Tharsis
+    { lat: 22, lon: 30, r: 22 },      // Arabia Terra
+  ];
+
+  // Faceted Mars mesh shaded from real latitude/longitude albedo regions.
+  const geo = new THREE.IcosahedronGeometry(1, 4);
+  const pos = geo.attributes.position;
+  let s = 17; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const colors = [], c = new THREE.Color(), v = new THREE.Vector3(), w = new THREE.Vector3();
+  const { mars: marsRamp, marsDark, ice } = art.RAMPS;
+  for (let i = 0; i < pos.count; i += 3) {
+    v.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) v.add(w.fromBufferAttribute(pos, i + k));
+    v.normalize();
+    const lat = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(v.y, -1, 1)));
+    const lon = THREE.MathUtils.radToDeg(Math.atan2(v.x, v.z));
+    let hex;
+    if (lat > 79 || lat < -81) {
+      hex = ice[3 + Math.floor(rnd() * 3)];
+    } else if (DARK_MARIA.some(m => angDistDeg(lat, lon, m.lat, m.lon) < m.r)) {
+      hex = marsDark[2 + Math.floor(rnd() * 3)];
+    } else if (BRIGHT_REGIONS.some(b => angDistDeg(lat, lon, b.lat, b.lon) < b.r)) {
+      hex = marsRamp[3 + Math.floor(rnd() * 3)];
+    } else {
+      hex = marsRamp[1 + Math.floor(rnd() * 4)];
+    }
+    c.set(hex);
+    for (let k = 0; k < 3; k++) colors.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const marsMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  globe.add(marsMesh);
+
+  // Subtle faceted atmosphere rim and orbital survey ring.
+  const atmos = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.05, 2),
+    new THREE.MeshBasicMaterial({ color: 0xe04f26, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide })
+  );
+  globe.add(atmos);
+  const orbitRing = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, (_, k) => {
+      const a = k / 48 * Math.PI * 2;
+      return new THREE.Vector3(1.28 * Math.cos(a), 0, 1.28 * Math.sin(a));
+    })),
+    new THREE.LineBasicMaterial({ color: 0x9b5de5, transparent: true, opacity: 0.35 })
+  );
+  orbitRing.rotation.set(0.32, 0, -0.22);
+  scene.add(orbitRing);
+
+  // 3D crater beacons on the exact planetocentric surface coordinates + linked HTML pins.
+  const markers = [], hitTargets = [], upAxis = new THREE.Vector3(0, 1, 0);
+  for (const [id, site] of Object.entries(ui.sites || {})) {
+    if (site.lat == null || site.lon == null) continue;
+    const normal = latLonVec(site.lat, site.lon, 1).normalize();
+    const anchor = new THREE.Group();
+    anchor.position.copy(normal).multiplyScalar(1.012);
+    anchor.quaternion.setFromUnitVectors(upAxis, normal);
+
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.08, 6), ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.01;
+    anchor.add(ring);
+
+    const pulseMat = new THREE.MeshBasicMaterial({ color: 0xfce8a6, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
+    const pulse = new THREE.Mesh(new THREE.RingGeometry(0.09, 0.11, 6), pulseMat);
+    pulse.rotation.x = -Math.PI / 2;
+    pulse.position.y = 0.015;
+    anchor.add(pulse);
+
+    const coreMat = new THREE.MeshLambertMaterial({ color: 0xf59e0b, flatShading: true });
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.038, 0), coreMat);
+    core.position.y = 0.055;
+    anchor.add(core);
+
+    const hit = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.userData.siteId = id;
+    anchor.add(hit);
+    hitTargets.push(hit);
+
+    globe.add(anchor);
+    const pin = box.querySelector(`[data-mars-pin="${id}"]`);
+    markers.push({ id, site, anchor, ring, ringMat, pulse, pulseMat, core, coreMat, pin });
+  }
+
+  let rotY = -THREE.MathUtils.degToRad((ui.sites?.[ui.state.site]?.lon) ?? 77.4508);
+  let rotX = THREE.MathUtils.degToRad(((ui.sites?.[ui.state.site]?.lat) ?? 18.4447));
+  let targetY = null, targetX = null, holdUntil = 0, dragging = false, moved = false, hovered = false;
+  let lastX = 0, lastY = 0;
+
+  function focusSite(id) {
+    const s = ui.sites?.[id];
+    if (!s || s.lat == null || s.lon == null) return;
+    const rawY = -THREE.MathUtils.degToRad(s.lon);
+    const diff = Math.atan2(Math.sin(rawY - rotY), Math.cos(rawY - rotY));
+    targetY = rotY + diff;
+    targetX = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(s.lat), -0.85, 0.85);
+    holdUntil = performance.now() + 2600;
+  }
+  window.addEventListener('astro:site', e => {
+    if (e.detail?.focus) focusSite(e.detail.id);
+    if (e.detail?.arrive && !reduce) camZ = baseZ * 1.55; // zoom-in arrival into Mars orbit
+  });
+
+  const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+  box.addEventListener('pointerenter', () => { hovered = true; });
+  box.addEventListener('pointerleave', () => { hovered = false; dragging = false; });
+  box.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    dragging = true; moved = false; targetY = null; targetX = null;
+    lastX = e.clientX; lastY = e.clientY;
+    box.setPointerCapture?.(e.pointerId);
+  });
+  box.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if (Math.hypot(dx, dy) > 4) moved = true;
+    rotY += dx * 0.008;
+    rotX = THREE.MathUtils.clamp(rotX + dy * 0.006, -0.9, 0.9);
+    lastX = e.clientX; lastY = e.clientY;
+    holdUntil = performance.now() + 2200;
+  });
+  box.addEventListener('pointerup', e => {
+    const wasDrag = moved;
+    dragging = false;
+    if (wasDrag || e.target.closest('button')) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(hitTargets, false);
+    if (hits.length) {
+      const id = hits[0].object.userData.siteId;
+      if (id && !window.ASTRO_NET?.isGuest) ui.selectSite?.(id, true);
+    }
+  });
+
+  const worldPos = new THREE.Vector3(), proj = new THREE.Vector3(), camDir = new THREE.Vector3();
+  let last = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const stepEl = document.getElementById('lobby-step-site');
+    if (!isActive('lobby') || !stepEl || stepEl.hidden || !view.width) return;
+
+    camZ += (baseZ - camZ) * Math.min(1, dt * 6.5);
+    camera.position.set(0, 0.12, camZ);
+    camera.lookAt(0, 0, 0);
+
+    if (targetY !== null && targetX !== null) {
+      const k = Math.min(1, dt * 5.5);
+      rotY += (targetY - rotY) * k;
+      rotX += (targetX - rotX) * k;
+      if (Math.abs(targetY - rotY) < 0.005 && Math.abs(targetX - rotX) < 0.005) { targetY = null; targetX = null; }
+    } else if (!reduce && !dragging && !hovered && now > holdUntil) {
+      rotY += dt * 0.22;
+    }
+
+    globe.rotation.set(rotX, rotY, 0);
+    globe.updateMatrixWorld(true);
+    const t = now / 1000;
+    const selectedId = ui.state.site;
+
+    for (const m of markers) {
+      const isSel = m.id === selectedId;
+      m.ringMat.color.setHex(isSel ? 0xf59e0b : 0xfce8a6);
+      m.coreMat.color.setHex(isSel ? 0xf59e0b : 0xe04f26);
+      m.pulse.visible = isSel;
+      if (isSel && !reduce) {
+        const p = 1 + 0.35 * Math.sin(t * 3.8);
+        m.pulse.scale.setScalar(p);
+        m.pulseMat.opacity = 0.7 - 0.35 * Math.sin(t * 3.8);
+        m.core.rotation.y = t * 2.2;
+      }
+      if (m.pin) {
+        m.anchor.getWorldPosition(worldPos);
+        camDir.copy(camera.position).sub(worldPos).normalize();
+        const front = worldPos.clone().normalize().dot(camDir);
+        proj.copy(worldPos).project(camera);
+        const x = (proj.x + 1) * 0.5 * view.width;
+        const y = (1 - proj.y) * 0.5 * view.height;
+        m.pin.style.left = `${x}px`;
+        m.pin.style.top = `${y - 18}px`;
+        m.pin.classList.toggle('back-side', front < 0.05);
+        m.pin.style.zIndex = front < 0.05 ? '1' : '3';
+      }
+    }
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+})().catch(err => console.warn('Mars globe not shown:', err));
+
 // Planner: the rocket the crew is building. Hull modules carry Attach_* nodes (the mounting points);
 // engines hang from Attach_Engines in the real cluster pattern, the tank stands on Attach_Tank,
 // one equipment module stands on each stage's Attach_Bay and up to 4 cabin modules sit on the cabin deck.

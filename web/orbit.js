@@ -6,7 +6,7 @@
 // Behind the planning screens (lobby, planner) the same scene becomes the background: the camera zooms in on
 // the chosen planet and follows it along its orbit while the rest of the system keeps moving.
 const THREE = await import('three');
-const art = window.ASTRO_ART, system = document.querySelector('.orbit-system'), screen = document.getElementById('orbit');
+const art = window.ASTRO_ART, system = document.querySelector('.orbit-system');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { renderer = null; }
 if (art && system && renderer) {
@@ -91,9 +91,21 @@ if (art && system && renderer) {
   scene.add(stars);
   const bg = document.createElement('div');
   bg.className = 'space-bg'; bg.setAttribute('aria-hidden', 'true'); document.body.prepend(bg);
-  const PLANNING = ['lobby', 'planner'], isOn = id => document.getElementById(id)?.classList.contains('active');
-  let focusId = 'mars', focus = 0;
+  const isOn = id => document.getElementById(id)?.classList.contains('active');
+  const destStep = document.getElementById('lobby-step-destination');
+  let focusId = 'mars', focus = 0, zoomTarget = false;
   window.addEventListener('astro:world', e => { focusId = e.detail; });
+  // Smooth zoom-into-Mars transition when advancing from Step 03 (Destination) → Step 04 (Landing site).
+  window.ASTRO_ZOOM_TO_PLANET = () => new Promise(resolve => {
+    if (reduce || !destStep || destStep.hidden) return resolve();
+    zoomTarget = true;
+    destStep.classList.add('zooming');
+    setTimeout(() => {
+      zoomTarget = false;
+      destStep.classList.remove('zooming');
+      resolve();
+    }, 420);
+  });
   const mapPos = new THREE.Vector3(), mapLook = new THREE.Vector3(0, -.4, 0), camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
   const out = new THREE.Vector3(), side = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3();
   const marker = system.querySelector('.orbit-marker'), v = new THREE.Vector3(), edge = new THREE.Vector3();
@@ -127,13 +139,15 @@ if (art && system && renderer) {
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
-    const map = screen.classList.contains('active'), planning = PLANNING.some(isOn);
+    const map = isOn('lobby') && !!destStep && !destStep.hidden;
+    const planning = (isOn('lobby') && !map) || isOn('planner');
     bg.classList.toggle('on', planning); document.body.classList.toggle('space-focus', planning);
     if (!map && !planning) return;
     const host = map ? system : bg;
     if (renderer.domElement.parentElement !== host) { host.prepend(renderer.domElement); resize(); }
     if (!width) return;
-    focus += ((planning ? 1 : 0) - focus) * Math.min(1, dt * 1.4);
+    const targetFocus = planning || zoomTarget ? 1 : 0;
+    focus += (targetFocus - focus) * Math.min(1, dt * (zoomTarget ? 6.5 : 1.4));
     if (window.ASTRO_FOCUS_NOW) focus = planning ? 1 : 0; // tests: skip the zoom animation
     // Slow down while a planet is hovered, so it is easy to click.
     speed += ((map && worlds.some(w => w.hovered) ? .12 : 1) - speed) * .1;
