@@ -243,6 +243,7 @@
   const COOP_ICON = `<svg viewBox="0 0 44 34" aria-hidden="true"><polygon points="22,2 30,10 22,18 14,10" fill="#F59E0B"/><polygon points="22,2 26,10 22,18 14,10" fill="#FCE8A6"/><polygon points="8,16 16,24 8,32 0,24" fill="#7EDAC2"/><polygon points="36,16 44,24 36,32 28,24" fill="#1FA2FF"/><polygon points="14,13 18,16 12,22 9,19" fill="#9B5DE5"/><polygon points="30,13 35,19 32,22 26,16" fill="#9B5DE5"/></svg>`;
   const browserState = { status: 'idle', rooms: [], fetchedAt: 0 };
   let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '';
+  let mpTab = 'browse'; // 'browse' | 'create'
 
   function ensurePlayerName() {
     const input = $('#mp-player-name');
@@ -375,7 +376,7 @@
 
     const netReady = net.enabled && net.available();
     const langCode = window.ASTRO_I18N?.language || 'en';
-    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}`;
+    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}|${net.url}|${mpTab}`;
 
     if(!netReady){
       mpVis.classList.remove('is-browser');
@@ -393,47 +394,72 @@
       if(mpCta.dataset.viewKey !== viewKey){
         mpCta.dataset.viewKey = viewKey;
         const savedName = net.getPlayerName?.() || '';
-        mpVis.innerHTML = `
+        const serverHost = (net.httpBase?.() || net.url || '').replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '');
+        const header = `
+          <div class="mp-server-bar">
+            <span class="micro">${t('lobby.roomBrowser.serverLabel')}</span>
+            <strong class="mp-server-url" title="${esc(net.url)}">${esc(serverHost)}</strong>
+            <button class="button quiet" type="button" id="mp-server-settings" aria-label="${esc(t('lobby.roomBrowser.changeServer'))}" title="${esc(t('lobby.roomBrowser.changeServer'))}">⚙</button>
+          </div>
           <div class="mp-name-bar">
             <label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label>
             <input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">
           </div>
-          <div class="mp-browser-head">
-            <span class="micro">${t('lobby.roomBrowser.openRooms')}</span>
-            <button class="button quiet" type="button" id="room-browser-refresh">↻ ${t('lobby.roomBrowser.refresh')}</button>
-          </div>
-          <div class="room-browser-list" id="room-browser-list" aria-live="polite"></div>`;
-        mpCta.innerHTML = `
-          <div class="mp-create-box">
-            <div class="mp-create-inputs">
+          <div class="segmented mp-tabs" role="group">
+            <button type="button" data-mp-tab="browse" aria-pressed="${mpTab === 'browse'}">${t('lobby.roomBrowser.tabBrowse')}</button>
+            <button type="button" data-mp-tab="create" aria-pressed="${mpTab === 'create'}">${t('lobby.roomBrowser.tabCreate')}</button>
+          </div>`;
+        if(mpTab === 'browse'){
+          mpVis.innerHTML = header + `
+            <div class="mp-browser-head">
+              <span class="micro">${t('lobby.roomBrowser.openRooms')}</span>
+              <button class="button quiet" type="button" id="room-browser-refresh">↻ ${t('lobby.roomBrowser.refresh')}</button>
+            </div>
+            <div class="room-browser-list" id="room-browser-list" aria-live="polite"></div>`;
+          mpCta.innerHTML = '';
+          mpFoot.innerHTML = `<span class="micro">${t('lobby.room.join')}</span><div class="mode-join-row"><input id="mode-room-code" maxlength="4" value="${esc(draftJoinCode)}" placeholder="${esc(t('lobby.room.codePlaceholder'))}" aria-label="${esc(t('lobby.room.codeAria'))}" autocomplete="off"><button class="button" type="button" id="mode-join-btn">${t('lobby.roomBrowser.joinBtn')}</button></div>`;
+        }else{
+          mpVis.innerHTML = header + `
+            <div class="mp-create-panel">
               <input class="mp-input" id="mp-room-name" maxlength="32" autocomplete="off" value="${esc(draftRoomName)}" aria-label="${esc(t('lobby.roomBrowser.roomNameAria'))}" placeholder="${esc(t('lobby.roomBrowser.roomNamePlaceholder'))}">
               <input class="mp-input" id="mp-room-password" type="password" maxlength="32" autocomplete="new-password" value="${esc(draftRoomPassword)}" aria-label="${esc(t('lobby.roomBrowser.passwordAria'))}" placeholder="${esc(t('lobby.roomBrowser.passwordPlaceholder'))}">
               <label class="mp-check"><input type="checkbox" id="mp-room-private" ${draftRoomPrivate ? 'checked' : ''}><span>${t('lobby.roomBrowser.privateToggle')}</span></label>
-            </div>
-            <button class="button amber" type="button" id="mode-create-btn">${t('lobby.roomBrowser.createBtn')}</button>
-          </div>`;
-        mpFoot.innerHTML = `<span class="micro">${t('lobby.room.join')}</span><div class="mode-join-row"><input id="mode-room-code" maxlength="4" value="${esc(draftJoinCode)}" placeholder="${esc(t('lobby.room.codePlaceholder'))}" aria-label="${esc(t('lobby.room.codeAria'))}" autocomplete="off"><button class="button" type="button" id="mode-join-btn">${t('lobby.roomBrowser.joinBtn')}</button></div>`;
+            </div>`;
+          mpCta.innerHTML = `<button class="button amber" type="button" id="mode-create-btn">${t('lobby.roomBrowser.createBtn')}</button>`;
+          mpFoot.innerHTML = `<span class="mode-foot-note">${t('lobby.roomBrowser.createHint')}</span>`;
+        }
 
+        $('#mp-server-settings').addEventListener('click', () => { window.ASTRO_SETTINGS?.syncUI(); showScreen('settings'); });
         $('#mp-player-name').addEventListener('input', e => { net.setPlayerName?.(e.target.value); });
         $('#mp-player-name').addEventListener('blur', e => { e.target.value = net.setPlayerName?.(e.target.value) ?? e.target.value; });
-        $('#mp-room-name').addEventListener('input', e => { draftRoomName = e.target.value; });
-        $('#mp-room-password').addEventListener('input', e => { draftRoomPassword = e.target.value; });
-        $('#mp-room-private').addEventListener('change', e => { draftRoomPrivate = e.target.checked; });
-        $('#mode-room-code').addEventListener('input', e => { draftJoinCode = e.target.value; });
-        $('#room-browser-refresh').addEventListener('click', () => refreshRoomBrowser(true));
-        $('#mode-create-btn').addEventListener('click', () => {
-          if (!ensurePlayerName()) return;
-          enterRoom(() => net.create('lobby', {
-            name: $('#mp-room-name').value,
-            password: $('#mp-room-password').value,
-            isPrivate: $('#mp-room-private').checked,
-          }), () => setLobbyStep('difficulty'));
-        });
-        $('#mode-join-btn').addEventListener('click', () => joinRoomWithPrompt($('#mode-room-code').value));
-        $('#mode-room-code').addEventListener('keydown', e => { if(e.key === 'Enter') $('#mode-join-btn').click(); });
+        $$('[data-mp-tab]', mpVis).forEach(btn => btn.addEventListener('click', () => {
+          if(mpTab === btn.dataset.mpTab) return;
+          mpTab = btn.dataset.mpTab;
+          renderModeStep();
+        }));
+        if(mpTab === 'browse'){
+          $('#mode-room-code').addEventListener('input', e => { draftJoinCode = e.target.value; });
+          $('#room-browser-refresh').addEventListener('click', () => refreshRoomBrowser(true));
+          $('#mode-join-btn').addEventListener('click', () => joinRoomWithPrompt($('#mode-room-code').value));
+          $('#mode-room-code').addEventListener('keydown', e => { if(e.key === 'Enter') $('#mode-join-btn').click(); });
+        }else{
+          $('#mp-room-name').addEventListener('input', e => { draftRoomName = e.target.value; });
+          $('#mp-room-password').addEventListener('input', e => { draftRoomPassword = e.target.value; });
+          $('#mp-room-private').addEventListener('change', e => { draftRoomPrivate = e.target.checked; });
+          $('#mode-create-btn').addEventListener('click', () => {
+            if (!ensurePlayerName()) return;
+            enterRoom(() => net.create('lobby', {
+              name: $('#mp-room-name').value,
+              password: $('#mp-room-password').value,
+              isPrivate: $('#mp-room-private').checked,
+            }), () => setLobbyStep('difficulty'));
+          });
+        }
       }
-      paintRoomBrowser();
-      if(browserState.status === 'idle') refreshRoomBrowser();
+      if(mpTab === 'browse'){
+        paintRoomBrowser();
+        if(browserState.status === 'idle') refreshRoomBrowser();
+      }
       return;
     }
 
@@ -2639,6 +2665,8 @@
     const audioBtn=$('#audio-toggle-cockpit');
     if(audioBtn)audioBtn.textContent=SIM.isMuted?t('cockpit.audioOff'):t('cockpit.audioOn');
     SIM.refreshUI();
+    browserState.status='idle';browserState.rooms=[];browserState.fetchedAt=0;
+    if(state.screen==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser(true);
     if(state.screen==='leaderboard')loadLeaderboardScreen();
   });
 

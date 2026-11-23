@@ -39,8 +39,14 @@ export const SIDES = { L: 1, R: -1 };
  * Creates the base astronaut (oversized bubble helmet, bulky bellowed pressurized suit,
  * chest DCM + umbilical ports, PLSS backpack, wrist rings, insulated gloves and boots).
  * Characters add their own gear and identifying stripes, then call `avatar.finish()`.
+ * With `astronaut: false` the rig comes empty and the character builds its whole body.
+ * `rig` overrides the position (`pos`) and rest rotation (`rest`) of pivots for other body
+ * proportions; names and hierarchy never change, so the shared clips still apply.
  */
-export function createAvatar({ id, accent, visor = 'Visor' }) {
+export function createAvatar({ id, accent, visor = 'Visor', astronaut = true, rig = {} }) {
+  for (const name of Object.keys(rig)) {
+    if (!PIVOT_NAMES.includes(name)) throw new Error(`Unknown rig pivot "${name}"`);
+  }
   const materials = createPalette(accent);
   const root = new THREE.Group();
   root.name = `Avatar_${id}`;
@@ -52,8 +58,9 @@ export function createAvatar({ id, accent, visor = 'Visor' }) {
   for (const joint of RIG) {
     const node = new THREE.Group();
     node.name = joint.name;
-    node.position.set(...joint.pos);
-    const [rx, ry, rz] = joint.rest ?? [0, 0, 0];
+    const { pos = joint.pos, rest = joint.rest ?? [0, 0, 0] } = rig[joint.name] ?? {};
+    node.position.set(...pos);
+    const [rx, ry, rz] = rest;
     node.quaternion.setFromEuler(new THREE.Euler(rx * DEG, ry * DEG, rz * DEG));
     restQuaternions[joint.name] = node.quaternion.clone();
     (joint.parent ? pivots[joint.parent] : root).add(node);
@@ -67,7 +74,7 @@ export function createAvatar({ id, accent, visor = 'Visor' }) {
     pivots,
     materials,
     restQuaternions,
-    restPositions: Object.fromEntries(RIG.map((j) => [j.name, new THREE.Vector3(...j.pos)])),
+    restPositions: Object.fromEntries(RIG.map((j) => [j.name, pivots[j.name].position.clone()])),
     fx: [],
     part: (pivot) => parts[pivot],
     /** Temporary prop group (`Prop_*`), attached to `root` or a rig pivot. */
@@ -107,7 +114,7 @@ export function createAvatar({ id, accent, visor = 'Visor' }) {
     },
   };
 
-  buildBody(avatar, visor);
+  if (astronaut) buildBody(avatar, visor);
   return avatar;
 }
 

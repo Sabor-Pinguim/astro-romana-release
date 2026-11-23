@@ -50,6 +50,7 @@ Use only these tokens. The names are those of the CSS variables in `:root`.
 | Lucas | `#F2A900` |
 | Oscar | `#1FA2FF` |
 | Maya | `#2BB673` |
+| Nancy Grace Roman (NPC, not in the interface yet) | `#9B5DE5` (same as `--amethyst`) |
 
 ## 3. Typography
 

@@ -13,7 +13,7 @@
   // it on their own: they use NET_SERVER, the VM's address (multiplayer/deploy; its setup.sh prints it, and needs
   // EXTRA_ORIGINS=https://<user>.github.io for Pages). A page the VM serves talks to its own host at /ws; localhost uses
   // the local server (cd multiplayer && npm start). ?server=ws(s)://…/ws overrides all of it.
-  const NET_SERVER = 'wss://35-193-156-110.sslip.io/ws'; // the VM (IP 35.193.156.110, multiplayer/deploy)
+  const NET_SERVER = 'wss://v2.35-193-156-110.sslip.io/ws'; // the VM (IP 35.193.156.110, multiplayer/deploy)
   const LOCAL_SERVER = 'ws://localhost:8787/ws';
   // Screens a guest can join in (the server's DEFAULT_JOINABLE); after the launch only a dropped player comes back.
   const JOINABLE = ['menu', 'orbit', 'lobby', 'planner'];

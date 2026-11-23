@@ -17,7 +17,7 @@ import { BODY_MATERIALS } from './lib/palette.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const MODELS_DIR = path.join(ROOT, 'assets/models');
 
-const HELMET_TOP_RANGE = [1.75, 1.95]; // meters: body height = top of the helmet in the rest pose
+const HELMET_TOP_RANGE = [1.75, 1.95]; // meters: body height = top of the helmet (or of the head, without one) in the rest pose
 const MAX_TOTAL_HEIGHT = 2.4; // meters, including accessories such as antennas
 const GROUND_TOLERANCE = 0.01; // the lowest point must sit on y = 0
 const MAX_MESHES = 50; // ≈ draw calls per avatar (see AGENTS.md §5.3)
@@ -83,15 +83,17 @@ async function validateModel(entry, conventions) {
   if (Math.abs(bounds.min.y) > GROUND_TOLERANCE) problems.push(`feet at y = ${bounds.min.y.toFixed(3)}, expected 0`);
 
   const helmet = scene.getObjectByName('Head_Helmet');
-  const helmetTop = helmet ? new THREE.Box3().setFromObject(helmet).max.y : NaN;
+  const top = helmet ? 'helmet top' : 'head top';
+  const head = helmet ?? scene.getObjectByName('Head');
+  const helmetTop = head ? new THREE.Box3().setFromObject(head).max.y : NaN;
   if (!(helmetTop >= HELMET_TOP_RANGE[0] && helmetTop <= HELMET_TOP_RANGE[1])) {
-    problems.push(`helmet top at ${helmetTop.toFixed(2)} m, expected ${HELMET_TOP_RANGE.join('–')} m`);
+    problems.push(`${top} at ${helmetTop.toFixed(2)} m, expected ${HELMET_TOP_RANGE.join('–')} m`);
   }
 
   return {
     problems,
     summary: `${triangles} tris, ${meshes} meshes, ${clipNames.length} clips, ` +
-      `helmet top ${helmetTop.toFixed(2)} m, total ${height.toFixed(2)} m, ` +
+      `${top} ${helmetTop.toFixed(2)} m, total ${height.toFixed(2)} m, ` +
       `${report.issues.numWarnings} warnings, ${report.issues.numInfos} infos`,
   };
 }

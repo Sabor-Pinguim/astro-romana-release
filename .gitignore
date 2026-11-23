@@ -7,3 +7,5 @@ tools/terrain/preview/
 # Local multiplayer SQLite database
 multiplayer/data/
 *.sqlite*
+# Local multi-agent coordination
+SHARED_CONTEXT.md

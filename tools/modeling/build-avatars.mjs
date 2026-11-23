@@ -1,4 +1,5 @@
-// Builds the four low-poly astronaut avatars as GLB files plus a manifest.json that the
+// Builds the low-poly avatars (the four playable astronauts and the non-playable characters)
+// as GLB files plus a manifest.json that the
 // model viewer (tools/model-viewer) and the game (index.html) read.
 //
 //   npm run models:build          # all characters
@@ -45,7 +46,13 @@ function countTriangles(root) {
 }
 
 async function buildCharacter(character, exporter) {
-  const avatar = createAvatar({ id: character.id, accent: character.accent, visor: character.visor });
+  const avatar = createAvatar({
+    id: character.id,
+    accent: character.accent,
+    visor: character.visor,
+    astronaut: character.astronaut ?? true,
+    rig: character.rig,
+  });
   character.build(avatar);
 
   const footDust = { preset: 'footdust', clips: ['walk_loop'] };

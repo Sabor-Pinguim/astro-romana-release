@@ -92,6 +92,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 - Os GLBs em `assets/models/` são **gerados** por `tools/modeling/`.
 - **Nunca edite um GLB à mão**, nem no Blender: a próxima geração sobrescreve.
 - **Para mudar um personagem**, edite `tools/modeling/characters/<id>.mjs`.
+- **Personagem sem traje** (NPC, como a `nancy`): `astronaut: false` no arquivo dele. O rig vem vazio e o arquivo monta o corpo inteiro; `rig` ajusta posição e repouso dos pivôs para outras proporções (nomes e hierarquia não mudam). Em `characters/index.mjs`, entra depois dos jogáveis.
 - **Para mudar o que é comum a todos**, edite `tools/modeling/lib/`.
 - O gerador usa three.js (formas, hierarquia, `AnimationClip`) e exporta com `GLTFExporter`.
 
@@ -100,7 +101,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 - **Frente:** o personagem olha para **+Z**.
 - **Lados:** o lado esquerdo do personagem é **+X**.
 - **Origem:** entre os pés, no chão (y = 0).
-- **Altura:** topo do capacete entre 1,75 e 1,95 m; com acessórios, no máximo 2,4 m.
+- **Altura:** topo do capacete (ou da cabeça, sem capacete) entre 1,75 e 1,95 m; com acessórios, no máximo 2,4 m.
 
 ### 5.3 Estilo e orçamento
 
@@ -241,6 +242,10 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 ## 10. Git, versionamento e changelog
 
 - **Repositório exclusivo (`astro-romana-v2`):** Nunca, jamais toque em outro repositório que não seja o `astro-romana-v2` (`Sabor-Pinguim/astro-romana-v2`). O repositório antigo (`astro-romana` sem `-v2`) **não pode ser tocado em hipótese alguma** (nem `push`, nem `pull`, nem `fetch`, nem leitura/edição local).
+- **Coordenação entre agentes (`SHARED_CONTEXT.md`, no `.gitignore`):**
+  - Antes de editar ou commitar, leia `SHARED_CONTEXT.md` (se existir) para ver o que outro agente está alterando.
+  - Registre sua frente, horário e lista de arquivos em uso; nunca toque em arquivos listados por outro agente nem use `git add .` (faça `git add` explícito dos seus arquivos).
+  - Ao concluir ou commitar, remova sua linha do arquivo. Entradas antigas já commitadas podem ser limpas.
 - **Bump automático de versão a cada commit (`MAJOR.MINOR.PATCH`, ou seja `X.Y.Z`):**
   - A partir da versão **`1.0.0`**, **todo novo commit** feito por qualquer pessoa ou agente deve incrementar automaticamente a versão:
     - **Patch (`X.Y.Z`, o "minor minor"):** padrão para pequenas alterações, correções (`fix:`), ajustes, refatorações, docs e manutenção (`docs:`, `chore:`). Ex.: `1.3.0` → `1.3.1` → `1.3.2`.
@@ -279,7 +284,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 
 ```bash
 npm install                    # uma vez: three + validador glTF
-npm run models                 # gera os 4 avatares e valida
+npm run models                 # gera os avatares (4 jogáveis + NPCs) e valida
 npm run models:build -- maya   # gera só um personagem
 npm run models:validate        # só valida
 npm run web:models             # empacota GLBs e specs usados pelo index.html em index.models.js

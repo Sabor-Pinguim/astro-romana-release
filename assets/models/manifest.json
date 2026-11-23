@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T05:46:19.280Z",
+  "generatedAt": "2026-11-23T12:58:22.823Z",
   "generator": "tools/modeling/build-avatars.mjs",
   "conventions": {
     "units": "meters",
@@ -590,6 +590,63 @@
         "triangles": 2892,
         "meshes": 50,
         "bytes": 291312
+      }
+    },
+    {
+      "id": "nancy",
+      "name": "Nancy Grace Roman",
+      "role": "Astrônoma da NASA (personagem não jogável)",
+      "accent": "#9B5DE5",
+      "file": "characters/nancy.glb",
+      "summary": "Sem traje: blusa branca de manga curta com gola e botões, saia rodada escura abaixo do joelho, sapatos baixos de presilha, crachá roxo no peito, óculos gatinho, cabelo grisalho cacheado preso para cima e uma régua de madeira sempre na mão direita.",
+      "equipment": [
+        {
+          "item": "Régua de madeira de 50 cm com marcas a cada 5 cm",
+          "basis": "Régua graduada comum de desenho e medição (marcas estilizadas)"
+        },
+        {
+          "item": "Blusa branca de manga curta com gola, saia rodada escura e sapatos baixos",
+          "basis": "Foto de corpo inteiro de referência fornecida pelo time"
+        },
+        {
+          "item": "Crachá roxo no peito, sem logotipo",
+          "basis": "Crachá da foto de referência; roxo é a cor de identidade da personagem"
+        },
+        {
+          "item": "Óculos gatinho, cabelo grisalho cacheado preso para cima e brincos",
+          "basis": "Retrato de referência fornecido pelo time"
+        }
+      ],
+      "animations": {
+        "idle_loop": "Parada, respirando",
+        "walk_loop": "Caminhada em baixa gravidade",
+        "wave": "Aceno",
+        "salute": "Continência",
+        "action_loop": "Bate a régua na palma da mão esquerda, como uma professora"
+      },
+      "fx": [
+        {
+          "anchor": "FX_Foot_L",
+          "preset": "footdust",
+          "clips": [
+            "walk_loop"
+          ]
+        },
+        {
+          "anchor": "FX_Foot_R",
+          "preset": "footdust",
+          "clips": [
+            "walk_loop"
+          ]
+        }
+      ],
+      "budget": {
+        "triangles": 3000
+      },
+      "stats": {
+        "triangles": 2368,
+        "meshes": 26,
+        "bytes": 234268
       }
     }
   ],

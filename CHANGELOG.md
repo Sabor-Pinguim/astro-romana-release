@@ -11,6 +11,17 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.1] - 2026-11-23
+
+### Added
+- **Nancy Grace Roman NPC 3D model & non-suited NPC pipeline (`astronaut: false`):** added [tools/modeling/characters/nancy.mjs](tools/modeling/characters/nancy.mjs) and generated [assets/models/characters/nancy.glb](assets/models/characters/nancy.glb), updated `tools/modeling/` (`build-avatars.mjs`, `characters/index.mjs`, `lib/avatar.mjs`, `lib/palette.mjs`, `validate.mjs`), `assets/models/manifest.json`, and documented her accent (`#9B5DE5`) in `docs/visual-identity.md`.
+- **Local multi-agent coordination rule:** added `SHARED_CONTEXT.md` to `.gitignore` and documented shared coordination rules in `AGENTS.md` (§10).
+
+### Changed
+- **Multiplayer card:** split into "Find a room" and "Host a room" tabs, so connecting to a server no longer pushes you into creating a room; added an active-server bar with a shortcut to Settings.
+- **Server change:** saving another server in Settings now clears and reloads the room browser.
+- Default `NET_SERVER` is now `wss://v2.35-193-156-110.sslip.io/ws` (the v2 server running next to the old one on the same VM).
+
 ## [1.4.0] - 2026-11-23
 
 ### Added

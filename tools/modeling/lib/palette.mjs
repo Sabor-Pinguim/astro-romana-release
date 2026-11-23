@@ -22,6 +22,12 @@ const BASE = {
   LedRed: { color: '#FF3B30', emissive: '#FF3B30', emissiveIntensity: 2.0, roughness: 0.3 },
   LedAmber: { color: '#FFB020', emissive: '#FFB020', emissiveIntensity: 2.0, roughness: 0.3 },
   Display: { color: '#0F2236', emissive: '#123C5A', emissiveIntensity: 0.6, roughness: 0.8 }, // a lit, matte dark screen
+  // Characters without a pressure suit (astronaut: false in characters/<id>.mjs).
+  Skin: { color: '#E9B794', roughness: 0.75 },
+  Hair: { color: '#A9A7AE', roughness: 0.9 },
+  Lens: { color: '#A8CFE8', roughness: 0.15, metalness: 0.2 },
+  Lips: { color: '#C2686E', roughness: 0.6 },
+  Wood: { color: '#D9A55B', roughness: 0.7 },
   // Rocket parts materials (references/parts/parts.md §3).
   Hull: { color: '#E9E9E4', roughness: 0.6 },
   HullBlack: { color: '#1E2024', roughness: 0.55 },
