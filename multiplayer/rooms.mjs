@@ -5,13 +5,18 @@
 // `pose` and `send` payloads are relayed as they are. It stamps the sender ({id, seat}) on what it relays, so a
 // host can check who may do an action without trusting the client.
 
-import { randomBytes, randomInt } from 'node:crypto';
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 
 const NAME = /^[A-Za-z0-9_-]{1,32}$/; // seats, phases and state keys
 const isName = v => typeof v === 'string' && NAME.test(v);
 const isNameList = (v, max) => Array.isArray(v) && v.length >= 1 && v.length <= max && v.every(isName) && new Set(v).size === v.length;
 const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const stamp = peer => ({ id: peer.id, seat: peer.seat });
+
+// Free text typed by players (room titles): no control characters, one space between words, a length cap.
+export const sanitizeText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '';
+function hashPassword(pw) { const salt = randomBytes(16); return { salt, hash: scryptSync(pw, salt, 32) }; }
+function verifyPassword(pw, rec) { return timingSafeEqual(scryptSync(pw, rec.salt, 32), rec.hash); }
 
 const ENTRY = new Set(['create', 'join', 'resume']);
 
@@ -85,8 +90,13 @@ export class RoomHub {
     if (!seats.includes(seat)) return fail(conn, 'bad-seat', 'create');
     const meta = this.checkMeta(msg.meta);
     if (meta === undefined) return fail(conn, 'bad-message', 'create');
+    if (msg.password != null && typeof msg.password !== 'string') return fail(conn, 'bad-message', 'create');
+    const code = this.newCode(), hostName = sanitizeText(meta?.name, 20);
     const room = {
-      code: this.newCode(), createdAt: this.now(), seats: [...seats], joinable: [...joinable], phase,
+      code, createdAt: this.now(), seats: [...seats], joinable: [...joinable], phase,
+      name: sanitizeText(msg.name, c.MAX_ROOM_NAME_LEN) || (hostName ? `${hostName}'s Crew` : `Mission ${code}`),
+      isPrivate: msg.isPrivate === true,
+      passwordHash: msg.password ? hashPassword(msg.password.slice(0, c.MAX_PASSWORD_LEN)) : null,
       hostId: null, peers: new Map(), state: new Map(), poses: new Map(),
     };
     const host = this.addPeer(room, conn, seat, meta);
@@ -102,6 +112,10 @@ export class RoomHub {
     if (!room.joinable.includes(room.phase)) return fail(conn, 'in-progress', 'join');
     const taken = new Set([...room.peers.values()].map(p => p.seat));
     if (taken.size >= room.seats.length) return fail(conn, 'room-full', 'join');
+    if (room.passwordHash) {
+      if (typeof msg.password !== 'string' || !msg.password) return fail(conn, 'password-required', 'join');
+      if (!verifyPassword(msg.password.slice(0, this.config.MAX_PASSWORD_LEN), room.passwordHash)) return fail(conn, 'wrong-password', 'join');
+    }
     let seat = msg.seat;
     if (seat == null) seat = room.seats.find(s => !taken.has(s));
     else if (!room.seats.includes(seat)) return fail(conn, 'bad-seat', 'join');
@@ -178,9 +192,32 @@ export class RoomHub {
     return [...room.peers.values()].map(p => ({ id: p.id, seat: p.seat, host: p.id === room.hostId, online: !!p.conn, meta: p.meta }));
   }
 
+  summary(room) {
+    const setup = room.state.get('setup'), host = room.peers.get(room.hostId);
+    return {
+      code: room.code, name: room.name, hostName: sanitizeText(host?.meta?.name, 20),
+      players: room.peers.size, maxPlayers: room.seats.length, phase: room.phase,
+      site: typeof setup?.site === 'string' ? setup.site : null, difficulty: typeof setup?.difficulty === 'string' ? setup.difficulty : null,
+      hasPassword: !!room.passwordHash, createdAt: room.createdAt,
+    };
+  }
+
+  // Rooms shown in the browser: public and still open to new players. Never includes the password.
+  listPublicRooms() {
+    return [...this.rooms.values()].filter(r => !r.isPrivate && r.joinable.includes(r.phase)).map(r => this.summary(r)).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  // One room by code (private ones too, so the client knows whether to ask for a password).
+  inspectRoom(code) {
+    const room = this.rooms.get(normalizeCode(code));
+    if (!room) return { exists: false };
+    return { exists: true, ...this.summary(room), isPrivate: room.isPrivate, joinable: room.joinable.includes(room.phase), full: room.peers.size >= room.seats.length };
+  }
+
   welcome(t, room, peer) {
     return {
       t, code: room.code, you: { id: peer.id, seat: peer.seat, token: peer.token },
+      roomName: room.name, isPrivate: room.isPrivate, hasPassword: !!room.passwordHash,
       host: room.hostId, seats: room.seats, joinable: room.joinable, phase: room.phase,
       peers: this.peerList(room),
       state: Object.fromEntries(room.state),

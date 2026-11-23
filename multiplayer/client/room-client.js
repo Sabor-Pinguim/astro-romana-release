@@ -66,6 +66,9 @@
       this.phase = null;
       this.state = {}; // key → last data from the host
       this.poses = new Map(); // peer id → { from, data }
+      this.roomName = '';
+      this.isPrivate = false;
+      this.hasPassword = false;
     }
 
     get isHost() { return !!this.you && this.you.id === this.hostId; }
@@ -87,19 +90,19 @@
 
     // ---- entering a room ------------------------------------------------------------------------------------
 
-    // Host. opts: { seat, meta, seats, joinable, phase } (the server has defaults for the current game).
+    // Host. opts: { seat, meta, seats, joinable, phase, name, isPrivate, password } (the server has defaults for the current game).
     create(opts = {}) {
-      return this.enter({ t: 'create', seat: pick(opts.seat, this.seat), meta: pick(opts.meta, this.meta), seats: opts.seats, joinable: opts.joinable, phase: opts.phase });
+      return this.enter({ t: 'create', seat: pick(opts.seat, this.seat), meta: pick(opts.meta, this.meta), seats: opts.seats, joinable: opts.joinable, phase: opts.phase, name: opts.name, isPrivate: !!opts.isPrivate, password: opts.password || undefined });
     }
 
-    // Guest. Resumes the saved seat when this tab was already in that room. opts: { seat, meta }.
+    // Guest. Resumes the saved seat when this tab was already in that room. opts: { seat, meta, password }.
     async join(code, opts = {}) {
       code = String(code || '').trim().toUpperCase();
       const saved = loadSession();
       if (saved && saved.code === code && saved.url === this.url) {
         try { return await this.resume(saved); } catch (err) { saveSession(null); }
       }
-      return this.enter({ t: 'join', code, seat: pick(opts.seat, this.seat), meta: pick(opts.meta, this.meta) });
+      return this.enter({ t: 'join', code, seat: pick(opts.seat, this.seat), meta: pick(opts.meta, this.meta), password: opts.password || undefined });
     }
 
     resume({ code, id, token }) { return this.enter({ t: 'resume', code, id, token }); }
@@ -254,6 +257,7 @@
     welcome(m) {
       this.code = m.code; this.you = m.you; this.hostId = m.host; this.seats = m.seats; this.joinable = m.joinable;
       this.phase = m.phase; this.peers = m.peers; this.state = Object.assign({}, m.state);
+      this.roomName = m.roomName || ''; this.isPrivate = !!m.isPrivate; this.hasPassword = !!m.hasPassword;
       this.poses = new Map(m.poses.map(p => [p.from.id, p]));
       saveSession({ url: this.url, code: m.code, id: m.you.id, token: m.you.token });
       this.stopReconnect();

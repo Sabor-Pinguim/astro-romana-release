@@ -12,6 +12,8 @@ Group=astro
 WorkingDirectory=/srv/astro-romana/multiplayer
 # PORT, HOST and ALLOWED_ORIGINS (written by setup.sh)
 EnvironmentFile=/etc/astro-romana/rooms.env
+# /var/lib/astro-romana: the SQLite leaderboard (DB_PATH). The only place the service may write.
+StateDirectory=astro-romana
 ExecStart=/usr/bin/node server.mjs
 # SIGTERM closes every room with reason "server" before exiting.
 KillSignal=SIGTERM

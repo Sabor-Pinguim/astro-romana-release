@@ -21,6 +21,7 @@
     tempRangeC: (a, b) => `${a}–${b} °C`,
   };
   const capFirst = s => (s ? s[0].toUpperCase() + s.slice(1) : '');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const crew = [
     // Keep HUD, labels, and lobby accents in sync with each avatar's 3D Accent material.
     {id:'helena',name:'Helena',color:'#D7263D',get role(){return t('crew.helena.role');},get quote(){return t('crew.helena.quote');},get tags(){return t('crew.helena.tags');},get perk(){return t('crew.helena.perk');},get perkText(){return t('crew.helena.perkText');}},
@@ -131,9 +132,9 @@
     ['v1','50,30 62,22 88,22 100,30 98,52 75,60 52,52'],['v2','50,30 62,22 88,22 52,52'],['v3','55,31 63,26 77,26 59,37']
   ].map(([c,p])=>`<polygon class="${c}" points="${p}"/>`).join('')}</svg>`;
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
-  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){}};
+  const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
-  const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner')renderPlanner();net.setPhase(id);lockGuest();};
+  const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id==='planner')renderPlanner();if(id==='lobby'&&state.lobbyStep==='mode')refreshRoomBrowser();net.setPhase(id);lockGuest();};
   let toastTimer;
   const toast = message => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);};
 
@@ -152,6 +153,7 @@
     const next = net.isGuest ? 'crew' : (LOBBY_STEPS.includes(step) ? step : 'mode');
     state.lobbyStep = next;
     renderLobbyStepper();
+    if(next==='mode')refreshRoomBrowser();
     if(next==='site')window.dispatchEvent(new CustomEvent('astro:site',{detail:{id:state.site,focus:true,arrive:true}}));
     if(next==='crew')renderDetail();
   }
@@ -239,38 +241,220 @@
   }
   const ROBOT_ICON = `<svg viewBox="0 0 40 34" aria-hidden="true"><polygon points="18,0 22,0 21,7 19,7" fill="#F59E0B"/><polygon points="17,0 23,0 20,4" fill="#FCE8A6"/><polygon points="6,7 34,7 38,13 38,27 32,33 8,33 2,27 2,13" fill="#281147"/><polygon points="6,7 20,7 20,33 8,33 2,27 2,13" fill="#3a2163"/><polygon points="7,14 33,14 31,24 9,24" fill="#17183B"/><polygon points="11,17 17,17 16,21 12,21" fill="#7EDAC2"/><polygon points="23,17 29,17 28,21 24,21" fill="#7EDAC2"/><polygon points="14,27 26,27 25,30 15,30" fill="#9B5DE5"/></svg>`;
   const COOP_ICON = `<svg viewBox="0 0 44 34" aria-hidden="true"><polygon points="22,2 30,10 22,18 14,10" fill="#F59E0B"/><polygon points="22,2 26,10 22,18 14,10" fill="#FCE8A6"/><polygon points="8,16 16,24 8,32 0,24" fill="#7EDAC2"/><polygon points="36,16 44,24 36,32 28,24" fill="#1FA2FF"/><polygon points="14,13 18,16 12,22 9,19" fill="#9B5DE5"/><polygon points="30,13 35,19 32,22 26,16" fill="#9B5DE5"/></svg>`;
+  const browserState = { status: 'idle', rooms: [], fetchedAt: 0 };
+  let draftRoomName = '', draftRoomPassword = '', draftRoomPrivate = false, draftJoinCode = '';
+
+  function ensurePlayerName() {
+    const input = $('#mp-player-name');
+    if (input && net.setPlayerName) net.setPlayerName(input.value);
+    const name = net.getPlayerName?.() || '';
+    if (name.length >= 2) return name;
+    toast(t('lobby.roomBrowser.nameRequired'));
+    input?.focus();
+    return null;
+  }
+
+  function promptRoomPassword(code) {
+    const dlg = $('#room-password-dialog'), input = $('#room-pw-input'), form = $('#room-pw-form'), cancel = $('#room-pw-cancel'), desc = $('#room-pw-desc');
+    if (!dlg || !input || !form) return Promise.resolve(null);
+    desc.textContent = t('lobby.roomBrowser.passwordDesc', { code: String(code || '').toUpperCase() });
+    input.value = '';
+    return new Promise(resolve => {
+      let settled = false;
+      const done = val => {
+        if (settled) return;
+        settled = true;
+        form.removeEventListener('submit', onSubmit);
+        cancel?.removeEventListener('click', onCancel);
+        dlg.removeEventListener('cancel', onCancel);
+        dlg.removeEventListener('click', onBackdrop);
+        if (dlg.open) dlg.close();
+        resolve(val);
+      };
+      const onSubmit = e => { e.preventDefault(); done(input.value); };
+      const onCancel = e => { e.preventDefault(); done(null); };
+      const onBackdrop = e => { if (e.target === dlg) done(null); };
+      form.addEventListener('submit', onSubmit);
+      cancel?.addEventListener('click', onCancel);
+      dlg.addEventListener('cancel', onCancel);
+      dlg.addEventListener('click', onBackdrop);
+      if (!dlg.open) dlg.showModal();
+      input.focus();
+    });
+  }
+
+  async function joinRoomWithPrompt(rawCode, needsPassword = false, skipNameCheck = false) {
+    const code = String(rawCode || '').trim().toUpperCase();
+    if (!code) return;
+    if (!skipNameCheck && !ensurePlayerName()) return;
+    let password;
+    if (needsPassword) {
+      password = await promptRoomPassword(code);
+      if (password === null) return;
+    }
+    try {
+      await enterRoom(() => net.join(code, password ? { password } : {}), undefined, true);
+    } catch (err) {
+      if (err?.code === 'password-required') {
+        const pw = await promptRoomPassword(code);
+        if (pw !== null) await enterRoom(() => net.join(code, { password: pw }));
+      } else {
+        toast(net.message(err));
+      }
+    }
+  }
+
+  function paintRoomBrowser() {
+    const list = $('#room-browser-list');
+    if (!list) return;
+    if (browserState.status === 'loading') {
+      list.innerHTML = `<div class="room-browser-empty">${t('lobby.roomBrowser.loading')}</div>`;
+      return;
+    }
+    if (browserState.status === 'offline') {
+      list.innerHTML = `<div class="room-browser-empty">${t('lobby.roomBrowser.offline')}</div>`;
+      return;
+    }
+    if (!browserState.rooms.length) {
+      list.innerHTML = `<div class="room-browser-empty">${t('lobby.roomBrowser.empty')}</div>`;
+      return;
+    }
+    list.innerHTML = browserState.rooms.map(rm => {
+      const siteTag = rm.site && SITES_INFO[rm.site] ? SITES_INFO[rm.site].name : '';
+      const diffTag = rm.difficulty && difficulty[rm.difficulty] ? difficulty[rm.difficulty].label : '';
+      const host = rm.hostName ? esc(t('lobby.roomBrowser.hostLabel', { name: rm.hostName })) : esc(rm.code);
+      return `<div class="room-browser-item">
+        <div class="room-browser-info">
+          <strong>${rm.hasPassword ? '🔒 ' : ''}${esc(rm.name || rm.code)}</strong>
+          <div class="room-browser-meta">
+            <span>${esc(rm.code)}</span><span>· ${host}</span>
+            <span class="tag">${esc(t('lobby.roomBrowser.slots', { players: rm.players, max: rm.maxPlayers }))}</span>
+            ${siteTag ? `<span class="tag">${esc(siteTag)}</span>` : ''}
+            ${diffTag ? `<span class="tag">${esc(diffTag)}</span>` : ''}
+            ${rm.hasPassword ? `<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
+          </div>
+        </div>
+        <button class="button secondary" type="button" data-join-room="${esc(rm.code)}" data-join-locked="${rm.hasPassword ? '1' : ''}" ${rm.players >= rm.maxPlayers ? 'disabled' : ''}>${t('lobby.roomBrowser.joinBtn')}</button>
+      </div>`;
+    }).join('');
+    $$('[data-join-room]', list).forEach(btn => btn.addEventListener('click', () => {
+      joinRoomWithPrompt(btn.dataset.joinRoom, btn.dataset.joinLocked === '1');
+    }));
+  }
+
+  async function refreshRoomBrowser(force = false) {
+    if (!net.enabled || !net.available?.() || net.mode !== 'solo') return;
+    if (!force && browserState.status === 'ok' && Date.now() - browserState.fetchedAt < 2500) {
+      paintRoomBrowser();
+      return;
+    }
+    browserState.status = 'loading';
+    paintRoomBrowser();
+    try {
+      const data = await net.listRooms();
+      browserState.rooms = Array.isArray(data?.rooms) ? data.rooms : [];
+      browserState.status = 'ok';
+      browserState.fetchedAt = Date.now();
+    } catch {
+      browserState.status = 'offline';
+    }
+    paintRoomBrowser();
+  }
+
   function renderModeStep(){
     const soloVis = $('#mode-solo-visual'), mpVis = $('#mode-mp-visual'), mpCta = $('#mode-mp-cta'), mpFoot = $('#mode-mp-foot');
-    if(!mpCta || !mpFoot) return;
+    if(!mpCta || !mpFoot || !mpVis) return;
     if(soloVis && !soloVis.childElementCount){
       soloVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top is-player">Helena · You</span><div class="mode-avatar is-hero" style="--crew:${crew[0].color}">${astronaut(crew[0])}</div></div><span class="mode-plus">+</span><div class="mode-figure-group"><span class="mode-badge-top is-ai">${ROBOT_ICON} 3 AI Crew</span><div class="mode-trio">${crew.slice(1).map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
-    }
-    if(mpVis && !mpVis.childElementCount){
-      mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} Co-op Squad</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
     }
     const soloCard = $('[data-mode-card="solo"]'), mpCard = $('[data-mode-card="multiplayer"]');
     soloCard?.classList.toggle('selected', net.mode === 'solo');
     mpCard?.classList.toggle('selected', net.mode !== 'solo');
     const soloBtn = $('#mode-solo-btn');
-    if(soloBtn) soloBtn.innerHTML = net.isHost ? 'Switch to Singleplayer <span aria-hidden="true">→</span>' : 'Play Singleplayer <span aria-hidden="true">→</span>';
-    if(!net.enabled || !net.available()){
-      mpCta.innerHTML = `<button class="button amber" type="button" disabled>Create room (Host) <span aria-hidden="true">→</span></button>`;
-      mpFoot.innerHTML = `<span class="mode-foot-note">No room server configured (?server=wss://…/ws).</span>`;
+    if(soloBtn) soloBtn.innerHTML = net.isHost ? t('lobby.roomBrowser.switchSoloBtn') : t('lobby.roomBrowser.playSoloBtn');
+
+    const netReady = net.enabled && net.available();
+    const langCode = window.ASTRO_I18N?.language || 'en';
+    const viewKey = `${netReady}|${net.mode}|${net.code || ''}|${langCode}`;
+
+    if(!netReady){
+      mpVis.classList.remove('is-browser');
+      if(mpCta.dataset.viewKey !== viewKey){
+        mpCta.dataset.viewKey = viewKey;
+        mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} Co-op Squad</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
+        mpCta.innerHTML = `<button class="button amber" type="button" disabled>${t('lobby.roomBrowser.createBtn')}</button>`;
+        mpFoot.innerHTML = `<span class="mode-foot-note">${t('lobby.room.noServer')}</span>`;
+      }
       return;
     }
+
     if(net.mode === 'solo'){
-      mpCta.innerHTML = `<button class="button amber" type="button" id="mode-create-btn">Create room (Host) <span aria-hidden="true">→</span></button>`;
-      mpFoot.innerHTML = `<span class="micro">Join</span><div class="mode-join-row"><input id="mode-room-code" maxlength="4" placeholder="CODE" aria-label="Room code" autocomplete="off"><button class="button" type="button" id="mode-join-btn">Join room</button></div>`;
-      $('#mode-create-btn').addEventListener('click', () => enterRoom(() => net.create('lobby'), () => setLobbyStep('difficulty')));
-      $('#mode-join-btn').addEventListener('click', () => enterRoom(() => net.join($('#mode-room-code').value)));
-      $('#mode-room-code').addEventListener('keydown', e => { if(e.key === 'Enter') $('#mode-join-btn').click(); });
+      mpVis.classList.add('is-browser');
+      if(mpCta.dataset.viewKey !== viewKey){
+        mpCta.dataset.viewKey = viewKey;
+        const savedName = net.getPlayerName?.() || '';
+        mpVis.innerHTML = `
+          <div class="mp-name-bar">
+            <label for="mp-player-name">${t('lobby.roomBrowser.playerNameLabel')}</label>
+            <input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">
+          </div>
+          <div class="mp-browser-head">
+            <span class="micro">${t('lobby.roomBrowser.openRooms')}</span>
+            <button class="button quiet" type="button" id="room-browser-refresh">↻ ${t('lobby.roomBrowser.refresh')}</button>
+          </div>
+          <div class="room-browser-list" id="room-browser-list" aria-live="polite"></div>`;
+        mpCta.innerHTML = `
+          <div class="mp-create-box">
+            <div class="mp-create-inputs">
+              <input class="mp-input" id="mp-room-name" maxlength="32" autocomplete="off" value="${esc(draftRoomName)}" aria-label="${esc(t('lobby.roomBrowser.roomNameAria'))}" placeholder="${esc(t('lobby.roomBrowser.roomNamePlaceholder'))}">
+              <input class="mp-input" id="mp-room-password" type="password" maxlength="32" autocomplete="new-password" value="${esc(draftRoomPassword)}" aria-label="${esc(t('lobby.roomBrowser.passwordAria'))}" placeholder="${esc(t('lobby.roomBrowser.passwordPlaceholder'))}">
+              <label class="mp-check"><input type="checkbox" id="mp-room-private" ${draftRoomPrivate ? 'checked' : ''}><span>${t('lobby.roomBrowser.privateToggle')}</span></label>
+            </div>
+            <button class="button amber" type="button" id="mode-create-btn">${t('lobby.roomBrowser.createBtn')}</button>
+          </div>`;
+        mpFoot.innerHTML = `<span class="micro">${t('lobby.room.join')}</span><div class="mode-join-row"><input id="mode-room-code" maxlength="4" value="${esc(draftJoinCode)}" placeholder="${esc(t('lobby.room.codePlaceholder'))}" aria-label="${esc(t('lobby.room.codeAria'))}" autocomplete="off"><button class="button" type="button" id="mode-join-btn">${t('lobby.roomBrowser.joinBtn')}</button></div>`;
+
+        $('#mp-player-name').addEventListener('input', e => { net.setPlayerName?.(e.target.value); });
+        $('#mp-player-name').addEventListener('blur', e => { e.target.value = net.setPlayerName?.(e.target.value) ?? e.target.value; });
+        $('#mp-room-name').addEventListener('input', e => { draftRoomName = e.target.value; });
+        $('#mp-room-password').addEventListener('input', e => { draftRoomPassword = e.target.value; });
+        $('#mp-room-private').addEventListener('change', e => { draftRoomPrivate = e.target.checked; });
+        $('#mode-room-code').addEventListener('input', e => { draftJoinCode = e.target.value; });
+        $('#room-browser-refresh').addEventListener('click', () => refreshRoomBrowser(true));
+        $('#mode-create-btn').addEventListener('click', () => {
+          if (!ensurePlayerName()) return;
+          enterRoom(() => net.create('lobby', {
+            name: $('#mp-room-name').value,
+            password: $('#mp-room-password').value,
+            isPrivate: $('#mp-room-private').checked,
+          }), () => setLobbyStep('difficulty'));
+        });
+        $('#mode-join-btn').addEventListener('click', () => joinRoomWithPrompt($('#mode-room-code').value));
+        $('#mode-room-code').addEventListener('keydown', e => { if(e.key === 'Enter') $('#mode-join-btn').click(); });
+      }
+      paintRoomBrowser();
+      if(browserState.status === 'idle') refreshRoomBrowser();
       return;
     }
-    mpCta.innerHTML = `<button class="button amber" type="button" id="mode-continue-room">Continue as Host <span aria-hidden="true">→</span></button>`;
-    mpFoot.innerHTML = `<div class="mode-room-active"><span class="micro">Room</span><strong class="room-code">${net.code}</strong><button class="button quiet" type="button" id="mode-copy-btn">Copy link</button><button class="button quiet" type="button" id="mode-leave-btn">Leave</button></div>`;
-    $('#mode-copy-btn').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(net.link); toast('Invite link copied.'); } catch { prompt('Copy the invite link:', net.link); } });
-    $('#mode-continue-room').addEventListener('click', () => setLobbyStep('difficulty'));
-    $('#mode-leave-btn').addEventListener('click', () => { net.leave(); });
+
+    mpVis.classList.remove('is-browser');
+    if(mpCta.dataset.viewKey !== viewKey){
+      mpCta.dataset.viewKey = viewKey;
+      mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} Co-op Squad</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
+      mpCta.innerHTML = `<button class="button amber" type="button" id="mode-continue-room">${t('lobby.roomBrowser.continueHostBtn')}</button>`;
+      mpFoot.innerHTML = `<div class="mode-room-active">
+        <span class="micro">${t('lobby.room.label')}</span>
+        <strong class="room-code">${esc(net.code)}</strong>
+        ${net.roomName ? `<span class="tag">${esc(net.roomName)}</span>` : ''}
+        ${net.hasPassword ? `<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
+        ${net.isPrivate ? `<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>` : ''}
+        <button class="button quiet" type="button" id="mode-copy-btn">${t('lobby.roomBrowser.copyLinkShort')}</button>
+        <button class="button quiet" type="button" id="mode-leave-btn">${t('lobby.room.leave')}</button>
+      </div>`;
+      $('#mode-copy-btn').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(net.link); toast(t('lobby.room.linkCopied')); } catch { prompt(t('lobby.room.copyPrompt'), net.link); } });
+      $('#mode-continue-room').addEventListener('click', () => setLobbyStep('difficulty'));
+      $('#mode-leave-btn').addEventListener('click', () => { net.leave(); });
+    }
   }
   function renderDifficultyStep(){
     const grid = $('#difficulty-buttons');
@@ -302,36 +486,47 @@
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
     $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.isGuest&&net.joinable&&!seat.player;
-      return `<article class="crew-card ${picked?'selected':''}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${seat.text}</span></div><div class="crew-actions">${take?`<button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button>`:''}<button class="pick" type="button" data-pick="${p.id}" aria-label="${t('lobby.detailsBtn')}: ${p.name}" aria-pressed="${picked}">${t('lobby.detailsBtn')}</button></div></article>`;}).join('');
+      return `<article class="crew-card ${picked?'selected':''}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.text)}</span></div><div class="crew-actions">${take?`<button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button>`:''}<button class="pick" type="button" data-pick="${p.id}" aria-label="${t('lobby.detailsBtn')}: ${p.name}" aria-pressed="${picked}">${t('lobby.detailsBtn')}</button></div></article>`;}).join('');
     $$('#crew-grid [data-pick]').forEach(b=>b.addEventListener('click',()=>{state.detail={kind:'crew',id:b.dataset.pick};renderLobby();}));
     $$('#crew-grid [data-take]').forEach(b=>b.addEventListener('click',()=>net.setSeat(b.dataset.take)));
     renderModeStep();renderDifficultyStep();renderSiteStep();renderRoom();renderLobbyStepper();renderDetail();syncSetup();
   }
   // Who plays each crew member: the room's peers, or (solo) the player as Helena and the AI for the rest.
   function seatStatus(id){
-    if(net.mode==='solo'){const host=id===crew[0].id;return {player:host,text:host?t('lobby.hostPlayer'):t('lobby.aiNpc')};}
+    if(net.mode==='solo'){const host=id===crew[0].id,pName=net.getPlayerName?.();return {player:host,text:host?(pName?`${pName} · ${t('lobby.hostPlayer')}`:t('lobby.hostPlayer')):t('lobby.aiNpc')};}
     const peer=net.peerOf(id);
     if(!peer)return {player:false,text:t('lobby.aiNpc')};
-    const you=peer.id===net.you.id?t('lobby.seatYou'):'';
-    return {player:true,text:(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'))+(peer.online?'':t('lobby.seatOffline'))+you};
+    const pName=net.sanitizePlayerName?.(peer.meta?.name)||'';
+    const roleText=(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'))+(peer.online?'':t('lobby.seatOffline'))+(peer.id===net.you.id?t('lobby.seatYou'):'');
+    return {player:true,text:pName?`${pName} · ${roleText}`:roleText};
   }
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
-  // Room panel in Step 3: only shown in Multiplayer (code, invite link, leave). Solo stays clean.
+  // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus editable name if joined by link).
   function renderRoom(){
     const panel=$('#room-panel');if(!panel)return;
     if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';return;}
+    if(panel.contains(document.activeElement)) return;
     panel.hidden=false;
     const lost=net.status!=='open';
-    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${net.code}</strong><button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    const curName=net.getPlayerName?.()||'';
+    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">🔒 ${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button><div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" value="${esc(curName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{net.leave();});
+    $('#room-player-name').addEventListener('change',e=>{
+      const clean=net.setPlayerName?.(e.target.value)??e.target.value;
+      e.target.value=clean;
+      renderLobby();
+    });
   }
-  async function enterRoom(go, onSuccess){
-    $$('#mode-mp-cta button, #mode-mp-foot button, #room-panel button').forEach(b=>{b.disabled=true;});
+  async function enterRoom(go, onSuccess, rethrow = false){
+    $$('#mode-mp-cta button, #mode-mp-foot button, #room-panel button, [data-join-room]').forEach(b=>{b.disabled=true;});
     try{
       await go();
       if(onSuccess) onSuccess();
-    }catch(err){toast(net.message(err));}
+    }catch(err){
+      if(rethrow){ renderLobby(); throw err; }
+      toast(net.message(err));
+    }
     renderLobby();
   }
   function renderDetail(){
@@ -701,6 +896,10 @@
     const go=()=>{setLobbyStep(net.isGuest?'crew':net.isHost?'difficulty':'mode');showScreen('lobby');};
     window.ASTRO_LAUNCH?window.ASTRO_LAUNCH().then(go):go();
   });
+  $('#leaderboard-button')?.addEventListener('click',()=>openLeaderboard());
+  $('#leaderboard-back')?.addEventListener('click',()=>showScreen('menu'));
+  $('#leaderboard-refresh')?.addEventListener('click',()=>loadLeaderboardScreen());
+  $('#results-open-lb')?.addEventListener('click',()=>openLeaderboard(net.mode==='solo'?'solo':'server'));
   $('#settings-button')?.addEventListener('click',()=>{window.ASTRO_SETTINGS?.syncUI();showScreen('settings');});
   $('#settings-back')?.addEventListener('click',()=>showScreen('menu'));
   $('#lobby-back').addEventListener('click',()=>{
@@ -1121,6 +1320,7 @@
 
     function startFlight() {
       flight.design = captureDesign();
+      flight.missionId = 'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
       flightLog.length = 0; remoteInput.clear();
       flight.liftoffSeconds = flight.design.ready && flight.design.twr >= TWR_BARE() ? ascentSeconds(flight.design.twr) : 0;
       flight.ascent = ascentPlan(flight.design);
@@ -2016,9 +2216,39 @@
         </div>`).join('');
 
       // Guests run this same function on the host's numbers (it has no randomness).
-      net.emit({ k: 'results', forced: !!forcedTimeout, flight: flightSnapshot(), surf: { completed: [...surf.completed], stranded: surf.stranded, strandedIds: surf.strandedIds, timerSec: surf.timerSec } });
+      const missionId = flight.missionId || ('m-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8));
+      net.emit({ k: 'results', missionId, forced: !!forcedTimeout, flight: flightSnapshot(), surf: { completed: [...surf.completed], stranded: surf.stranded, strandedIds: surf.strandedIds, timerSec: surf.timerSec } });
       showScreen('results');
       window.dispatchEvent(new CustomEvent('astro:results', { detail: { ranked, grade } }));
+
+      const lbPlayers = net.mode === 'solo'
+        ? [{ playerName: net.getPlayerName?.() || t('leaderboard.soloDefaultName'), seat: 'helena', score: helenaPts, grade: ranked.find(r => r.id === 'helena').grade, stranded: strandedSet.has('helena') }]
+        : net.peers.map(p => {
+            const member = ranked.find(r => r.id === p.seat);
+            const pName = net.sanitizePlayerName?.(p.meta?.name) || '';
+            return {
+              playerName: pName.length >= 2 ? pName : (member?.name || capFirst(p.seat)),
+              seat: p.seat,
+              score: member?.pts ?? 0,
+              grade: member?.grade ?? 'F',
+              stranded: !!member?.stranded,
+            };
+          });
+      const lbRecord = {
+        id: missionId,
+        roomCode: net.code || null,
+        mode: net.mode === 'solo' ? 'solo' : 'multiplayer',
+        site: state.site,
+        difficulty: state.difficulty,
+        grade,
+        teamScore: total,
+        tasksDone,
+        tasksTotal: surf.tasks.length,
+        strandedCount,
+        players: lbPlayers,
+        createdAt: Date.now(),
+      };
+      submitAndShowResultsLeaderboard(lbRecord);
     }
 
     // Mission failed: on the pad (liftoffOf: no ignition, or thrust below weight) or after a Δv abort (abortOf: no orbit,
@@ -2056,6 +2286,7 @@
         <div class="podium-col"><div class="podium-step is-empty" style="padding-top:${(4 - i) * 10}px">${pos} · —</div></div>`).join('');
       showScreen('results');
       window.dispatchEvent(new CustomEvent('astro:results', { detail: { ranked: [], grade: 'F', failed: true } }));
+      loadResultsLeaderboard(null, net.mode === 'solo' ? 'solo' : 'server');
     }
 
     function hasEdlLabel(d) {
@@ -2282,6 +2513,7 @@
         window.ASTRO_SURFACE?.playDeparture?.(data.strandedIds || []);
       } else if (data.k === 'results') {
         guestFlight = false; guestSurface = false;
+        flight.missionId = data.missionId || flight.missionId;
         for (const k of FLIGHT_FIELDS) if (data.flight && k in data.flight) flight[k] = data.flight[k];
         flight.active = false;
         surf.active = false;
@@ -2375,9 +2607,13 @@
     lastSetup='';
     if(role==='guest'&&!GUEST_SCREENS.includes(state.screen)&&state.screen!=='results'){SIM.leaveMission();showScreen('menu');} // a guest mid-mission has nothing left to draw
     role='solo';
+    browserState.status='idle';
     lockGuest();renderLobby();if(reason!=='left')toast(net.message(reason));
   });
-  net.on('error',err=>toast(net.message(err)));
+  net.on('error',err=>{
+    if(err?.code==='password-required'&&err.roomCode){joinRoomWithPrompt(err.roomCode,true,true);return;}
+    toast(net.message(err));
+  });
   // Host: a guest's planner action, checked against the list of rocket actions (the server stamps who sent it).
   net.on('act',(data,from)=>{
     if(!net.isHost||!data)return;
@@ -2403,7 +2639,147 @@
     const audioBtn=$('#audio-toggle-cockpit');
     if(audioBtn)audioBtn.textContent=SIM.isMuted?t('cockpit.audioOff'):t('cockpit.audioOn');
     SIM.refreshUI();
+    if(state.screen==='leaderboard')loadLeaderboardScreen();
   });
+
+  // ---- Leaderboards (Server SQLite Co-op + Local Solo localStorage) ----------------------------------------
+  const lbState = { source: 'server', tab: 'missions', difficulty: 'all', site: 'all' };
+  let lastSubmittedMissionId = '';
+
+  function renderLeaderboardRows(entries, tab, highlightId = null) {
+    const myLower = (net.getPlayerName?.() || '').toLowerCase();
+    return entries.map((entry, idx) => {
+      const rank = `#${idx + 1}`;
+      if (tab === 'players') {
+        const isMe = !!(myLower && String(entry.playerName || '').toLowerCase() === myLower);
+        const seatName = crew.find(c => c.id === entry.lastSeat)?.name || capFirst(entry.lastSeat || '');
+        return `<div class="lb-row${isMe ? ' lb-me' : ''}">
+          <span class="leader-pos">${rank}</span>
+          <div class="lb-main-col">
+            <strong>${esc(entry.playerName)}</strong>
+            <div class="lb-tags">
+              ${isMe ? `<span class="tag is-you">${t('leaderboard.youTag')}</span>` : ''}
+              <span class="tag">${esc(t('leaderboard.missionsCount', { count: entry.missions }))}</span>
+              ${seatName ? `<span class="tag">${esc(seatName)}</span>` : ''}
+            </div>
+          </div>
+          <span class="lb-score">${t('results.ptsSuffix', { pts: number(entry.bestScore) })}</span>
+          <span class="leader-grade">${esc(entry.bestGrade)}</span>
+        </div>`;
+      }
+      const players = Array.isArray(entry.players) ? entry.players : [];
+      const isMe = !!(highlightId && entry.id === highlightId) || !!(myLower && players.some(p => String(p.playerName || '').toLowerCase() === myLower));
+      const namesLine = players.map(p => p.playerName).join(' · ') || '—';
+      const siteLabel = SITES_INFO[entry.site]?.name || entry.site || '';
+      const diffLabel = difficulty[entry.difficulty]?.label || entry.difficulty || '';
+      return `<div class="lb-row${isMe ? ' lb-me' : ''}">
+        <span class="leader-pos">${rank}</span>
+        <div class="lb-main-col">
+          <strong>${esc(namesLine)}</strong>
+          <div class="lb-tags">
+            ${isMe ? `<span class="tag is-you">${t('leaderboard.youTag')}</span>` : ''}
+            ${siteLabel ? `<span class="tag">${esc(siteLabel)}</span>` : ''}
+            ${diffLabel ? `<span class="tag">${esc(diffLabel)}</span>` : ''}
+            <span class="tag">${esc(t('leaderboard.tasksCount', { done: entry.tasksDone ?? 0, total: entry.tasksTotal ?? 4 }))}</span>
+            ${entry.strandedCount ? `<span class="tag is-warn">${esc(t('leaderboard.strandedTag', { count: entry.strandedCount }))}</span>` : `<span class="tag">${t('leaderboard.allReturnedTag')}</span>`}
+            ${entry.roomCode ? `<span class="tag">${esc(entry.roomCode)}</span>` : ''}
+          </div>
+        </div>
+        <span class="lb-score">${t('results.ptsSuffix', { pts: number(entry.teamScore) })}</span>
+        <span class="leader-grade">${esc(entry.grade)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadResultsLeaderboard(highlightId, source) {
+    const wrap = $('#results-server-lb-wrap'), list = $('#results-server-lb'), status = $('#results-server-lb-status'), title = $('#results-server-lb-title');
+    if (!wrap || !list || !status || !title) return;
+    title.textContent = source === 'solo' ? t('results.serverLb.titleSolo') : t('results.serverLb.titleServer');
+    if (source === 'solo') {
+      const res = net.getSoloLeaderboard?.({ tab: 'missions', limit: 5 }) || { entries: [] };
+      status.hidden = res.entries.length > 0;
+      status.textContent = res.entries.length ? '' : t('results.serverLb.empty');
+      list.innerHTML = renderLeaderboardRows(res.entries, 'missions', highlightId);
+      return;
+    }
+    status.hidden = false;
+    status.textContent = t('results.serverLb.loading');
+    list.innerHTML = '';
+    try {
+      const res = await net.getLeaderboard?.({ tab: 'missions', limit: 5 });
+      const entries = res?.entries || [];
+      status.hidden = entries.length > 0;
+      status.textContent = entries.length ? '' : t('results.serverLb.empty');
+      list.innerHTML = renderLeaderboardRows(entries, 'missions', highlightId);
+    } catch {
+      status.hidden = false;
+      status.textContent = t('results.serverLb.offline');
+    }
+  }
+
+  function submitAndShowResultsLeaderboard(record) {
+    if (record.mode === 'solo') {
+      if (lastSubmittedMissionId !== record.id) {
+        lastSubmittedMissionId = record.id;
+        net.recordSoloScore?.(record);
+      }
+      loadResultsLeaderboard(record.id, 'solo');
+      return;
+    }
+    if (net.isHost) {
+      if (lastSubmittedMissionId !== record.id) {
+        lastSubmittedMissionId = record.id;
+        net.submitScore?.(record).catch(() => null).finally(() => loadResultsLeaderboard(record.id, 'server'));
+      } else {
+        loadResultsLeaderboard(record.id, 'server');
+      }
+    } else {
+      window.setTimeout(() => loadResultsLeaderboard(record.id, 'server'), 650);
+    }
+  }
+
+  function syncLeaderboardControls() {
+    $$('#lb-source [data-lb-source]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lbSource === lbState.source)));
+    $$('#lb-tab [data-lb-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lbTab === lbState.tab)));
+    const diffSel = $('#lb-filter-difficulty'), siteSel = $('#lb-filter-site');
+    if (diffSel) diffSel.value = lbState.difficulty;
+    if (siteSel) siteSel.value = lbState.site;
+  }
+
+  async function loadLeaderboardScreen() {
+    syncLeaderboardControls();
+    const list = $('#leaderboard-list'), status = $('#leaderboard-status');
+    if (!list || !status) return;
+    const opts = { tab: lbState.tab, difficulty: lbState.difficulty, site: lbState.site, limit: 25 };
+    if (lbState.source === 'solo') {
+      const res = net.getSoloLeaderboard?.(opts) || { entries: [] };
+      const entries = res.entries || [];
+      status.textContent = entries.length ? t('leaderboard.countSummary', { count: entries.length }) : t('leaderboard.emptySolo');
+      list.innerHTML = renderLeaderboardRows(entries, lbState.tab);
+      return;
+    }
+    status.textContent = t('leaderboard.loading');
+    list.innerHTML = '';
+    try {
+      const res = await net.getLeaderboard?.(opts);
+      const entries = res?.entries || [];
+      status.textContent = entries.length ? t('leaderboard.countSummary', { count: entries.length }) : t('leaderboard.emptyServer');
+      list.innerHTML = renderLeaderboardRows(entries, lbState.tab);
+    } catch {
+      status.textContent = t('leaderboard.offlineServer');
+    }
+  }
+
+  function openLeaderboard(source = null) {
+    if (source === 'solo' || source === 'server') lbState.source = source;
+    showScreen('leaderboard');
+    loadLeaderboardScreen();
+  }
+
+  $$('#lb-source [data-lb-source]').forEach(b => b.addEventListener('click', () => { lbState.source = b.dataset.lbSource; loadLeaderboardScreen(); }));
+  $$('#lb-tab [data-lb-tab]').forEach(b => b.addEventListener('click', () => { lbState.tab = b.dataset.lbTab; loadLeaderboardScreen(); }));
+  $('#lb-filter-difficulty')?.addEventListener('change', e => { lbState.difficulty = e.target.value; loadLeaderboardScreen(); });
+  $('#lb-filter-site')?.addEventListener('change', e => { lbState.site = e.target.value; loadLeaderboardScreen(); });
 
   selectWorld(state.world);paintArt();renderLobby();renderBadge();renderPlanner();setupStars();lockGuest();net.start();
   if(!DATA)fetch('assets/models/parts/manifest.json').then(r=>r.json()).then(m=>{useData(m);renderBadge();renderDifficultyStep();renderPlanner();}).catch(()=>toast(t('planner.loadPartsError')));

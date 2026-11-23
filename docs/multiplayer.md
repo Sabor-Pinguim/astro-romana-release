@@ -26,6 +26,15 @@ Players can only **join** the room up to the `planner`. After the launch, only s
 
 ## What changes, by file
 
+- **Room browser, private & password rooms:** hosts can give a room a name, set an optional password (`scrypt` salted hash on the server), and mark `isPrivate: true` (hidden from the public browser, accessible via 4-letter code or `?room=CODE`).
+  - `GET /api/rooms` lists public joinable rooms (`code`, `name`, `hostName`, `players`, `maxPlayers`, `site`, `difficulty`, `hasPassword`, `createdAt`).
+  - `GET /api/rooms/:code` checks a specific room (including private ones) so guests know before connecting whether a password is needed.
+- **Astronaut name & Leaderboards (`localStorage` + SQLite):**
+  - Every multiplayer player enters a name (2–20 chars, stored in `localStorage` under `astro-romana-player-name`) and sends it in `meta.name`.
+  - Finished co-op missions are submitted once by the host via `POST /api/leaderboard` and persisted in **SQLite** (`node:sqlite` in `multiplayer/db.mjs`, `WAL` mode, stored at `DB_PATH=/var/lib/astro-romana/astro.sqlite` via `StateDirectory=astro-romana` in `astro-rooms.service`). `GET /api/leaderboard` serves Top Missions and Top Astronauts filtered by difficulty and site.
+  - Solo runs stay local in `localStorage` (`astro-romana-solo-leaderboard`) and appear in the **Local · Solo** view of the `#leaderboard` screen and on `#results`.
+  - Caddy (`multiplayer/deploy/Caddyfile.site`) reverse-proxies `/ws`, `/health`, and `/api/*` to the Node room server on `127.0.0.1:8787`, with CORS controlled by `ALLOWED_ORIGINS`.
+
 ### 1. Loading the client: `index.html` and `web/net.js` ✅
 - `index.html` loads `multiplayer/client/room-client.js` and then `web/net.js`, both **before** `web/app.js`. They are classic scripts and work on `file://`.
 - `web/net.js` connects the `RoomClient` to the game and exposes `window.ASTRO_NET`:

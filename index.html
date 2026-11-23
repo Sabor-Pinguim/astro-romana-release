@@ -16,7 +16,7 @@
 <main id="app">
   <section id="menu" class="screen active" aria-labelledby="game-title">
     <div class="space-art" aria-hidden="true"><canvas class="starfield" id="stars"></canvas><div class="mars"></div></div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.3.1</div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span data-i18n="menu.play">Play</span><span aria-hidden="true">↗</span></button><button class="button secondary" id="leaderboard-button" type="button"><span data-i18n="menu.leaderboard">Leaderboards</span><span aria-hidden="true">★</span></button><button class="button secondary" id="settings-button" type="button"><span data-i18n="menu.settings">Settings</span><span class="settings-glyph" aria-hidden="true"></span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="coordinates" data-i18n="menu.version">v1.4.0</div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -100,6 +100,56 @@
         <button class="button quiet" id="settings-reset-all" type="button" data-i18n="settings.resetAll">Reset all defaults</button>
       </div>
     </footer>
+  </section>
+
+  <section id="leaderboard" class="screen" aria-labelledby="leaderboard-title">
+    <header class="app-header">
+      <div class="header-title">
+        <button class="button quiet" id="leaderboard-back" type="button" data-i18n="leaderboard.back">← Menu</button>
+        <div>
+          <div class="eyebrow" data-i18n="leaderboard.eyebrow">Global &amp; local ranking</div>
+          <h2 id="leaderboard-title" data-i18n="leaderboard.title">Mission Leaderboards</h2>
+        </div>
+      </div>
+      <div class="header-side">
+        <button class="button secondary" id="leaderboard-refresh" type="button" data-i18n="leaderboard.refresh">Refresh ↻</button>
+      </div>
+    </header>
+    <div class="settings-main lb-main">
+      <div class="settings-card slab lb-card">
+        <div class="lb-controls">
+          <div class="lb-toggles">
+            <div class="segmented" id="lb-source" role="group" data-i18n-aria="leaderboard.sourceAria" aria-label="Leaderboard source">
+              <button type="button" data-lb-source="server" aria-pressed="true" data-i18n="leaderboard.sourceServer">Server · Co-op</button>
+              <button type="button" data-lb-source="solo" aria-pressed="false" data-i18n="leaderboard.sourceSolo">Local · Solo</button>
+            </div>
+            <div class="segmented" id="lb-tab" role="group" data-i18n-aria="leaderboard.tabAria" aria-label="Leaderboard view">
+              <button type="button" data-lb-tab="missions" aria-pressed="true" data-i18n="leaderboard.tabMissions">Top Missions</button>
+              <button type="button" data-lb-tab="players" aria-pressed="false" data-i18n="leaderboard.tabPlayers">Top Astronauts</button>
+            </div>
+          </div>
+          <div class="lb-filters">
+            <label><span class="micro" data-i18n="leaderboard.filterDiff">Difficulty</span>
+              <select id="lb-filter-difficulty">
+                <option value="all" data-i18n="leaderboard.all">All</option>
+                <option value="easy" data-i18n="difficulty.easy.label">Easy</option>
+                <option value="normal" data-i18n="difficulty.normal.label">Normal</option>
+                <option value="hard" data-i18n="difficulty.hard.label">Hard</option>
+              </select>
+            </label>
+            <label><span class="micro" data-i18n="leaderboard.filterSite">Landing site</span>
+              <select id="lb-filter-site">
+                <option value="all" data-i18n="leaderboard.all">All</option>
+                <option value="jezero" data-i18n="sites.jezero.name">Jezero Crater</option>
+                <option value="gale" data-i18n="sites.gale.name">Gale Crater</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <p class="lb-status muted" id="leaderboard-status" aria-live="polite"></p>
+        <div class="lb-list" id="leaderboard-list"></div>
+      </div>
+    </div>
   </section>
 
   <section id="lobby" class="screen" aria-labelledby="lobby-title">
@@ -413,6 +463,14 @@
           <span class="micro" style="color:var(--amethyst)" data-i18n="results.breakdownLabel">Design Cause &amp; Effect Summary</span>
           <div class="summary-list" id="results-breakdown" style="margin-top:8px"></div>
         </div>
+        <div id="results-server-lb-wrap" class="results-server-lb">
+          <div class="results-lb-head">
+            <span class="micro" id="results-server-lb-title" style="color:var(--safe)" data-i18n="results.serverLb.titleServer">Server Co-op Leaderboard</span>
+            <button class="button quiet results-open-lb" id="results-open-lb" type="button" data-i18n="results.serverLb.viewAll">Full leaderboard ↗</button>
+          </div>
+          <p class="muted results-lb-status" id="results-server-lb-status" hidden></p>
+          <div class="leaderboard" id="results-server-lb"></div>
+        </div>
       </section>
     </div>
   </section>
@@ -473,6 +531,18 @@
   </dialog>
   <dialog id="hint-dialog" aria-labelledby="hint-dialog-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="planner.hints.modalEyebrow">Engineering hint</span><h3 id="hint-dialog-title" data-i18n="planner.hints.modalTitle">How to fix this warning</h3><div class="alert show" id="hint-dialog-alert" role="status"></div><p class="hint-dialog-copy" id="hint-dialog-text"></p><div class="dialog-actions"><button class="button quiet" id="hint-dialog-close" type="button" data-i18n="planner.hints.close">Close</button><button class="button primary" id="hint-dialog-action" type="button" hidden></button></div></div></dialog>
   <dialog id="launch-dialog" aria-labelledby="launch-title"><div class="dialog-inner"><span class="eyebrow" data-i18n="launch.reviewEyebrow">Launch review</span><h3 id="launch-title">Mission ready for review</h3><p id="launch-message"></p><div class="summary-list" id="launch-summary"></div><div class="dialog-actions"><button class="button quiet" id="launch-close" type="button" data-i18n="launch.keepEditing">Keep editing</button><button class="button primary" id="launch-confirm" type="button">Launch mission →</button></div></div></dialog>
+  <dialog id="room-password-dialog" aria-labelledby="room-pw-title">
+    <form class="dialog-inner" method="dialog" id="room-pw-form">
+      <span class="eyebrow" data-i18n="lobby.roomBrowser.passwordEyebrow">Protected room</span>
+      <h3 id="room-pw-title" data-i18n="lobby.roomBrowser.passwordTitle">Enter room password</h3>
+      <p id="room-pw-desc"></p>
+      <input id="room-pw-input" class="mp-input" type="password" maxlength="32" autocomplete="off" data-i18n-aria="lobby.roomBrowser.passwordAria" data-i18n-placeholder="lobby.roomBrowser.passwordInputPlaceholder" placeholder="Password">
+      <div class="dialog-actions">
+        <button class="button quiet" id="room-pw-cancel" type="button" data-i18n="common.back">Back</button>
+        <button class="button primary" id="room-pw-submit" type="submit" data-i18n="lobby.roomBrowser.joinBtn">Join</button>
+      </div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>

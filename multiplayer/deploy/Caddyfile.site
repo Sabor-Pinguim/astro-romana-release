@@ -12,6 +12,10 @@ handle /ws {
 handle /health {
 	reverse_proxy 127.0.0.1:8787
 }
+# Room browser and leaderboard (HTTP API of the same server).
+handle /api/* {
+	reverse_proxy 127.0.0.1:8787
+}
 
 # Everything else: the game as static files, straight from the repository checkout. The rooms test page is at
 # /multiplayer/demo/ and finds the server at wss://<this host>/ws on its own.

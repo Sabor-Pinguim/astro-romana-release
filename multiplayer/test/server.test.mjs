@@ -10,7 +10,7 @@ import '../client/room-client.js';
 const { RoomClient } = globalThis;
 
 async function withServer(overrides, fn) {
-  const server = await startServer({ ...loadConfig({}), PORT: 0, ...overrides }, { log: () => {} });
+  const server = await startServer({ ...loadConfig({}), PORT: 0, DB_PATH: ':memory:', ...overrides }, { log: () => {} });
   const clients = [];
   const client = opts => { const c = new RoomClient({ url: server.url, reconnect: false, ...opts }); clients.push(c); return c; };
   try { await fn(server, client); } finally {
@@ -129,4 +129,108 @@ test('bad version, bad JSON, oversized and flooding messages get errors', () => 
   for (let i = 0; i < 3; i++) errors.add((await c.next()).code);
   assert.ok(errors.has('rate-limited'));
   c.ws.close();
+}));
+
+test('room browser lists public rooms only; private rooms require code lookup', () => withServer({}, async (server, client) => {
+  const hPub = client(), hPriv = client();
+  const pub = await hPub.create({ name: 'Jezero Squad', meta: { name: 'Ana' } });
+  hPub.setState('setup', { site: 'jezero', difficulty: 'hard' });
+  const priv = await hPriv.create({ name: 'Secret Crew', isPrivate: true, meta: { name: 'Bia' } });
+
+  const list = await (await fetch(`${server.http}/api/rooms`)).json();
+  assert.equal(list.rooms.length, 1);
+  assert.equal(list.rooms[0].code, pub.code);
+  assert.equal(list.rooms[0].name, 'Jezero Squad');
+  assert.equal(list.rooms[0].hostName, 'Ana');
+  assert.equal(list.rooms[0].site, 'jezero');
+  assert.equal(list.rooms[0].difficulty, 'hard');
+  assert.equal(list.rooms[0].hasPassword, false);
+
+  const info = await (await fetch(`${server.http}/api/rooms/${priv.code}`)).json();
+  assert.equal(info.exists, true);
+  assert.equal(info.isPrivate, true);
+  assert.equal(info.name, 'Secret Crew');
+
+  const g = client();
+  await g.join(priv.code, { meta: { name: 'Caio' } });
+  assert.equal(g.inRoom, true);
+  assert.equal(g.roomName, 'Secret Crew');
+
+  const missing = await (await fetch(`${server.http}/api/rooms/ZZZZ`)).json();
+  assert.deepEqual(missing, { exists: false });
+}));
+
+test('password-protected rooms enforce password without leaking it', () => withServer({}, async (server, client) => {
+  const host = client(), g1 = client(), g2 = client(), g3 = client();
+  const created = await host.create({ name: 'Vault Mission', password: 'mars-2026', meta: { name: 'Helena' } });
+  assert.equal(created.hasPassword, true);
+  assert.equal(JSON.stringify(created).includes('mars-2026'), false);
+
+  const list = await (await fetch(`${server.http}/api/rooms`)).json();
+  assert.equal(list.rooms[0].hasPassword, true);
+  assert.equal(JSON.stringify(list).includes('mars-2026'), false);
+
+  await assert.rejects(g1.join(created.code), { code: 'password-required' });
+  await assert.rejects(g2.join(created.code, { password: 'wrong' }), { code: 'wrong-password' });
+  await g3.join(created.code, { password: 'mars-2026', meta: { name: 'Lucas' } });
+  assert.equal(g3.inRoom, true);
+}));
+
+test('SQLite leaderboard records missions, deduplicates, filters, and ranks players; CORS works', () => withServer({ ALLOWED_ORIGINS: ['https://game.example'] }, async server => {
+  const preflight = await fetch(`${server.http}/api/rooms`, { method: 'OPTIONS', headers: { Origin: 'https://game.example' } });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://game.example');
+
+  const badOrigin = await fetch(`${server.http}/api/leaderboard`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example' },
+    body: JSON.stringify({ id: 'm-1' }),
+  });
+  assert.equal(badOrigin.status, 403);
+
+  const invalid = await fetch(`${server.http}/api/leaderboard`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://game.example' },
+    body: JSON.stringify({ id: 'bad', mode: 'multiplayer' }),
+  });
+  assert.equal(invalid.status, 400);
+
+  const m1 = {
+    id: 'mission-test-001', roomCode: 'ABCD', mode: 'multiplayer', site: 'jezero', difficulty: 'normal',
+    grade: 'S+', teamScore: 1240, tasksDone: 4, tasksTotal: 4, strandedCount: 0,
+    players: [
+      { playerName: 'Ana', seat: 'helena', score: 380, grade: 'S+', stranded: false },
+      { playerName: 'Bia', seat: 'lucas', score: 340, grade: 'A', stranded: false },
+    ],
+  };
+  const m2 = {
+    id: 'mission-test-002', roomCode: 'EFGH', mode: 'multiplayer', site: 'gale', difficulty: 'hard',
+    grade: 'A', teamScore: 990, tasksDone: 3, tasksTotal: 4, strandedCount: 1,
+    players: [
+      { playerName: 'Ana', seat: 'maya', score: 310, grade: 'A', stranded: false },
+      { playerName: 'Caio', seat: 'oscar', score: 0, grade: 'F', stranded: true },
+    ],
+  };
+  const post1 = await fetch(`${server.http}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://game.example' }, body: JSON.stringify(m1) });
+  assert.equal(post1.status, 201);
+  const dup = await fetch(`${server.http}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://game.example' }, body: JSON.stringify(m1) });
+  assert.equal(dup.status, 200);
+  assert.equal((await dup.json()).duplicate, true);
+  await fetch(`${server.http}/api/leaderboard`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://game.example' }, body: JSON.stringify(m2) });
+
+  const missionsAll = await (await fetch(`${server.http}/api/leaderboard?tab=missions`)).json();
+  assert.equal(missionsAll.entries.length, 2);
+  assert.equal(missionsAll.entries[0].teamScore, 1240);
+  assert.equal(missionsAll.entries[0].players.length, 2);
+
+  const missionsHard = await (await fetch(`${server.http}/api/leaderboard?tab=missions&difficulty=hard&site=gale`)).json();
+  assert.equal(missionsHard.entries.length, 1);
+  assert.equal(missionsHard.entries[0].id, 'mission-test-002');
+
+  const playersAll = await (await fetch(`${server.http}/api/leaderboard?tab=players`)).json();
+  assert.equal(playersAll.entries[0].playerName, 'Ana');
+  assert.equal(playersAll.entries[0].bestScore, 380);
+  assert.equal(playersAll.entries[0].missions, 2);
+
+  const health = await (await fetch(`${server.http}/health`)).json();
+  assert.equal(health.dbOk, true);
+  assert.equal(health.missionsRecorded, 2);
 }));

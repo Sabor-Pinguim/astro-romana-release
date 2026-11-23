@@ -31,6 +31,13 @@ const DEFAULTS = {
 
   CODE_LENGTH: 4,
   CODE_ALPHABET: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', // no 0/O, 1/I/L
+
+  // Server leaderboard (SQLite file; ':memory:' in tests) and the HTTP API limits.
+  DB_PATH: './data/astro.sqlite',
+  MAX_API_BYTES: 8 * 1024,
+  API_RATE_PER_MIN: 30, // POSTs per IP per minute
+  MAX_ROOM_NAME_LEN: 32,
+  MAX_PASSWORD_LEN: 32,
 };
 
 export const PROTOCOL_VERSION = 1;

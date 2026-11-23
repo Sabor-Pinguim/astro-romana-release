@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.4.0] - 2026-11-23
+
+### Added
+- **Server Room Browser, Private & Password Rooms:** hosts can set a room name, mark a room as private (hidden from the browser, joinable only by code or invite link), and protect it with a salted `scrypt` password verified on join without ever exposing the plaintext secret.
+- **Server SQLite Database & REST API (`multiplayer/db.mjs`, `multiplayer/server.mjs`):** built-in `node:sqlite` (`WAL` mode) stores finished co-op missions and individual astronaut scores, exposed over CORS-enabled `GET /api/rooms`, `GET /api/rooms/:code`, `GET /api/leaderboard`, and `POST /api/leaderboard`.
+- **Player Name & Local Solo Leaderboard:** multiplayer requires an astronaut name persisted in `localStorage` (`astro-romana-player-name`) and shown in the crew cards; solo runs are stored locally in `localStorage` (`astro-romana-solo-leaderboard`).
+- **Leaderboards Screen (`#leaderboard`) & Results Ranking:** new **Leaderboards** button on the main menu with Server (Co-op) / Local (Solo) and Top Missions / Top Astronauts views filtered by difficulty and landing site, plus a live leaderboard panel on the Mission Results screen.
+- **VM Infrastructure Updates (`multiplayer/deploy/`):** added `StateDirectory=astro-romana` to `astro-rooms.service`, `handle /api/*` reverse proxy to `Caddyfile.site`, and `DB_PATH` + `astro-romana-v2` repo default in `setup.sh`.
+
 ## [1.3.1] - 2026-11-23
 
 ### Changed

@@ -4,3 +4,6 @@ tools/terrain/preview/
 # Editor and OS leftovers
 *.tmp
 ~*
+# Local multiplayer SQLite database
+multiplayer/data/
+*.sqlite*

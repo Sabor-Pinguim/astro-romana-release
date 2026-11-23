@@ -10,7 +10,7 @@
 #               game files are live as soon as they are pulled.
 set -euo pipefail
 
-REPO_URL=${REPO_URL:-git@github.com:Sabor-Pinguim/astro-romana.git}
+REPO_URL=${REPO_URL:-git@github.com:Sabor-Pinguim/astro-romana-v2.git}
 BRANCH=${BRANCH:-main}
 APP_DIR=/srv/astro-romana   # also in astro-rooms.service and Caddyfile.site
 APP_USER=astro
@@ -121,7 +121,7 @@ put() {
   install -m "${2:-0644}" "$tmp" "$1"; rm -f "$tmp"
 }
 # "null" lets pages opened from file:// (local testing with ?server=) join too.
-if printf 'PORT=%s\nHOST=127.0.0.1\nALLOWED_ORIGINS=https://%s,null%s\n' "$ROOMS_PORT" "$DOMAIN" "${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}" \
+if printf 'PORT=%s\nHOST=127.0.0.1\nDB_PATH=/var/lib/astro-romana/astro.sqlite\nALLOWED_ORIGINS=https://%s,null%s\n' "$ROOMS_PORT" "$DOMAIN" "${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}" \
   | put "$CONF_DIR/rooms.env"; then restart_rooms=1; fi
 if put /etc/systemd/system/astro-rooms.service < "$APP_DIR/multiplayer/deploy/astro-rooms.service"; then
   systemctl daemon-reload; restart_rooms=1
@@ -163,6 +163,7 @@ Done.
   Rooms test page https://$DOMAIN/multiplayer/demo/
   WebSocket       wss://$DOMAIN/ws
   Health          https://$DOMAIN/health
+  API             https://$DOMAIN/api/rooms   ·   https://$DOMAIN/api/leaderboard
 The first HTTPS request can take a few seconds while Caddy gets the certificate.
 Logs: journalctl -u astro-rooms -f   ·   journalctl -u caddy -f
 Update later: sudo bash $APP_DIR/multiplayer/deploy/setup.sh
