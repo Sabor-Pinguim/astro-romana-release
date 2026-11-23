@@ -386,10 +386,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 // Empty mounting points glow amber and can be clicked; "+" buttons in the gaps insert a stage.
 (async () => {
   const blueprint = document.querySelector('.blueprint'), ui = window.ASTRO;
-  const view = blueprint && ui && makeView(blueprint, { fov: 26 });
-  if (!view) return;
-  blueprint.classList.add('is-3d');
-  const { scene, camera, renderer } = view, overlay = blueprint.querySelector('#stack-overlay');
+  if (!ui) return;
   const HULL = { booster: 'parts/structures/booster-thrust-section.glb', stage: 'parts/structures/stage-module.glb', cabin: 'parts/structures/crew-cabin.glb' };
   // Two versions of each hull: open here (the front half, node `Closed`, hidden so the bay shows) and closed
   // for outside views (launch pad), where the equipment is stowed inside and not loaded.
@@ -400,7 +397,6 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   };
   const CABIN_SLOTS = [[-.28, .24], [.28, .24], [-.28, .80], [.28, .80]]; // x, y on the enlarged cabin decks
   const GAP = .36, TANK_CAP = 3.2;
-  const stack = new THREE.Group(); scene.add(stack);
   const padMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: .8, depthWrite: false });
   const lineMat = new THREE.LineBasicMaterial({ color: 0xfce8a6 }), selMat = new THREE.LineBasicMaterial({ color: 0xf59e0b });
   const polygon = (r, n, mat) => new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({ length: n }, (_, k) => new THREE.Vector3(r * Math.cos(k * 2 * Math.PI / n), 0, r * Math.sin(k * 2 * Math.PI / n)))), mat);
@@ -429,14 +425,14 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const g = new THREE.Group(), hull = await loadGLB(HULL.booster);
     g.userData.module = module; g.add(hull);
     // Fins (Main Booster only) share the thrust section's origin: they bolt straight onto the skirt.
-    if (module === 'booster' && r.booster.fins) g.add(await loadGLB(parts[r.booster.fins].file));
+    if (module === 'booster' && r.booster.fins && parts[r.booster.fins]?.file) g.add(await loadGLB(parts[r.booster.fins].file));
     const engineY = attach(hull, 'Attach_Engines', 0), tankY = attach(hull, 'Attach_Tank', .5);
     let top = tankY;
-    if (r.booster.engine) {
-      const { w, at } = cluster(parts[r.booster.engine].specs.defaultClusterCount || 1);
+    if (r.booster.engine && parts[r.booster.engine]?.file) {
+      const { w, at } = cluster(parts[r.booster.engine].specs?.defaultClusterCount || 1);
       for (const [x, z] of at) { const e = await loadGLB(parts[r.booster.engine].file); fitWidth(e, w); e.position.set(x, engineY, z); g.add(e); }
     } else { const m = mountPoint(.24, { module, tab: 'engine' }); m.position.y = engineY - .03; g.add(m); }
-    if (r.booster.tank) {
+    if (r.booster.tank && parts[r.booster.tank]?.file) {
       const t = await loadGLB(parts[r.booster.tank].file), size = new THREE.Box3().setFromObject(t).getSize(new THREE.Vector3());
       const s = .96 / Math.max(size.x, size.z), h = size.y * s, capped = softCap(h);
       t.scale.set(s, s * capped / h, s); t.position.y = tankY; g.add(t);
@@ -451,7 +447,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     g.userData.module = key; g.add(hull);
     const bay = attach(hull, 'Attach_Bay', .1);
     if (closed) { /* equipment stowed inside the closed bay */ }
-    else if (item) { const e = await loadGLB(parts[item].file); e.position.y = bay; g.add(e); }
+    else if (item && parts[item]?.file) { const e = await loadGLB(parts[item].file); e.position.y = bay; g.add(e); }
     else { const m = mountPoint(.16, { module: key }); m.position.y = bay + .01; g.add(m); }
     g.userData.top = attach(hull, 'Attach_Top', 1);
     return g;
@@ -461,12 +457,37 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     g.userData.module = 'cabin'; g.add(await hullOf(HULL.cabin, closed));
     for (let k = 0; k < (closed ? 0 : CABIN_SLOTS.length); k++) {
       const [x, y] = CABIN_SLOTS[k], id = r.cabin[k];
-      if (id) { const e = await loadGLB(parts[id].file); e.scale.setScalar(.58); e.position.set(x, y, 0); g.add(e); }
+      if (id && parts[id]?.file) { const e = await loadGLB(parts[id].file); e.scale.setScalar(.58); e.position.set(x, y, 0); g.add(e); }
       else { const m = mountPoint(.09, { module: 'cabin' }); m.position.set(x, y + .01, 0); g.add(m); }
     }
     g.userData.top = new THREE.Box3().setFromObject(g).max.y;
     return g;
   }
+
+  // Launch pad (web/launch.js) and other outside views: the same assembly, closed, stacked without gaps,
+  // mounting points or selection rings. Exposed even if the planner's own WebGL view cannot initialize.
+  window.ASTRO_BUILD_ROCKET = async () => {
+    const data = ui.data(), parts = data?.parts || {}, r = ui.state.rocket;
+    const groups = await Promise.all([booster(r, parts), ...r.stages.map((_, i) => stage(r, i, parts, true)), cabin(r, parts, true)]);
+    const rocket = new THREE.Group();
+    let y = 0;
+    for (const g of groups) {
+      g.traverse(o => { if (o.userData.pulse) o.visible = false; });
+      g.position.y = y; rocket.add(g); y += g.userData.top;
+    }
+    const cab = groups[groups.length - 1], mark = cab.getObjectByName('View_Window') ?? new THREE.Object3D(); // the pilot's windows
+    if (!mark.parent) { mark.position.y = cab.userData.top / 2; cab.add(mark); }
+    rocket.updateMatrixWorld(true);
+    const minY = new THREE.Box3().setFromObject(rocket).min.y;
+    rocket.userData = { height: y, minY, cabin: mark, cabinMid: cab.position.y + cab.userData.top / 2 };
+    return rocket;
+  };
+
+  const view = blueprint && makeView(blueprint, { fov: 26 });
+  if (!view) return;
+  blueprint.classList.add('is-3d');
+  const { scene, camera, renderer } = view, overlay = blueprint.querySelector('#stack-overlay');
+  const stack = new THREE.Group(); scene.add(stack);
 
   let key = '', build = 0, layout = [], gaps = [], focusKey = null;
   const center = new THREE.Vector3();
@@ -524,24 +545,6 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   }
   window.addEventListener('astro:rocket', rebuild);
   rebuild();
-  // Launch pad (web/launch.js) and other outside views: the same assembly, closed, stacked without gaps,
-  // mounting points or selection rings.
-  window.ASTRO_BUILD_ROCKET = async () => {
-    const data = ui.data(), r = ui.state.rocket;
-    const groups = await Promise.all([booster(r, data.parts), ...r.stages.map((_, i) => stage(r, i, data.parts, true)), cabin(r, data.parts, true)]);
-    const rocket = new THREE.Group();
-    let y = 0;
-    for (const g of groups) {
-      g.traverse(o => { if (o.userData.pulse) o.visible = false; });
-      g.position.y = y; rocket.add(g); y += g.userData.top;
-    }
-    const cab = groups[groups.length - 1], mark = cab.getObjectByName('View_Window') ?? new THREE.Object3D(); // the pilot's windows
-    if (!mark.parent) { mark.position.y = cab.userData.top / 2; cab.add(mark); }
-    rocket.updateMatrixWorld(true);
-    const minY = new THREE.Box3().setFromObject(rocket).min.y;
-    rocket.userData = { height: y, minY, cabin: mark, cabinMid: cab.position.y + cab.userData.top / 2 };
-    return rocket;
-  };
 
   // Clicks: a mounting point selects its module and catalog tab; anything else selects its module.
   const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
@@ -599,29 +602,45 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   requestAnimationFrame(frame);
 })().catch(err => console.warn('3D rocket not shown:', err));
 
-// Planner catalog: render each part's 3D GLB once into an offscreen studio view (cached in window.ASTRO_THUMBS).
+// Planner catalog: render each part's 3D GLB once into an offscreen studio view (cached in window.ASTRO_THUMBS),
+// then dispose the temporary WebGL context so it never counts against the browser's active context limit.
 (async () => {
   const thumbs = window.ASTRO_THUMBS;
   if (!thumbs) return;
-  let renderer;
-  try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch { return; }
-  renderer.setPixelRatio(1);
-  renderer.setSize(144, 144, false);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
-
-  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 100);
-  scene.add(new THREE.AmbientLight(0xb48cf0, 0.95));
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.55;
-  const key = new THREE.DirectionalLight(0xfce8a6, 2.4); key.position.set(-4, 6, 5); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xe04f26, 1.8); rim.position.set(5, 1, -4); scene.add(rim);
-  const holder = new THREE.Group();
-  scene.add(holder);
+  let renderer = null, scene = null, camera = null, holder = null, envTex = null;
+  function ensureThumbStudio() {
+    if (renderer) return true;
+    try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch { renderer = null; return false; }
+    renderer.setPixelRatio(1);
+    renderer.setSize(144, 144, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(28, 1, 0.05, 100);
+    scene.add(new THREE.AmbientLight(0xb48cf0, 0.95));
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    scene.environment = envTex;
+    scene.environmentIntensity = 0.55;
+    const key = new THREE.DirectionalLight(0xfce8a6, 2.4); key.position.set(-4, 6, 5); scene.add(key);
+    const rim = new THREE.DirectionalLight(0xe04f26, 1.8); rim.position.set(5, 1, -4); scene.add(rim);
+    holder = new THREE.Group();
+    scene.add(holder);
+    return true;
+  }
+  function releaseThumbStudio() {
+    if (!renderer) return;
+    envTex?.dispose?.();
+    renderer.dispose();
+    renderer.forceContextLoss?.();
+    renderer = null; scene = null; camera = null; holder = null; envTex = null;
+  }
 
   const box = new THREE.Box3(), size = new THREE.Vector3(), center = new THREE.Vector3();
   async function renderPartThumb(p) {
+    if (!ensureThumbStudio()) return null;
     const obj = await loadGLB(p.file);
     holder.clear();
     holder.rotation.set(0, 0, 0);
@@ -651,6 +670,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   async function syncCatalogThumbs() {
     if (running) { again = true; return; }
     running = true;
+    let renderedNew = false;
     try {
       do {
         again = false;
@@ -663,14 +683,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
           let url = thumbs.get(id);
           if (!url) {
             url = await renderPartThumb(p);
-            thumbs.set(id, url);
+            if (url) { thumbs.set(id, url); renderedNew = true; }
           }
-          document.querySelectorAll(`#parts-list [data-part-thumb="${CSS.escape(id)}"]`).forEach(el => {
-            if (!el.querySelector('img')) el.innerHTML = `<img src="${url}" alt="">`;
-          });
+          if (url) {
+            document.querySelectorAll(`#parts-list [data-part-thumb="${CSS.escape(id)}"]`).forEach(el => {
+              if (!el.querySelector('img')) el.innerHTML = `<img src="${url}" alt="">`;
+            });
+          }
         }
       } while (again);
     } finally {
+      if (renderedNew) releaseThumbStudio();
       running = false;
     }
   }
@@ -693,9 +716,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const MARS_G = 3.71; // m/s², Mars surface gravity (same value as tools/modeling/lib/fx-presets.mjs)
   // game-balance: walk/run speed (m/s), jump speed, reach to a block or the lander, and where the blocks
   // land (close enough to visit all four within the launch window).
-  const WALK = 2.2, RUN = 4.6, JUMP = 2.6, REACH = 3.2, BOARD_REACH = 5, SPOT_MIN = 20, SPOT_MAX = 75, SPOT_GAP = 28;
-  // Where each crew member stands after touchdown (m, south of the lander).
+  const WALK = 2.2, RUN = 4.6, JUMP = 2.6, REACH = 3.2, BOARD_REACH = 5, BOARD_SAFE_R = 6.5, SPOT_MIN = 20, SPOT_MAX = 75, SPOT_GAP = 28;
+  // Where each crew member stands after touchdown (m, south of the lander) and where NPCs rush to board in the final 10 s.
   const CREW_START = { helena: [-5.4, 6.6], lucas: [-1.8, 7.5], oscar: [2.1, 7.5], maya: [5.7, 6.3] };
+  const CREW_BOARD = { helena: [-1.8, 2.8], lucas: [-0.7, 3.2], oscar: [0.7, 3.2], maya: [1.8, 2.8] };
   const STRIDE = 1.33; // m/s that matches walk_loop (1.1 s cycle, two ~0.73 m steps)
   // game: the photo is a grayscale stretch; this gain on the manifest tint makes it read as warm Mars ground under the game lights.
   const GROUND_GAIN = [3, 2, 1.25];
@@ -792,6 +816,23 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const rung = add(new THREE.CylinderGeometry(.016, .016, .48, 5), steel, 0, y, z);
       rung.rotation.z = Math.PI / 2;
     }
+    // Engine exhaust plume & point light for the timeout ascent sequence.
+    const plume = new THREE.Group();
+    plume.position.set(0, .32, 0);
+    for (const [r, h, col, op] of [[.52, 2.8, 0xe04f26, .55], [.34, 2.0, 0xf59e0b, .72], [.16, 1.2, 0xfce8a6, .95]]) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      cone.rotation.x = Math.PI;
+      cone.position.y = -h * .5;
+      plume.add(cone);
+    }
+    plume.visible = false;
+    g.add(plume);
+    const engineLight = new THREE.PointLight(0xf59e0b, 0, 28, 1.6);
+    engineLight.position.set(0, .1, 0);
+    g.add(engineLight);
+    g.userData.plume = plume;
+    g.userData.engineLight = engineLight;
     return g;
   }
 
@@ -922,6 +963,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     body.updateMatrixWorld(true);
     const idx = world.avatars.size;
     const a = { id, body, mixer, idle, walk, wave, action, props, emoteAction: null, emoteW: 0, actW: 0, head, helmet, walkW: 0,
+      upperArmL: body.getObjectByName('UpperArm_L'), lowerArmL: body.getObjectByName('LowerArm_L'),
+      upperArmR: body.getObjectByName('UpperArm_R'), lowerArmR: body.getObjectByName('LowerArm_R'),
+      torso: body.getObjectByName('Torso'),
       eyeY: head.getWorldPosition(new THREE.Vector3()).y, pos: new THREE.Vector3(), bodyYaw: 0,
       ai: { state: 'idle', last: 'idle', timer: 1.5 + idx * 0.9, tx: 0, tz: 0, waveCd: 0 } };
     mixer.addEventListener('finished', e => {
@@ -1047,13 +1091,19 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       const [terrain] = await Promise.all([fetchTerrain(site), world.lander.userData.ready]);
       if (s.site !== site) return;
       setTerrain(terrain);
+      s.departing = null;
       world.lander.position.set(0, terrain.hf.at(0, 0), 0);
+      if (world.lander.userData.plume) world.lander.userData.plume.visible = false;
+      if (world.lander.userData.engineLight) world.lander.userData.engineLight.intensity = 0;
+      world.camera.fov = 72; world.camera.updateProjectionMatrix();
       placeBlocks(seed); buildCompass();
       await Promise.all(ui.crew.map(c => loadCrew(c.id)));
       let idx = 0;
       for (const [id, [x, z]] of Object.entries(CREW_START)) {
         const a = world.avatars.get(id);
-        a.pos.set(x, t.hf.at(x, z), z); a.bodyYaw = 0;
+        a.body.visible = true;
+        a.pos.set(x, terrain.hf.at(x, z), z); a.bodyYaw = 0;
+        a.body.rotation.set(0, 0, 0);
         a.action.stop(); a.wave.stop(); a.emoteAction = null; a.emoteW = 0; a.actW = 0; a.walkW = 0;
         for (const p of a.props) p.visible = false;
         a.ai = { state: 'idle', last: 'idle', timer: 1.2 + idx++ * 0.85, tx: x, tz: z, waveCd: 1.5 };
@@ -1303,11 +1353,19 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const stepYaw = (cur, target, alpha) => cur + Math.atan2(Math.sin(target - cur), Math.cos(target - cur)) * Math.min(1, alpha);
   function pickNpcTarget(o, active) {
     const hf = world.hf, lim = hf.half - 16;
+    const ownBlock = world.blocks.find(b => b.userData.exp.crew === o.id);
     for (let attempt = 0; attempt < 32; attempt++) {
-      const nearShip = o.id === 'helena' && attempt < 24 && Math.random() < 0.55;
-      const r = nearShip ? 4.6 + Math.random() * 2.6 : 6 + Math.random() * 18;
-      const ang = Math.random() * Math.PI * 2;
-      const tx = Math.sin(ang) * r, tz = Math.cos(ang) * r;
+      let tx, tz;
+      if (ownBlock && attempt < 12 && Math.random() < 0.45) {
+        const ang = Math.random() * Math.PI * 2, d = 3.2 + Math.random() * 4.5;
+        tx = ownBlock.position.x + Math.sin(ang) * d;
+        tz = ownBlock.position.z + Math.cos(ang) * d;
+      } else {
+        const nearShip = o.id === 'helena' && attempt < 18 && Math.random() < 0.45;
+        const r = nearShip ? 5.2 + Math.random() * 4.0 : 12 + Math.random() * 26;
+        const ang = Math.random() * Math.PI * 2;
+        tx = Math.sin(ang) * r; tz = Math.cos(ang) * r;
+      }
       if (Math.abs(tx) >= lim || Math.abs(tz) >= lim || hf.slope(tx, tz) >= 0.35) continue;
       if (Math.hypot(tx - o.pos.x, tz - o.pos.z) < 3.0) continue;
       if (world.colliders.some(c => Math.hypot(tx - c.x, tz - c.z) < c.r + 1.0)) continue;
@@ -1362,12 +1420,21 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     for (const p of a.props) p.visible = showPlayerProps;
     a.mixer.update(reduce && !speed && !s.emote ? 0 : dt);
     world.camera.getWorldDirection(camDir);
+    const timeLeft = sim()?.surf.timerSec ?? 999, rushing = timeLeft <= 10 && timeLeft > 0;
     for (const o of world.avatars.values()) { // teammates wander, work in role animations, and wave back when looked at while stopped
       if (o === a) continue;
       if (driverOf(o.id) !== 'ai') { followRemote(o, dt); poseAvatar(o, dt); continue; } // another screen moves it
       if (o.wasRemote) { o.wasRemote = false; o.ai = { state: 'idle', last: 'idle', timer: 1.5, tx: o.pos.x, tz: o.pos.z, waveCd: 3 }; o.wave.stop(); }
+      if (rushing) {
+        const [bx, bz] = CREW_BOARD[o.id] || [0, 3.2];
+        o.ai.tx = bx; o.ai.tz = bz;
+        const bdist = Math.hypot(bx - o.pos.x, bz - o.pos.z);
+        if (o.ai.state === 'wave' || o.ai.state === 'action') { o.wave.stop(); o.action.stop(); o.actW = 0; }
+        o.ai.state = bdist > 0.65 ? 'walk' : 'idle';
+        o.ai.timer = 15;
+      }
       o.ai.waveCd = Math.max(0, o.ai.waveCd - dt);
-      if (!reduce && (o.ai.state === 'idle' || o.ai.state === 'action') && o.ai.waveCd <= 0) {
+      if (!rushing && !reduce && (o.ai.state === 'idle' || o.ai.state === 'action') && o.ai.waveCd <= 0) {
         const pdist = Math.hypot(o.pos.x - s.pos.x, o.pos.z - s.pos.z);
         if (pdist > 1.0 && pdist < 18) {
           toNpc.set(o.pos.x, o.pos.y + 1.35, o.pos.z).sub(world.camera.position).normalize();
@@ -1393,7 +1460,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
             o.ai.state = 'idle'; o.ai.last = 'action'; o.ai.timer = 1.5 + Math.random() * 2.2;
           }
         } else if (o.ai.state === 'idle') {
-          if (!reduce && o.ai.timer <= 0) {
+          if (rushing) {
+            o.bodyYaw = stepYaw(o.bodyYaw, Math.atan2(-o.pos.x, -o.pos.z), dt * 8);
+          } else if (!reduce && o.ai.timer <= 0) {
             if (o.ai.last !== 'action' && Math.random() < 0.55) {
               o.ai.state = 'action'; o.ai.timer = 4.5 + Math.random() * 3.5; o.action.reset().play();
             } else {
@@ -1402,31 +1471,31 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
             }
           }
         } else if (o.ai.state === 'walk') {
-          const spd = WALK * 0.68, dx = o.ai.tx - o.pos.x, dz = o.ai.tz - o.pos.z, dist = Math.hypot(dx, dz);
+          const spd = rushing ? WALK : WALK * 0.68, dx = o.ai.tx - o.pos.x, dz = o.ai.tz - o.pos.z, dist = Math.hypot(dx, dz);
           const stepDist = Math.min(dist, spd * dt);
           let nx = clamp(o.pos.x + (dist > 1e-4 ? dx / dist : 0) * stepDist, -lim, lim);
           let nz = clamp(o.pos.z + (dist > 1e-4 ? dz / dist : 0) * stepDist, -lim, lim);
           let blocked = false;
           for (const c of world.colliders) {
-            const cx = nx - c.x, cz = nz - c.z, cd = Math.hypot(cx, cz), minR = c.r + 0.6;
-            if (cd < minR && cd > 1e-4) { nx = c.x + cx / cd * minR; nz = c.z + cz / cd * minR; blocked = true; }
+            const cx = nx - c.x, cz = nz - c.z, cd = Math.hypot(cx, cz), minR = c.r + (rushing ? 0.35 : 0.6);
+            if (cd < minR && cd > 1e-4) { nx = c.x + cx / cd * minR; nz = c.z + cz / cd * minR; blocked = !rushing; }
           }
           for (const other of world.avatars.values()) {
             if (other === o) continue;
             const op = other === a ? s.pos : other.pos;
-            const cx = nx - op.x, cz = nz - op.z, cd = Math.hypot(cx, cz), minR = 0.9;
-            if (cd < minR && cd > 1e-4) { nx = op.x + cx / cd * minR; nz = op.z + cz / cd * minR; blocked = true; }
+            const cx = nx - op.x, cz = nz - op.z, cd = Math.hypot(cx, cz), minR = 0.85;
+            if (cd < minR && cd > 1e-4) { nx = op.x + cx / cd * minR; nz = op.z + cz / cd * minR; blocked = !rushing; }
           }
-          if (dist < 0.45 || o.ai.timer <= 0 || blocked) {
+          if (dist < (rushing ? 0.65 : 0.45) || (!rushing && (o.ai.timer <= 0 || blocked))) {
             if (blocked) { o.pos.x = nx; o.pos.z = nz; o.pos.y = hf.at(nx, nz); }
-            if (Math.random() < 0.75) {
+            if (!rushing && Math.random() < 0.75) {
               o.ai.state = 'action'; o.ai.timer = 4.5 + Math.random() * 3.5; o.action.reset().play();
             } else {
               o.ai.state = 'idle'; o.ai.last = 'walk'; o.ai.timer = 1.8 + Math.random() * 2;
             }
           } else {
             o.pos.x = nx; o.pos.z = nz; o.pos.y = hf.at(nx, nz);
-            o.bodyYaw = stepYaw(o.bodyYaw, Math.atan2(dx, dz), dt * 8);
+            o.bodyYaw = stepYaw(o.bodyYaw, Math.atan2(dx, dz), dt * (rushing ? 11 : 8));
           }
         }
         const targetWalk = o.ai.state === 'walk' ? 1 : 0;
@@ -1437,7 +1506,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         o.walk.setEffectiveWeight(o.walkW * (1 - o.actW));
         o.idle.setEffectiveWeight((1 - o.walkW) * (1 - o.actW));
         o.action.setEffectiveWeight(o.actW);
-        o.walk.timeScale = WALK * 0.68 / STRIDE;
+        o.walk.timeScale = (rushing ? WALK : WALK * 0.68) / STRIDE;
       }
       poseAvatar(o, dt);
     }
@@ -1572,6 +1641,48 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     updateHud();
   });
 
+  // Two-stage rocket departure cutscene:
+  // Stage 1 (0..2.1s): ground camera watching the lander ignite and lift off into the Martian sky.
+  // Stage 2 (2.1..5.2s): camera attached to the rising rocket hull looking down at any crew members left behind waving both arms.
+  function playDeparture(strandedIds = []) {
+    return new Promise(resolve => {
+      if (!world || !s.ready || !world.hf) { resolve(); return; }
+      if (document.pointerLockElement === world.renderer.domElement) document.exitPointerLock();
+      if (dlg.open) dlg.close();
+      closeWheel(false);
+      endEmote();
+      const strandedSet = new Set(strandedIds);
+      let idx = 0;
+      for (const [id, a] of world.avatars) {
+        for (const m of a.helmet) m.material = m.userData.mat;
+        for (const p of a.props) p.visible = false;
+        a.action.stop(); a.wave.stop();
+        a.walk.setEffectiveWeight(0); a.idle.setEffectiveWeight(1);
+        if (!strandedSet.has(id)) {
+          a.body.visible = false;
+          continue;
+        }
+        a.body.visible = true;
+        if (a === world.avatar) a.pos.copy(s.pos);
+        // Bring far-off stranded astronauts near the pad perimeter (8..11 m) as if they ran up just too late, so the rocket camera frames them clearly.
+        const d = Math.hypot(a.pos.x, a.pos.z);
+        if (d > 12 || d < 4.5) {
+          const baseAng = d > 0.5 ? Math.atan2(a.pos.x, a.pos.z) : (idx - 0.5) * 0.55;
+          const targetR = 7.8 + idx * 1.4;
+          a.pos.x = Math.sin(baseAng) * targetR;
+          a.pos.z = Math.cos(baseAng) * targetR;
+        }
+        a.pos.y = world.hf.at(a.pos.x, a.pos.z);
+        a.bodyYaw = Math.atan2(-a.pos.x, -a.pos.z);
+        a.body.position.copy(a.pos);
+        a.body.rotation.set(0, a.bodyYaw, 0);
+        idx++;
+      }
+      const groundY = world.hf.at(0, 0);
+      s.departing = { t: 0, duration: 5.2, switchAt: 2.1, groundY, stranded: [...strandedSet], resolve };
+    });
+  }
+
   let last = performance.now(), hudClock = 0;
   function frame(now) {
     requestAnimationFrame(frame);
@@ -1579,6 +1690,78 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     // Leaving the surface (timer, results) must give the mouse back.
     if (world && document.pointerLockElement === world.renderer.domElement && !isActive('surface')) document.exitPointerLock();
     if (!world || !s.ready || !world.avatar || !isActive('surface') || !world.width) return;
+    if (s.departing) {
+      const d = s.departing;
+      d.t += dt;
+      const climb = Math.max(0, d.t - 0.25);
+      const rocketY = d.groundY + climb * climb * 2.5;
+      world.lander.position.set((Math.random() - .5) * .03, rocketY, (Math.random() - .5) * .03);
+      const plume = world.lander.userData.plume, engineLight = world.lander.userData.engineLight;
+      if (plume) {
+        plume.visible = true;
+        const flicker = .88 + Math.sin(now * .06) * .18;
+        plume.scale.set(flicker, .85 + Math.cos(now * .08) * .25, flicker);
+      }
+      if (engineLight) engineLight.intensity = 22 + Math.sin(now * .05) * 6;
+      let fx = 0, fy = d.groundY, fz = 7.5;
+      if (d.stranded.length) {
+        let sx = 0, sy = 0, sz = 0;
+        d.stranded.forEach((id, i) => {
+          const a = world.avatars.get(id);
+          if (!a) return;
+          a.idle.setEffectiveWeight(1); a.walk.setEffectiveWeight(0);
+          a.mixer.update(dt);
+          // Raise and wave BOTH arms furiously while looking up at the departing rocket.
+          const phase = now * 0.016 + i * 1.4, wL = Math.sin(phase) * 0.55, wR = Math.sin(phase + 0.35) * 0.55;
+          if (a.upperArmL) a.upperArmL.rotation.set(-2.55, 0, 0.52 + wL);
+          if (a.lowerArmL) a.lowerArmL.rotation.set(-0.35, 0, wL * 0.65);
+          if (a.upperArmR) a.upperArmR.rotation.set(-2.55, 0, -0.52 - wR);
+          if (a.lowerArmR) a.lowerArmR.rotation.set(-0.35, 0, -wR * 0.65);
+          if (a.head) a.head.rotation.x = -0.58;
+          const hop = reduce ? 0 : Math.max(0, Math.sin(now * 0.012 + i * 1.7)) * 0.22;
+          const gy = world.hf.at(a.pos.x, a.pos.z);
+          a.bodyYaw = Math.atan2(-a.pos.x, -a.pos.z);
+          a.body.position.set(a.pos.x, gy + hop, a.pos.z);
+          a.body.rotation.set(0, a.bodyYaw, 0);
+          sx += a.pos.x; sy += gy; sz += a.pos.z;
+        });
+        fx = sx / d.stranded.length; fy = sy / d.stranded.length; fz = sz / d.stranded.length;
+      }
+      const { camera } = world;
+      for (const b of world.blocks) if (b.userData.tag) b.userData.tag.hidden = true;
+      promptEl.hidden = false; promptEl.disabled = true;
+      promptEl.className = 'surface-prompt locked';
+      if (d.t < d.switchAt) {
+        // Stage 1: ground camera watching the rocket ignite and climb into the Martian sky.
+        camera.fov = 66; camera.updateProjectionMatrix();
+        camera.position.set(-10.5, d.groundY + 1.8, 12.5);
+        camera.lookAt(0, rocketY + 2.2, 0);
+        promptEl.textContent = t('surface.departingStandby');
+      } else {
+        // Stage 2: camera mounted on the rising rocket hull looking down at the stranded astronauts waving their arms.
+        const fDist = Math.hypot(fx, fz) || 1, dirX = fx / fDist, dirZ = fz / fDist;
+        const camProg = clamp((d.t - d.switchAt) / (d.duration - d.switchAt), 0, 1);
+        camera.fov = 56 - camProg * 18; camera.updateProjectionMatrix();
+        camera.position.set(dirX * 2.05, rocketY + 0.55, dirZ * 2.05);
+        camera.lookAt(fx * 0.88, fy + 1.05, fz * 0.88);
+        const strandedNames = d.stranded.map(id => ui.crew.find(c => c.id === id)?.name ?? id).join(', ');
+        promptEl.textContent = d.stranded.length ? t('surface.departingStranded', { names: strandedNames }) : t('surface.departingStandby');
+      }
+      world.sky.position.copy(camera.position);
+      world.sun.target.position.set(0, d.groundY, 0);
+      world.sun.position.set(0, d.groundY, 0).addScaledVector(world.sunDir, 90);
+      world.renderer.render(world.scene, camera);
+      if (d.t >= d.duration) {
+        const done = d.resolve;
+        s.departing = null;
+        if (plume) plume.visible = false;
+        if (engineLight) engineLight.intensity = 0;
+        camera.fov = 72; camera.updateProjectionMatrix();
+        for (const a of world.avatars.values()) a.body.visible = true;
+        done();
+      }
+      return;
+    }
     if (!dlg.open) step(dt); else if (mp()) step(dt, false);
     if (mp() && (poseClock += dt * 1000) >= POSE_MS) { poseClock = 0; sendPoses(now); }
     placeCamera();
@@ -1591,7 +1774,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   requestAnimationFrame(frame);
   // Test and debug hook (Playwright, console): state, and a teleport next to a block.
   window.ASTRO_SURFACE = { state: s, world: () => world, emote: kind => playEmote(kind), wheel: open => (open ? openWheel(false) : closeWheel(false)),
-    running: () => !!(s.ready && startEl.hidden && !dlg.open), loaded: () => !!(s.ready && startEl.hidden), boardReach: BOARD_REACH,
+    running: () => !!(s.ready && startEl.hidden && !dlg.open && !s.departing), loaded: () => !!(s.ready && startEl.hidden),
+    boardReach: BOARD_REACH, boardSafeReach: BOARD_SAFE_R, playDeparture,
     distanceToLander(id) { const a = world?.avatars.get(id); if (!a) return 0; const p = a === world.avatar ? s.pos : a.pos; return Math.hypot(p.x, p.z); },
     goTo(id) { const b = world?.blocks.find(x => x.userData.exp.id === id); if (b) { s.pos.x = b.position.x + 2.2; s.pos.z = b.position.z + 1.2; s.yaw = Math.atan2(-(b.position.x - s.pos.x), -(b.position.z - s.pos.z)); s.grounded = false; } } };
   // index.html#surface or #surface-gale opens the surface directly (quick testing).

@@ -535,6 +535,9 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
   // ---------------------------------------------------------------------------
   // 3. ANIMATED 3D PODIUM (#podium-viewport)
   // ---------------------------------------------------------------------------
+  let latestRanking = null;
+  window.addEventListener('astro:results', e => { latestRanking = e.detail?.ranked; });
+
   async function initPodium() {
     const section = document.getElementById('results');
     const container = document.getElementById('podium-viewport');
@@ -563,12 +566,68 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       scene.add(colMesh, capMesh);
     }
 
+    // Faceted legless ghost tail (👻) attached to Hips when a crew member is left behind on Mars.
+    function createGhostTail(colorHex) {
+      const geo = new THREE.ConeGeometry(0.24, 0.68, 7, 4, false);
+      geo.rotateX(Math.PI); // tip pointing down
+      geo.translate(0, -0.32, 0);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const t = Math.max(0, Math.min(1, (-y) / 0.68)); // 0 at waist, 1 at tail tip
+        const ang = Math.atan2(x, z);
+        const wave = Math.sin(ang * 3) * 0.045 * t;
+        pos.setX(i, x * (1 + 0.15 * Math.sin(t * Math.PI)) + Math.sin(t * 4) * 0.035);
+        pos.setY(i, y + wave);
+        pos.setZ(i, z * (1 + 0.15 * Math.sin(t * Math.PI)) - Math.pow(t, 1.6) * 0.14);
+      }
+      const nonIdx = geo.toNonIndexed();
+      nonIdx.computeVertexNormals();
+      const col = new THREE.Color(colorHex || '#8ae8ff').lerp(new THREE.Color(0xc8f4ff), 0.55);
+      const mat = new THREE.MeshStandardMaterial({
+        color: col,
+        emissive: new THREE.Color(0x6ad4ff),
+        emissiveIntensity: 0.42,
+        roughness: 0.25,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+        flatShading: true,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(nonIdx, mat);
+      mesh.name = 'GhostTail';
+      mesh.visible = false;
+      return mesh;
+    }
+
     const actors = {};
     await Promise.all(CREW_IDS.map(async id => {
       const rel = window.ASTRO?.CREW_MODELS?.[id] || `characters/${id}.glb`;
       const gltf = await parseFreshGLB(rel);
       const model = gltf.scene;
       scene.add(model);
+      const hips = model.getObjectByName('Hips') || model;
+      const legL = model.getObjectByName('UpperLeg_L');
+      const legR = model.getObjectByName('UpperLeg_R');
+      const ghostTail = createGhostTail(CREW_COLORS[id]);
+      hips.add(ghostTail);
+      const meshMats = [];
+      model.traverse(child => {
+        if (!child.isMesh || child === ghostTail) return;
+        const origMat = child.material;
+        const ghostMat = origMat.clone();
+        ghostMat.transparent = true;
+        ghostMat.opacity = 0.42;
+        ghostMat.depthWrite = false;
+        if (ghostMat.color) ghostMat.color.lerp(new THREE.Color(0xc8f4ff), 0.55);
+        if (ghostMat.emissive) {
+          ghostMat.emissive.setHex(0x6ad4ff);
+          ghostMat.emissiveIntensity = 0.4;
+        }
+        meshMats.push({ mesh: child, origMat, ghostMat });
+      });
       const mixer = new THREE.AnimationMixer(model);
       const actions = {};
       const idle = findClip(gltf.animations, ['idle_loop', 'idle']);
@@ -580,7 +639,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         actions.wave = mixer.clipAction(wave);
         actions.wave.setLoop(THREE.LoopRepeat, Infinity);
       }
-      const actor = { id, model, mixer, actions, current: null };
+      const actor = { id, model, mixer, actions, current: null, legL, legR, ghostTail, meshMats, isGhost: false, slotH: 0.5, rankIdx: 0 };
       playClip(actor, 'idle', 0);
       actors[id] = actor;
     }));
@@ -592,17 +651,27 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       if (empty) return;
       const list = Array.isArray(ranked) && ranked.length
         ? ranked
-        : CREW_IDS.map((id, i) => ({ id, pos: i + 1 }));
+        : CREW_IDS.map((id, i) => ({ id, pos: i + 1, stranded: false }));
       list.forEach((entry, idx) => {
         const slot = SLOTS[Math.min(idx, SLOTS.length - 1)];
         const actor = actors[entry.id];
         if (!actor) return;
-        actor.model.position.set(slot.x, slot.h + 0.07, slot.z);
+        const isGhost = Boolean(entry.stranded);
+        actor.isGhost = isGhost;
+        actor.slotH = slot.h;
+        actor.rankIdx = idx;
+        if (actor.legL) actor.legL.visible = !isGhost;
+        if (actor.legR) actor.legR.visible = !isGhost;
+        if (actor.ghostTail) actor.ghostTail.visible = isGhost;
+        for (const m of actor.meshMats) {
+          m.mesh.material = isGhost ? m.ghostMat : m.origMat;
+        }
+        actor.model.position.set(slot.x, slot.h + (isGhost ? 0.25 : 0.07), slot.z);
         actor.model.rotation.y = (0.15 - idx * 0.08);
-        playClip(actor, idx === 0 ? 'wave' : idx === 1 ? 'action' : 'idle', 0.25);
+        playClip(actor, isGhost ? 'wave' : idx === 0 ? 'wave' : idx === 1 ? 'action' : 'idle', 0.25);
       });
     }
-    applyRanking();
+    applyRanking(latestRanking);
     window.addEventListener('astro:results', e => applyRanking(e.detail?.ranked));
 
     let lastT = performance.now();
@@ -615,7 +684,15 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       }
       const dt = Math.min((now - lastT) / 1000, 0.05);
       lastT = now;
-      for (const id of CREW_IDS) actors[id]?.mixer.update(dt);
+      for (const id of CREW_IDS) {
+        const actor = actors[id];
+        if (!actor) continue;
+        actor.mixer.update(dt);
+        if (actor.isGhost && !reducedMotion) {
+          actor.model.position.y = actor.slotH + 0.26 + Math.sin(now * 0.0032 + actor.rankIdx * 1.3) * 0.07;
+          if (actor.ghostTail) actor.ghostTail.rotation.z = Math.sin(now * 0.0045 + actor.rankIdx) * 0.14;
+        }
+      }
       if (!reducedMotion) angle += dt * 0.35;
       camera.position.set(0.3 + Math.sin(angle) * 0.55, 2.35, 5.4);
       camera.lookAt(0.3, 1.35, 0);
@@ -624,8 +701,15 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     requestAnimationFrame(frame);
   }
 
+  let podiumReady = false;
+  const ensurePodium = () => {
+    if (podiumReady) return;
+    podiumReady = true;
+    initPodium().catch(err => console.warn('3D podium fallback active:', err));
+  };
   initCockpit().catch(err => console.warn('3D cockpit fallback active:', err));
-  initPodium().catch(err => console.warn('3D podium fallback active:', err));
+  window.addEventListener('astro:results', ensurePodium);
+  if (document.getElementById('results')?.classList.contains('active')) ensurePodium();
 })();
 
 })().catch(error => console.warn('flight 3D unavailable:', error));

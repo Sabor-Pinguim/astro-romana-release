@@ -106,11 +106,18 @@
   const warn = (id,key) => String(spec(id).sources?.[key]||'').includes('⚠')?` <span class="warn" title="${t('planner.metrics.sourcesDisagree')}">⚠</span>`:'';
   const shortName = id => (part(id)?.name||id).replace(/\s*\(.*\)\s*$/,'');
   // Low-poly astronaut: flat polygons; s* = suit tones, c* = crew colour, v* = visor, d1 = dark gear.
-  const astronaut = (person) => `<svg class="astronaut" style="--crew:${person.color}" viewBox="0 0 150 215" aria-hidden="true">${[
+  // When isGhost = true (left behind on Mars), legs and boots are replaced by a translucent legless wavy ghost tail (👻).
+  const astronaut = (person, isGhost = false) => `<svg class="astronaut${isGhost ? ' is-ghost' : ''}" style="--crew:${person.color}" viewBox="0 0 150 215" aria-hidden="true">${[
     ['d1','40,62 110,62 114,120 36,120'],
-    ['s1','52,138 74,138 72,170 54,170'],['s2','54,170 72,170 70,196 55,196'],['c2','55,165 71,165 70,176 56,176'],
-    ['s2','98,138 76,138 78,170 96,170'],['s3','96,170 78,170 80,196 95,196'],['c2','95,165 79,165 80,176 94,176'],
-    ['d1','50,196 72,196 73,206 46,206'],['d1','100,196 78,196 77,206 104,206'],
+    ...(isGhost ? [
+      ['s1','50,138 75,138 75,196 61,180 46,194'],
+      ['s2','75,138 100,138 104,194 89,180 75,196'],
+      ['c2','49,128 101,128 100,142 50,142'],
+    ] : [
+      ['s1','52,138 74,138 72,170 54,170'],['s2','54,170 72,170 70,196 55,196'],['c2','55,165 71,165 70,176 56,176'],
+      ['s2','98,138 76,138 78,170 96,170'],['s3','96,170 78,170 80,196 95,196'],['c2','95,165 79,165 80,176 94,176'],
+      ['d1','50,196 72,196 73,206 46,206'],['d1','100,196 78,196 77,206 104,206'],
+    ]),
     ['s1','52,64 75,64 75,140 50,140 44,108'],['s2','75,64 98,64 106,108 100,140 75,140'],['s3','98,64 106,108 86,92'],
     ['c2','49,128 101,128 100,138 50,138'],
     ['d1','62,84 88,84 90,108 60,108'],['c1','64,96 86,96 86,100 64,100'],['c1','75,87 78,90 75,93 72,90'],
@@ -663,8 +670,12 @@
     $('#launch-dialog').close();
     const lift=DATA?liftoffOf(metrics()):{ok:true,accel:1};
     net.emit({k:'launch',lift}); // guests watch the same pad (and, if it never lifts off, the same debrief)
-    const go=()=>{const sim=window.ASTRO_SIM;if(!lift.ok){sim?.failLaunch(lift);return;}sim?.startFlight();if(sim?.flight)sim.flight.throttle=Math.max(sim.flight.throttle,.7);};
-    window.ASTRO_LAUNCHPAD?window.ASTRO_LAUNCHPAD(lift).then(go):go();
+    let started=false;
+    const go=()=>{if(started)return;started=true;const sim=window.ASTRO_SIM;if(!lift.ok){sim?.failLaunch(lift);return;}sim?.startFlight();if(sim?.flight)sim.flight.throttle=Math.max(sim.flight.throttle,.7);};
+    if(window.ASTRO_LAUNCHPAD){
+      try{Promise.resolve(window.ASTRO_LAUNCHPAD(lift)).then(go,err=>{console.warn('Launchpad fallback:',err);go();});}
+      catch(err){console.warn('Launchpad sync fallback:',err);go();}
+    }else{go();}
   });
   // Low-poly art: planets and terrain are flat-shaded triangles, like the 3D models.
   const RAMPS = {
@@ -1663,11 +1674,14 @@
     function startSurface() {
       flight.design ||= captureDesign();
       surf.active = true;
+      surf.departing = false;
+      surf.rushWarned = false;
       surf.timerSec = difficulty[state.difficulty].surfaceS;
       // Solo: the crew member open in the lobby. In a room, each player starts on their own seat (the host on its own).
       surf.activeCrew = net.mode !== 'solo' ? net.seat : state.detail.kind === 'crew' ? state.detail.id : 'maya';
       surf.completed = new Set();
       surf.stranded = [];
+      surf.strandedIds = [];
       // The experiment spots come from this seed, so every screen places them alike (web/views.js, placeBlocks).
       surf.seed = Math.floor(Math.random() * 2 ** 31);
       surf.control = Object.fromEntries(crew.map(c => [c.id, net.peerOf(c.id)?.id ?? null])); // crew → peer id (null: AI)
@@ -1684,28 +1698,37 @@
 
     // by: the peer that sent it (the host checks that it controls the experiment's owner); none: this screen.
     function completeSurfaceTask(id, by) {
-      const t = surf.tasks.find(item => item.id === id);
+      const task = surf.tasks.find(item => item.id === id);
       if (net.isGuest) { // the host confirms; the block shows done right away
-        if (surf.active && t && t.crew === surf.activeCrew && !surf.completed.has(id)) { net.act('task', id); surf.completed.add(id); }
+        if (surf.active && task && task.crew === surf.activeCrew && !surf.completed.has(id)) { net.act('task', id); surf.completed.add(id); }
         return;
       }
-      const owner = by ? surf.control?.[t?.crew] === by : t?.crew === surf.activeCrew;
-      if (!surf.active || !t || !owner || surf.completed.has(id)) return;
+      const owner = by ? surf.control?.[task?.crew] === by : task?.crew === surf.activeCrew;
+      if (!surf.active || !task || !owner || surf.completed.has(id)) return;
       surf.completed.add(id);
       syncSurface(true);
       radAudio.tone(860, 0.14, 'triangle', 0.06);
-      crewToast(surf.completed.size === surf.tasks.length ? t('surface.allDoneToast') : t('surface.taskDoneToast', { id, title: t.title, done: surf.completed.size, total: surf.tasks.length }));
+      crewToast(surf.completed.size === surf.tasks.length ? t('surface.allDoneToast') : t('surface.taskDoneToast', { id, title: task.title, done: surf.completed.size, total: surf.tasks.length }));
       window.dispatchEvent(new CustomEvent('astro:surface', { detail: surf }));
     }
 
     function boardShipAndFinish(forcedTimeout = false) {
+      if (surf.departing) return;
       surf.active = false;
+      surf.departing = true;
       if ($('#minigame-dialog').open) $('#minigame-dialog').close();
       cancelAnimationFrame(surf.raf);
       radAudio.stopAll();
-      // game-balance: on timeout, crew members more than 35 m from the lander are left behind.
-      surf.stranded = forcedTimeout ? crew.filter(p => (window.ASTRO_SURFACE?.distanceToLander(p.id) ?? 0) > 35).map(p => p.name) : [];
-      showResults(forcedTimeout);
+      radAudio.tone(240, 0.45, 'sawtooth', 0.07);
+      // game-balance: on timeout, any crew member outside the lander boarding perimeter (6.5 m) is left behind on Mars.
+      const reach = window.ASTRO_SURFACE?.boardSafeReach ?? 6.5;
+      const left = forcedTimeout ? crew.filter(p => (window.ASTRO_SURFACE?.distanceToLander(p.id) ?? 0) > reach) : [];
+      surf.strandedIds = left.map(p => p.id);
+      surf.stranded = left.map(p => p.name);
+      net.emit({ k: 'depart', forced: !!forcedTimeout, strandedIds: surf.strandedIds });
+      const finish = () => { surf.departing = false; showResults(forcedTimeout); };
+      if (window.ASTRO_SURFACE?.playDeparture) window.ASTRO_SURFACE.playDeparture(surf.strandedIds).then(finish);
+      else finish();
     }
 
     // The launch window only counts down while the crew is walking (not paused, loading or in a minigame).
@@ -1714,6 +1737,11 @@
       const dt = Math.min(0.1, (now - surf.lastTick) / 1000);
       surf.lastTick = now;
       if (surfaceClockRuns()) surf.timerSec = Math.max(0, surf.timerSec - dt);
+      if (surf.timerSec <= 10 && surf.timerSec > 0 && !surf.rushWarned) {
+        surf.rushWarned = true;
+        radAudio.tone(680, 0.22, 'sawtooth', 0.06);
+        crewToast(t('surface.returnRushToast'));
+      }
       syncSurface();
       if (surf.timerSec <= 0) {
         crewToast(t('surface.windowReached'));
@@ -1760,24 +1788,33 @@
     function showResults(forcedTimeout) {
       setResultsMode(false);
       const d = flight.design;
+      if (!Array.isArray(surf.strandedIds) || (!surf.strandedIds.length && surf.stranded?.length)) {
+        surf.strandedIds = crew.filter(c => surf.stranded?.includes(c.name) || surf.stranded?.includes(c.id)).map(c => c.id);
+      }
+      surf.stranded = surf.strandedIds.map(id => crew.find(c => c.id === id)?.name ?? id);
+      const strandedSet = new Set(surf.strandedIds);
+      const strandedCount = strandedSet.size;
+      // game-balance: leaving any crew member behind penalizes the entire team's mission score and every member's score.
+      const teamPenalty = strandedCount * 100;
+      const memberPenalty = strandedCount * 40;
       const tasksDone = surf.completed.size;
       const scienceBonus = (d.hasDrill ? 6 : 0) + (d.hasSpec ? 6 : 0) + (d.hasDna ? 6 : 0) + (d.hasDish ? 5 : 0);
-      const returnBonus = forcedTimeout ? (surf.stranded.length ? -18 : 4) : 18;
+      const returnBonus = forcedTimeout ? (strandedCount ? -18 : 4) : 18;
       const edlBonus = (d.hasLoftid && d.hasTrn) ? 14 : (d.hasLoftid || d.hasTrn) ? 9 : 4;
       const timeBonus = Math.round(surf.timerSec * 0.08);
-      const total = Math.max(150, Math.round((flight.score * 6.5) + tasksDone * 140 + scienceBonus * 5 + edlBonus * 6 + returnBonus * 6 + timeBonus));
+      const total = Math.max(150, Math.round((flight.score * 6.5) + tasksDone * 140 + scienceBonus * 5 + edlBonus * 6 + returnBonus * 6 + timeBonus - teamPenalty));
       const grade = total >= 1150 ? 'S+' : total >= 950 ? 'A' : total >= 740 ? 'B' : 'C';
 
       $('#results-rank-letter').textContent = grade;
       $('#results-score-text').textContent = t('results.totalScore', { pts: number(total), done: tasksDone, total: surf.tasks.length });
-      $('#results-status-badge').textContent = surf.stranded.length ? t('results.leftBehind', { names: surf.stranded.join(', ').toUpperCase() }) : t('results.allReturned');
-      $('#results-headline').textContent = surf.stranded.length ? t('results.headlinePartial') : grade === 'S+' ? t('results.headlineTriumph') : t('results.headlineComplete');
+      $('#results-status-badge').textContent = strandedCount ? t('results.leftBehind', { names: surf.stranded.join(', ').toUpperCase() }) : t('results.allReturned');
+      $('#results-headline').textContent = strandedCount ? t('results.headlinePartial') : grade === 'S+' ? t('results.headlineTriumph') : t('results.headlineComplete');
       $('#podium-site-tag').textContent = t('results.podiumTagSuccess', { site: SITES_INFO[state.site].name.toUpperCase(), grade });
 
-      const helenaPts = Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0));
-      const lucasPts = Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25));
-      const oscarPts = Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25));
-      const mayaPts = Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25));
+      const helenaPts = Math.max(50, Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0) - memberPenalty));
+      const lucasPts = Math.max(50, Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25) - memberPenalty));
+      const oscarPts = Math.max(50, Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25) - memberPenalty));
+      const mayaPts = Math.max(50, Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25) - memberPenalty));
       const positions = t('results.positions');
       const ranked = [
         { ...crew[0], pts: helenaPts },
@@ -1787,13 +1824,14 @@
       ].sort((a, b) => b.pts - a.pts).map((c, idx) => ({
         ...c,
         pos: positions[idx],
+        stranded: strandedSet.has(c.id),
         grade: c.pts >= 360 ? 'S+' : c.pts >= 310 ? 'A' : c.pts >= 240 ? 'B' : 'C',
       }));
 
       $('#results-leaderboard').innerHTML = ranked.map(r => `
         <div class="leader-row">
           <span class="leader-pos">${r.pos}</span>
-          <span><b>${r.name}</b> <small class="muted">· ${r.role}</small></span>
+          <span><b>${r.name}</b> <small class="muted">· ${r.role}</small>${r.stranded ? `<span class="tag is-ghost-tag">${t('results.ghostTag')}</span>` : ''}</span>
           <strong>${t('results.ptsSuffix', { pts: r.pts })}</strong>
           <span class="leader-grade">${r.grade}</span>
         </div>`).join('');
@@ -1802,17 +1840,17 @@
         [t('results.breakdown.budgetTwr'), `${d.overBudget ? (d.budgetPenalty ? t('results.breakdown.exceeded') : t('results.breakdown.exceededWarn')) : t('results.breakdown.onBudget')} · ${d.lowTwr ? (d.overweight ? t('results.breakdown.lowTwrBuffet') : t('results.breakdown.lowTwrWarn')) : t('results.breakdown.twrNominal')}`],
         [t('results.breakdown.edlLanding'), t('results.breakdown.edlValue', { pct: flight.landingShare ?? 0, suite: hasEdlLabel(d) })],
         [t('results.breakdown.radLabel'), t('results.breakdown.radValue', { shelter: d.hasShelter ? t('results.breakdown.shelterYes') : t('results.breakdown.shelterNo') })],
-        [t('results.breakdown.surfaceWindow'), forcedTimeout ? (surf.stranded.length ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', ') }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
+        [t('results.breakdown.surfaceWindow'), forcedTimeout ? (strandedCount ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', '), pts: teamPenalty }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
       ].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
 
       $('#podium-fallback').innerHTML = ranked.map((r, i) => `
-        <div class="podium-col">
-          ${astronaut(r)}
-          <div class="podium-step" style="background:${r.color};padding-top:${(4 - i) * 10}px">${r.pos} · ${r.name.toUpperCase()} (${r.grade})</div>
+        <div class="podium-col${r.stranded ? ' is-ghost' : ''}">
+          ${astronaut(r, r.stranded)}
+          <div class="podium-step${r.stranded ? ' is-ghost' : ''}" style="background:${r.color};padding-top:${(4 - i) * 10}px">${r.pos} · ${r.name.toUpperCase()} (${r.stranded ? t('results.podiumGhostSuffix') : r.grade})</div>
         </div>`).join('');
 
       // Guests run this same function on the host's numbers (it has no randomness).
-      net.emit({ k: 'results', forced: !!forcedTimeout, flight: flightSnapshot(), surf: { completed: [...surf.completed], stranded: surf.stranded, timerSec: surf.timerSec } });
+      net.emit({ k: 'results', forced: !!forcedTimeout, flight: flightSnapshot(), surf: { completed: [...surf.completed], stranded: surf.stranded, strandedIds: surf.strandedIds, timerSec: surf.timerSec } });
       showScreen('results');
       window.dispatchEvent(new CustomEvent('astro:results', { detail: { ranked, grade } }));
     }
@@ -2052,18 +2090,30 @@
       if (data.k === 'toast' && typeof data.text === 'string') toast(data.text);
       else if (data.k === 'launch') {
         const lift = data.lift || { ok: true, accel: 1 };
-        const after = () => { if (!lift.ok && state.screen !== 'results') failLaunch(lift); };
-        if (window.ASTRO_LAUNCHPAD) window.ASTRO_LAUNCHPAD(lift).then(after); else after();
+        const after = () => {
+          if (!lift.ok && state.screen !== 'results') failLaunch(lift);
+          else if (lift.ok && net.cached.flight) applyFlight(net.cached.flight);
+        };
+        if (window.ASTRO_LAUNCHPAD) Promise.resolve(window.ASTRO_LAUNCHPAD(lift)).then(after, after); else after();
       } else if (data.k === 'abort') {
         guestFlight = false; flight.active = false;
         const debrief = () => failLaunch(data.info || {});
         if (window.ASTRO_SPLASHDOWN) window.ASTRO_SPLASHDOWN(data.info || {}).then(debrief); else debrief();
+      } else if (data.k === 'depart') {
+        surf.active = false;
+        if ($('#minigame-dialog').open) $('#minigame-dialog').close();
+        radAudio.stopAll();
+        radAudio.tone(240, 0.45, 'sawtooth', 0.07);
+        window.ASTRO_SURFACE?.playDeparture?.(data.strandedIds || []);
       } else if (data.k === 'results') {
         guestFlight = false; guestSurface = false;
         for (const k of FLIGHT_FIELDS) if (data.flight && k in data.flight) flight[k] = data.flight[k];
         flight.active = false;
         surf.active = false;
-        surf.completed = new Set(data.surf?.completed || []); surf.stranded = data.surf?.stranded || []; surf.timerSec = data.surf?.timerSec ?? 0;
+        surf.completed = new Set(data.surf?.completed || []);
+        surf.stranded = data.surf?.stranded || [];
+        surf.strandedIds = data.surf?.strandedIds || [];
+        surf.timerSec = data.surf?.timerSec ?? 0;
         if ($('#minigame-dialog').open) $('#minigame-dialog').close();
         radAudio.stopAll();
         showResults(data.forced);
@@ -2121,6 +2171,11 @@
     if(!net.isGuest||!phase)return;
     const screen = phase === 'orbit' ? 'lobby' : phase;
     if(GUEST_SCREENS.includes(screen)){SIM.leaveMission();if(screen==='lobby')state.lobbyStep='crew';if(screen!==state.screen)showScreen(screen);else renderLobbyStepper();return;}
+    if(phase==='launchpad'&&state.screen!=='launchpad'&&state.screen!=='cockpit'){
+      if(window.ASTRO_LAUNCHPAD)Promise.resolve(window.ASTRO_LAUNCHPAD({ok:true,accel:1})).then(()=>{if(net.cached.flight)SIM.applyFlight(net.cached.flight);},()=>{});
+      else showScreen('launchpad');
+      return;
+    }
     if(phase==='cockpit'&&net.cached.flight)SIM.applyFlight(net.cached.flight);
     if(phase==='surface'&&net.cached.surface)SIM.applySurface(net.cached.surface);
   }
