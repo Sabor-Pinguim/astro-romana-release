@@ -251,12 +251,14 @@
         <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.dvLabel">Δv to orbit</span><strong class="meter-value" id="dv-value">—</strong></div><div class="meter-track"><div class="meter-fill" id="dv-fill"></div></div><p class="meter-hint" id="dv-hint">Sum of every stage; each one drops away when empty. Target: low Earth orbit ≈ 9,400 m/s ⚠.</p></div>
         <div class="meter"><div class="meter-head"><span class="meter-label" data-i18n="planner.marsLabel">Mars transfer</span><strong class="meter-value" id="mars-value">—</strong></div><div class="meter-track"><div class="meter-fill" id="mars-fill"></div></div><p class="meter-hint" id="mars-hint">Reach low Earth orbit first.</p></div>
         <div class="mass-row"><span class="meter-label" data-i18n="planner.massLabel">Liftoff mass</span><strong class="meter-value" id="mass-value">—</strong></div>
-        <div class="alert" id="booster-alert" role="alert">BOOSTER INCOMPLETE! Install an engine and a tank.</div>
-        <div class="alert" id="stage-alert" role="alert"></div>
-        <div class="alert" id="twr-alert" role="alert">NOT ENOUGH THRUST! Thrust-to-weight below 1.2.</div>
-        <div class="alert" id="dv-alert" role="alert">CAN'T REACH ORBIT! Add a bigger tank or an upper stage.</div>
-        <div class="alert" id="budget-alert" role="alert" data-i18n="planner.alerts.overBudget">OVER BUDGET! Remove or swap parts.</div>
-        <div class="alert" id="power-alert" role="alert" data-i18n="planner.alerts.powerDeficit">POWER DEFICIT! Add generation or cut the draw.</div>
+        <div class="telemetry-alerts">
+          <div class="alert" id="booster-alert" role="alert">BOOSTER INCOMPLETE! Install an engine and a tank.</div>
+          <div class="alert" id="stage-alert" role="alert"></div>
+          <div class="alert" id="twr-alert" role="alert">NOT ENOUGH THRUST! Thrust-to-weight below 1.2.</div>
+          <div class="alert" id="dv-alert" role="alert">CAN'T REACH ORBIT! Add a bigger tank or an upper stage.</div>
+          <div class="alert" id="budget-alert" role="alert" data-i18n="planner.alerts.overBudget">OVER BUDGET! Remove or swap parts.</div>
+          <div class="alert" id="power-alert" role="alert" data-i18n="planner.alerts.powerDeficit">POWER DEFICIT! Add generation or cut the draw.</div>
+        </div>
       </section>
       <section class="panel slab blueprint" aria-labelledby="blueprint-heading"><div class="viewport-label"><strong id="blueprint-heading" data-i18n="planner.blueprintHeading">MODULAR ROCKET BLUEPRINT</strong><span data-i18n="planner.blueprintHint">Click a module or an amber mounting point. + inserts a stage.</span></div><div class="rocket-view-controls"><button id="rocket-overview" type="button" aria-pressed="false">⛶ Zoom in</button></div><div class="rocket-navigation" id="rocket-navigation" hidden><button id="rocket-up" type="button" aria-label="Select the module above">↑</button><button id="rocket-down" type="button" aria-label="Select the module below">↓</button></div><div class="stack-overlay" id="stack-overlay"></div><div class="rocket-status" id="rocket-tags"></div></section>
       <section class="panel slab catalog" aria-labelledby="catalog-heading"><div class="panel-heading"><h3 id="catalog-heading" data-i18n="planner.catalogHeading">Compatible parts</h3><span class="tag" id="selected-stage-tag">BOOSTER</span></div><div class="category-tabs" id="category-tabs" role="tablist" aria-label="Part categories"></div><p class="catalog-summary" id="catalog-summary"></p><div class="parts-list" id="parts-list"></div></section>
