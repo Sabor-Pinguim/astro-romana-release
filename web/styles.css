@@ -164,6 +164,8 @@
     /* Lobby: 5-step mission setup (01 Play mode → 02 Difficulty → 03 Destination → 04 Landing site → 05 Crew) */
     #lobby{height:100vh;height:100dvh;min-height:0;overflow:hidden}
     #lobby .app-header{min-height:60px;padding:8px clamp(16px,3vw,44px)}
+    #lobby-back{--a:var(--f4);--b:#1f0e38;--fg:var(--starlight-cream);min-height:40px;padding:.5rem 1.25rem;border-bottom:2px solid var(--solar-amber);font-size:.76rem;letter-spacing:.12em}
+    #lobby-back:hover:not(:disabled){--a:#fbbf24;--b:var(--solar-amber);--fg:var(--bg-void);filter:none}
     #lobby .app-foot{padding:8px clamp(16px,3vw,44px)}
     .lobby-stepper{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;width:100%;max-width:1400px;margin:8px auto 0;padding:0 clamp(16px,3vw,44px);flex:none}
     .lobby-step-tab{position:relative;display:flex;align-items:center;gap:.65rem;min-height:46px;padding:.45rem 1.45rem .45rem 1.2rem;border:0;text-align:left;color:var(--muted);background:var(--f2);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);transition:background .15s,color .15s}
@@ -189,7 +191,13 @@
     .lobby-step-orbit .orbit-sidebar{min-height:0;justify-content:center}
     .lobby-change-diff{min-height:32px;padding:.4rem .8rem;font-size:.66rem}
     .setup-lead{max-width:44rem;font-size:.88rem;color:var(--muted)}
-    .mode-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,3.2vw,44px);align-items:stretch}
+    .mode-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,3.2vw,44px);align-items:stretch;transition:grid-template-columns .32s cubic-bezier(.22,1,.36,1),gap .32s cubic-bezier(.22,1,.36,1)}
+    .mode-grid [data-mode-card="solo"]{transition:opacity .18s ease}
+    #lobby-step-mode.mp-expanded .dossier-title-wrap .micro,#lobby-step-mode.mp-expanded .dossier-title-wrap .setup-lead{display:none}
+    .mode-grid.mp-expanded{grid-template-columns:0fr minmax(0,1fr);gap:0}
+    .mode-grid.mp-expanded [data-mode-card="solo"]{opacity:0;visibility:hidden;pointer-events:none;min-width:0;min-height:0;height:0;padding:0;margin:0;border:0;overflow:hidden}
+    .mode-grid.mp-expanded [data-mode-card="multiplayer"]{grid-template-rows:auto minmax(0,1fr)}
+    .mode-grid.mp-expanded [data-mode-card="multiplayer"]>:is(.mode-cta-row:empty,.mode-card-foot:empty){display:none}
     .setup-card{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto minmax(44px,auto);gap:8px;min-height:0;padding:14px 18px 12px;background:linear-gradient(155deg,var(--f3) 0 24%,var(--f1) 24%);clip-path:var(--chamfer);box-shadow:inset 0 1px 0 #ffffff14}
     .setup-card::before{content:"";position:absolute;top:0;left:0;width:44%;height:4px;background:var(--amethyst)}
     .setup-card[data-mode-card="solo"]::before{background:#D7263D}
@@ -228,36 +236,42 @@
     .mode-room-active{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-void);clip-path:var(--chamfer)}
     .mode-room-active .button{min-height:34px;padding:.4rem .8rem;font-size:.66rem}
     /* Room Browser, Player Name & Private/Password creation inside Multiplayer card */
-    .mode-visual.is-browser{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;padding:10px 12px;overflow:hidden}
-    .mp-name-bar,.mp-create-inputs{position:relative;z-index:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-    .mp-server-bar{position:relative;z-index:1;display:flex;align-items:center;gap:8px;min-width:0}
-    .mp-server-url{min-width:0;flex:1;font:700 .7rem var(--heading);letter-spacing:.04em;color:var(--safe);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mp-server-bar .button{min-height:28px;padding:.2rem .6rem;font-size:.8rem}
+    .mode-visual.is-expanded{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:10px;padding:12px 14px;overflow:visible}
+    .mp-expanded-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:flex-start;gap:8px 14px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid #ffffff14}
+    .mp-expanded-grid{position:relative;z-index:1;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.95fr);gap:14px;align-items:stretch}
+    .mp-col{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:12px;background:#11071fb8;border:1px solid #ffffff14;clip-path:var(--chamfer)}
+    .mp-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px}
+    .mp-col-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid #ffffff14}
+    .mp-mobile-only,.mp-tabs.mp-mobile-only{display:none}
+    .mp-name-bar{position:relative;z-index:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
     .mp-tabs{position:relative;z-index:1}
     .mp-tabs button{flex:1;min-height:34px;padding:.4rem .6rem;font-size:.62rem}
-    .mp-create-panel{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;padding-top:4px}
+    .mp-create-panel{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding-top:2px}
     .mp-create-panel .mp-input{width:100%}
+    .mp-create-panel #mode-create-btn{margin-top:auto;width:100%;min-height:42px}
     .mp-name-bar label{font:600 .6rem var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--solar-amber);white-space:nowrap}
     .mp-input{min-width:0;min-height:34px;padding:.32rem .6rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:600 .78rem var(--heading);letter-spacing:.04em}
     .mp-input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .mp-name-bar .mp-input{flex:1 1 150px}
     .mp-name-locked{font:700 .78rem var(--heading);letter-spacing:.06em;color:var(--starlight-cream);padding:.26rem .6rem;background:#11071fe6;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
-    .mp-name-edit-btn{min-height:28px;padding:.24rem .45rem}
+    .mp-name-edit-btn{min-width:34px;min-height:34px;padding:.24rem .45rem}
     .mp-name-edit-btn .pencil-icon{width:14px;height:14px;display:block}
     .mp-name-save-btn{min-height:34px;padding:.32rem .7rem;font-size:.62rem}
-    .mp-browser-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:4px;border-top:1px solid #ffffff14}
-    .mp-browser-head .button{min-height:28px;padding:.28rem .65rem;font-size:.6rem}
-    .room-browser-list{position:relative;z-index:1;flex:1 1 auto;min-height:76px;max-height:175px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}
+    .mp-browser-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .mp-browser-head .button{min-height:34px;padding:.28rem .65rem;font-size:.62rem}
+    .room-browser-list{position:relative;z-index:1;flex:1 1 0;min-height:120px;max-height:none;display:flex;flex-direction:column;gap:5px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}
     .room-browser-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;background:#11071fe8;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);border-left:2px solid var(--amethyst)}
     .room-browser-info{min-width:0;display:flex;flex-direction:column;gap:2px}
     .room-browser-info strong{font:700 .76rem/1.15 var(--heading);color:var(--starlight-cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .room-browser-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font:600 .56rem/1 var(--heading);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-    .room-browser-item .button{flex:none;min-height:30px;padding:.35rem .75rem;font-size:.62rem}
+    .room-browser-item .button{flex:none;min-height:32px;padding:.35rem .75rem;font-size:.62rem}
     .room-browser-empty{padding:.55rem .7rem;font-size:.74rem;color:var(--muted);background:#11071fc8}
-    .mp-create-box{width:100%;display:flex;flex-direction:column;gap:6px}
-    .mp-create-inputs .mp-input{flex:1 1 110px}
-    .mp-check{display:inline-flex;align-items:center;gap:5px;font:600 .66rem var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--starlight-cream);cursor:pointer;white-space:nowrap}
-    .mp-check input{accent-color:var(--solar-amber);width:15px;height:15px;margin:0;cursor:pointer}
+    .mp-check{display:inline-flex;align-items:center;gap:6px;min-height:36px;font:600 .66rem var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--starlight-cream);cursor:pointer;white-space:nowrap}
+    .mp-check input{appearance:none;position:relative;flex:none;width:32px;height:32px;margin:0;padding:0;border:0;background:transparent;cursor:pointer}
+    .mp-check input::before{content:"";position:absolute;inset:7px;background:var(--bg-void);border:1px solid var(--amethyst)}
+    .mp-check input:checked::before{background:var(--solar-amber);border-color:var(--solar-amber)}
+    .mp-check input:checked::after{content:"";position:absolute;inset:11px;background:var(--bg-void);clip-path:var(--diamond)}
+    .mp-check input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .room-name-edit{display:flex;align-items:center;gap:6px;flex-basis:100%}
     .room-name-edit .mp-input{flex:1;min-height:32px}
     .room-name-edit .button{min-height:32px;padding:.35rem .7rem;font-size:.6rem}
@@ -277,7 +291,6 @@
     .difficulty-card[aria-pressed="true"] .diff-check{color:var(--bg-void);background:var(--diff-accent)}
     .difficulty-card[data-difficulty="hard"][aria-pressed="true"] .diff-check{color:var(--text-white)}
     .difficulty-card .diff-check::before{content:"";width:6px;height:6px;background:currentColor;clip-path:var(--diamond)}
-    .difficulty-card .diff-about{margin-top:auto;padding-top:10px;border-top:1px solid #ffffff12;font-size:.82rem;line-height:1.42;color:var(--muted)}
     /* Step 04: Full-image HiRISE crater cards + interactive 3D Mars globe (2 clickable columns, fits 100vh on desktop) */
     .site-select-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.9fr);gap:14px;align-items:stretch}
     .site-select-left{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
@@ -350,9 +363,6 @@
     .room-panel{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .6rem;margin-top:10px;padding:.65rem .75rem;background:var(--f1);clip-path:var(--chamfer)}
     .room-panel[hidden]{display:none}
     .room-panel .button{min-height:38px;padding:.55rem 1.05rem;font-size:.68rem}
-    .room-panel input{width:6.4em;min-height:38px;padding:.4rem .6rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:700 .9rem var(--heading);letter-spacing:.22em;text-transform:uppercase}
-    .room-panel input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
-    .room-or{color:var(--muted);font-size:.8rem}
     .room-code{font:700 1.3rem var(--heading);letter-spacing:.22em;color:var(--solar-amber)}
     .room-note{flex-basis:100%;color:var(--muted);font-size:.8rem}
     .mp-watch{margin:.7rem 0 0;color:var(--solar-amber);font:700 .72rem var(--heading);letter-spacing:.08em;text-transform:uppercase}
@@ -1149,11 +1159,17 @@
       .settings-server-actions{width:100%}
       .settings-server-actions .button{flex:1}
       .settings-units-group button{flex:1 1 100%}
-      .room-browser-list{max-height:150px}
       .lb-controls{flex-direction:column;align-items:stretch}
       .lb-filters{display:grid;grid-template-columns:1fr 1fr}
       .lb-filters select{min-width:0;width:100%}
       .lb-row{grid-template-columns:36px minmax(0,1fr) auto auto;gap:6px;padding:.5rem .65rem}
+    }
+    @media (max-width:760px) and (orientation:portrait){
+      .mp-mobile-only,.mp-tabs.mp-mobile-only{display:flex}
+      .mp-expanded-grid{grid-template-columns:1fr}
+      .mp-col{display:none}
+      .mp-col.is-active-pane{display:flex}
+      .mode-visual.is-expanded .room-browser-list{flex:0 1 auto;min-height:120px;max-height:240px}
     }
     @media (max-width:360px){.scout-order-label{display:none}}
     @media (max-height:500px) and (orientation:landscape){
@@ -1162,6 +1178,7 @@
       .app-header .eyebrow,.app-foot .hint,.dossier-title-wrap .micro,.dossier-title-wrap .setup-lead{display:none}
       .app-header h2{font-size:1rem}
       .app-header .button.quiet{min-height:32px;padding:.3rem .7rem;font-size:.7rem}
+      #lobby .app-header #lobby-back{min-height:32px;padding:.3rem .9rem;font-size:.7rem}
       #lobby .lobby-stepper{display:flex;align-items:center;gap:3px;margin:4px auto 0;padding:0 max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))}
       .lobby-step-tab,.lobby-step-tab:first-child{flex:0 0 auto;min-height:34px;padding:.24rem .6rem;clip-path:var(--chamfer);justify-content:center}
       .lobby-step-tab:not(.active) .lobby-step-copy{display:none}
@@ -1187,20 +1204,26 @@
       .menu-footer,.coordinates{bottom:8px;font-size:.56rem}
       .mars{right:-8vw;top:50%;width:min(82vh,38vw);opacity:.85}
       .mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .mode-grid.mp-expanded{grid-template-columns:0fr minmax(0,1fr);gap:0}
+      .mode-grid.mp-expanded [data-mode-card="multiplayer"]{grid-template-rows:auto minmax(0,1fr)}
       .setup-card{padding:8px 10px;gap:6px;grid-template-rows:auto auto auto auto}
       .setup-card h4{font-size:1.05rem}
       .setup-card p{font-size:.74rem}
       .mode-visual{padding:6px 8px;overflow:visible}
-      .mode-visual:not(.is-browser){min-height:56px}
+      .mode-visual.is-expanded{padding:8px;gap:6px;overflow:visible}
+      .mp-mobile-only,.mp-tabs.mp-mobile-only{display:none}
+      .mp-expanded-top{padding-bottom:4px;gap:6px 10px}
+      .mp-expanded-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:8px}
+      .mp-col{display:flex;padding:8px 10px;gap:6px}
+      .mode-visual:not(.is-expanded){min-height:56px}
       .mode-avatar .astronaut{height:44px}
       .mode-avatar.is-hero .astronaut{height:50px}
       .mode-badge-top{display:none}
-      .room-browser-list{min-height:48px;max-height:112px}
+      .room-browser-list{min-height:64px;max-height:120px}
       .mode-join-row{flex-direction:row}
       .difficulty-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
       .difficulty-card{padding:8px 10px;gap:6px}
       .difficulty-card h4{font-size:1.15rem}
-      .difficulty-card .diff-about{display:none}
       .setup-specs li{font-size:.72rem}
       .orbit-layout{grid-template-columns:minmax(0,1.35fr) minmax(210px,.85fr);gap:10px}
       .orbit-map.slab,.lobby-step-orbit .orbit-map.slab{min-height:calc(100dvh - var(--header-h) - var(--stepper-h) - var(--foot-h) - 24px);height:auto}
@@ -1270,7 +1293,7 @@
       .rocket-stage{min-height:44px}
       .remove-stage{width:44px;min-height:44px}
       .category-tabs button{min-height:44px;padding:.55rem .9rem}
-      .mp-name-edit-btn,.mp-server-bar .button{min-width:44px;min-height:44px}
+      .mp-name-edit-btn,.mp-browser-head .button,.room-browser-item .button{min-width:44px;min-height:44px}
       .menu-lang-btn{min-height:36px;padding:.45rem .8rem}
       .invite,.pick{min-height:36px;display:inline-flex;align-items:center;justify-content:center}
       .orbit-system.is-3d .orbit-world{min-width:44px;min-height:44px}
@@ -1279,4 +1302,4 @@
       .mars-globe-hud-bottom{display:none}
       .kir-ctrl kbd,.dock-depth-grid kbd,.launchpad-skip kbd{display:none}
     }
-    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}.mode-grid,.mode-grid [data-mode-card="solo"]{transition:none!important}}

@@ -11,6 +11,19 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.6.3] - 2026-11-24
+
+### Changed
+- **Step 01 Play Mode separation & expandable Multiplayer panel (`index.html`, `web/app.js`, `web/styles.css`, `web/locales/{en,pt,es}.js`):**
+  - Restored symmetric initial Play Mode cards (Singleplayer + Multiplayer) in Step 01 (`#lobby-step-mode`) with crew illustrations and primary action buttons (`#mode-solo-btn`, `#mode-mp-btn`), where Singleplayer advances directly to Step 02 (`difficulty`).
+  - Added smooth in-step Multiplayer expansion (`mpExpanded`) that collapses the Singleplayer card (`aria-hidden="true"` / removed on collapse, `inert`, zeroed layout box, honoring `prefers-reduced-motion`) and expands the Multiplayer panel to 100% width with a clean top bar (`#mp-collapse-btn` `← Back` + inline-editable astronaut Name bar, removing the server IP bar).
+  - Updated `#step-summary-mode` and `.setup-card.selected` to reflect the active mode selection (`soloTitle` when collapsed, `mpTitle` when expanded, `coop · CODE` in a room), and cleaned up the expanded Step 01 header by hiding `.micro` and `.setup-lead` while switching `.dossier-title` to `lobby.setup.mpTitle` (synced across `EN`, `PT-BR`, and `ES`).
+  - Rendered side-by-side Find (`#room-browser-refresh`, `#room-browser-list`, join-by-code) and Host (`#mp-room-name`, `#mp-room-password`, `#mp-room-private`, `#mode-create-btn`) columns on desktop and mobile landscape (`915×412`, `844×390`, `667×375`), with portrait-only tab switching (`≤ 760px` portrait) preserving input drafts.
+  - Updated `#lobby-back` to `← Play mode` (`lobby.setup.steps.difficulty.back`) while expanded so both `#lobby-back` and `#mp-collapse-btn` collapse back to the mode cards, guarded room browser fetches, fixed `enterRoom()` button recovery, and synchronized all new i18n keys across `en`, `pt`, and `es`.
+  - Fixed Step 01 expansion reset on step/screen exit (`setLobbyStep()` calling `renderModeStep()` and `showScreen()` resetting `mpExpanded` / `editingPlayerName` when leaving `#lobby`), removed legacy multiplayer `.is-browser` / `.mp-create-box` / `.mp-create-inputs` / `.room-panel input` / `.room-or` CSS rules and unused multiplayer locale keys (`lobby.room.create`, `lobby.room.or`, `lobby.room.join`, `lobby.roomBrowser.serverLabel`, `lobby.roomBrowser.changeServer`, `lobby.roomBrowser.backToModeBtn`), removed the redundant inner `#mp-collapse-btn`, and upgraded `#lobby-back` to a prominent faceted header back button across `en`, `pt`, and `es`.
+- **Step 02 Difficulty cards cleanup (`web/app.js`, `web/styles.css`):**
+  - Removed the redundant `.diff-about` paragraph below each difficulty card in `renderDifficultyStep()` (and its CSS rules) while preserving `title` tooltips and `difficulty.*.about` locale keys.
+
 ## [1.6.2] - 2026-11-24
 
 ### Added
