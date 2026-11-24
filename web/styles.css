@@ -367,12 +367,14 @@
     .room-note{flex-basis:100%;color:var(--muted);font-size:.8rem}
     .mp-watch{margin:.7rem 0 0;color:var(--solar-amber);font:700 .72rem var(--heading);letter-spacing:.08em;text-transform:uppercase}
     [aria-disabled]:is(#difficulty-buttons button,[data-world]){opacity:.55;cursor:not-allowed}
-    .crew-card{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px 10px;padding:10px;background:linear-gradient(158deg,color-mix(in srgb,var(--crew) 15%,var(--f2)) 0 36%,var(--f1) 36%);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+    .crew-card{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px 10px;padding:10px;cursor:pointer;background:linear-gradient(158deg,color-mix(in srgb,var(--crew) 15%,var(--f2)) 0 36%,var(--f1) 36%);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
     .crew-card::before{content:"";position:absolute;top:0;left:0;width:48%;height:4px;background:var(--crew)}
     .crew-card.selected{box-shadow:inset 0 0 0 2px var(--crew)}
     .crew-card .crew-stage{grid-row:1/3;height:104px}
     .crew-card .astronaut{width:68px;height:98px}
     .crew-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .specialty-icon{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;background:color-mix(in srgb,var(--crew) 35%,var(--f2));color:var(--starlight-cream);font:700 .66rem/1 var(--heading);clip-path:var(--hex)}
+    .specialty-icon svg{width:19px;height:19px;fill:currentColor}
     .crew-name{font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase}
     .crew-role{font:600 .56rem/1.25 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--crew)}
     .status{display:flex;align-items:center;gap:.45rem;font:600 .56rem var(--heading);letter-spacing:.1em;color:var(--muted)}
@@ -395,11 +397,19 @@
     .detail-view{--crew:var(--amethyst);position:relative;flex:1;min-height:220px;overflow:hidden;background:linear-gradient(170deg,#1c1d48 0 40%,var(--bg-viewport) 40% 72%,#131431 72%);clip-path:var(--chamfer)}
     .detail-view::after{content:"";position:absolute;left:50%;bottom:7%;width:min(46%,220px);height:34px;translate:-50% 0;background:color-mix(in srgb,var(--crew) 34%,var(--f2));clip-path:polygon(18% 0,82% 0,100% 50%,82% 100%,18% 100%,0 50%)}
     .detail-view>canvas{position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%}
+    #lobby-step-crew .detail-view>canvas{translate:16% 0}
+    #lobby-step-crew .detail-view::after{left:66%}
+    .detail-specialties{position:absolute;top:12px;left:12px;z-index:3;display:flex;flex-direction:column;gap:7px}
+    .detail-specialty{display:flex;align-items:center;gap:8px;color:var(--starlight-cream);font:700 .69rem/1.15 var(--heading);text-transform:uppercase;letter-spacing:.03em}
+    .detail-specialty-name{max-width:135px;padding:4px 6px;background:#11071fd9}
+    .detail-specialties .specialty-icon{width:42px;height:42px;flex:none}
+    .detail-specialties .specialty-icon svg{width:25px;height:25px}
     .detail-site{position:absolute;inset:0;z-index:2} /* above the avatar canvas (z-index 1) */
     .detail-site svg{display:block;width:100%;height:100%}
     .detail-view.site>canvas,.detail-view.site::after,.detail-view:not(.site) .detail-site{display:none!important}
     .detail-extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
     .detail-extra .perk{flex-basis:100%;padding:.8rem 1rem;background:var(--f1)}
+    #lobby-step-crew .detail-head .eyebrow,#lobby-step-crew #detail-role,#lobby-step-crew #detail-desc,#lobby-step-crew .detail-status,#lobby-step-crew .detail-extra{display:none}
     .perk strong{font-family:var(--heading);letter-spacing:.06em;color:var(--solar-amber)}
     .perk p{margin-top:.2rem;font-size:.86rem;color:var(--muted)}
 
@@ -1079,6 +1089,7 @@
       .parts-list{max-height:520px}
       .chalkboard-body{grid-template-columns:1fr}
     }
+    @media (max-width:1100px){#lobby-step-crew .detail-view{flex:none;height:clamp(140px,35dvh,300px);min-height:0}}
     @media (max-width:900px){
       #lobby{height:auto;min-height:100vh;min-height:100dvh;overflow:visible}
       .lobby-main,.dossier{overflow:visible}
@@ -1090,6 +1101,7 @@
       .site-card-media{min-height:180px}
       .mars-globe-stage{min-height:340px;height:340px}
       .crew-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      #lobby-step-crew .dossier-right{gap:8px}
       .cockpit-layout,.results-grid{grid-template-columns:1fr}
     }
     @media (max-width:640px){
@@ -1117,6 +1129,14 @@
       .crew-card{grid-template-columns:56px minmax(0,1fr);gap:6px 8px;padding:8px}
       .crew-card .crew-stage{height:82px}
       .crew-card .astronaut{width:52px;height:76px}
+      #lobby-step-crew .dossier-row{display:none}
+      #lobby-step-crew .dossier-title-wrap{display:none}
+      #lobby-step-crew .dossier{gap:6px}
+      #lobby-step-crew .crew-card{min-height:120px}
+      #lobby-step-crew .detail-view{height:150px}
+      #lobby-step-crew #detail-desc,#lobby-step-crew .detail-extra{display:none}
+      #lobby-step-crew .detail-head{gap:2px}
+      #lobby-step-crew .detail-head .eyebrow,#lobby-step-crew .detail-status{display:none}
       .crew-name{font-size:.92rem;letter-spacing:.03em;overflow-wrap:anywhere}
       #planner{height:100vh;height:100dvh;min-height:0;overflow:hidden}
       #planner .app-header{flex-wrap:nowrap;min-height:32px;padding:2px max(8px,env(safe-area-inset-right,0px)) 2px max(8px,env(safe-area-inset-left,0px));gap:5px}
@@ -1311,6 +1331,8 @@
       #planner{height:100vh;height:100dvh;min-height:0;overflow:hidden}
       .lobby-main,.dossier{overflow:visible;padding:6px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px))}
       .dossier{padding:8px 12px;gap:6px}
+      #lobby-step-crew .dossier-title-wrap,#lobby-step-crew .dossier-row{display:none}
+      #lobby-step-crew .dossier-right{gap:5px}
       .dossier-title{font-size:1.02rem}
       #lobby .app-foot,#planner .app-foot{position:sticky;bottom:0;z-index:6;min-height:36px;padding:3px max(12px,env(safe-area-inset-right,0px)) calc(3px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
       #lobby .app-foot:has(#lobby-next[hidden]){display:none}
@@ -1371,6 +1393,15 @@
       .crew-card{grid-template-columns:42px minmax(0,1fr);gap:3px 6px;padding:5px}
       .crew-card .crew-stage{height:58px}
       .crew-card .astronaut{width:38px;height:54px}
+      #lobby-step-crew .crew-card{min-height:88px}
+      #lobby-step-crew .room-note{display:none}
+      #lobby-step-crew .specialty-icon{font-size:.57rem}
+      #lobby-step-crew .detail-view{height:clamp(180px,calc(100dvh - 185px),250px)}
+      #lobby-step-crew .detail-specialties{top:8px;left:8px;gap:4px}
+      #lobby-step-crew .detail-specialties .specialty-icon{width:34px;height:34px}
+      #lobby-step-crew .detail-specialties .specialty-icon svg{width:21px;height:21px}
+      #lobby-step-crew .detail-specialty-name{max-width:105px;font-size:.57rem}
+      #lobby-step-crew #detail-desc,#lobby-step-crew .detail-extra{display:none}
       .crew-name{font-size:.8rem;overflow-wrap:anywhere}
       .detail-head h4{font-size:1.15rem}
       .detail-view{min-height:110px}
@@ -1514,6 +1545,9 @@
       #minigame-dialog .dialog-inner,#dev-exp-dialog .dialog-inner{padding:10px 14px;gap:5px}
       #minigame-dialog h3,#dev-exp-dialog h3{font-size:1.05rem}
       #minigame-summary,#dev-exp-summary{display:none}
+    }
+    @media (max-width:700px) and (max-height:500px) and (orientation:landscape){
+      #lobby:has(#lobby-step-crew:not([hidden])) .lobby-header-controls{display:none}
     }
     @media (pointer:coarse){
       .meter-info-btn{position:relative;isolation:isolate;display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;margin:-6px -4px;padding:0;border:0;background:none;clip-path:none;font:700 italic .68rem/1 var(--body);color:var(--bg-void)}

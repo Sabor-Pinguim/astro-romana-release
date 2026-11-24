@@ -29,6 +29,16 @@
     {id:'oscar',name:'Oscar',color:'#1FA2FF',get role(){return t('crew.oscar.role');},get quote(){return t('crew.oscar.quote');},get tags(){return t('crew.oscar.tags');},get perk(){return t('crew.oscar.perk');},get perkText(){return t('crew.oscar.perkText');}},
     {id:'maya',name:'Maya',color:'#2BB673',get role(){return t('crew.maya.role');},get quote(){return t('crew.maya.quote');},get tags(){return t('crew.maya.tags');},get perk(){return t('crew.maya.perk');},get perkText(){return t('crew.maya.perkText');}}
   ];
+  const specialtyMarks = {
+    helena: ['M12 2 8 8v7l4-2 4 2V8z M8 15 5 19h3z M16 15l3 4h-3z M11 17h2l-1 5z', 'M12 3a4 4 0 0 0-4 4v3h8V7a4 4 0 0 0-4-4z M10 12h4v6h4v3H6v-3h4z', 'M3 18l5-5 4 2 6-8-2-2 5-1-1 5-2-2-7 10-4-2-3 4z'],
+    lucas: ['M13 2 5 13h6l-1 9 9-12h-6z', 'M3 4h18v3H3z M4 9h4v11H4z M10 9h4v11h-4z M16 9h4v11h-4z M2 21h20v2H2z', 'M19 3a5 5 0 0 0-5 6l-9 9a2 2 0 0 0 3 3l9-9a5 5 0 0 0 5-6l-3 3-3-1-1-3z'],
+    oscar: ['M4 3h16v4H4z M4 10h16v4H4z M4 17h16v4H4z M6 5h2v1H6z M6 12h2v1H6z M6 19h2v1H6z', 'M11 12h2v10h-2z M6 12l6-9 6 9-6-3z M3 15a11 11 0 0 0 4 7l2-2a8 8 0 0 1-3-5z M21 15a11 11 0 0 1-4 7l-2-2a8 8 0 0 0 3-5z', 'M3 17l5-5 4 3 7-8-2-2 5-1-1 5-2-2-7 11-4-3-3 4z'],
+    maya: ['M2 17 8 5l6 12z M9 17l5-10 8 10z M2 19h20v3H2z', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z M11 10h2v4h-2z', 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z'],
+  };
+  const specialtyIcon = (p, label, i) => {
+    const icon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${specialtyMarks[p.id]?.[i] ?? 'M12 2 22 12 12 22 2 12z'}"/></svg>`;
+    return `<span class="detail-specialty"><span class="specialty-icon" aria-hidden="true">${icon}</span><span class="detail-specialty-name">${esc(label)}</span></span>`;
+  };
   const SITES_INFO = {
     jezero:{get name(){return t('sites.jezero.name');},get mission(){return t('sites.jezero.mission');},get tag(){return t('sites.jezero.tag');},lat:18.4447,lon:77.4508,coords:'18.4° N, 77.5° E',get desc(){return t('sites.jezero.desc');}},
     gale:{get name(){return t('sites.gale.name');},get mission(){return t('sites.gale.mission');},get tag(){return t('sites.gale.tag');},lat:-4.5895,lon:137.4417,coords:'4.6° S, 137.4° E',get desc(){return t('sites.gale.desc');}}
@@ -477,7 +487,7 @@
         mpCta.dataset.viewKey = viewKey;
         mpVis.innerHTML = `<div class="mode-figure-group"><span class="mode-badge-top">${COOP_ICON} ${esc(t('lobby.setup.coopSquadBadge'))}</span><div class="mode-squad">${crew.map(p=>`<div class="mode-avatar" style="--crew:${p.color}">${astronaut(p)}</div>`).join('')}</div></div>`;
         mpCta.innerHTML = `<button class="button amber" type="button" id="mode-mp-btn">${esc(t('lobby.roomBrowser.playMpBtn'))}</button>`;
-        mpFoot.innerHTML = `<span class="tag">${esc(t('lobby.roomBrowser.onlineCoopTag'))}</span><span class="mode-foot-note">${esc(t('lobby.roomBrowser.mpFootNote'))}</span>`;
+        mpFoot.innerHTML = '';
         $('#mode-mp-btn').addEventListener('click', () => setMpExpanded(true, { focus: true }));
       }
       return;
@@ -633,8 +643,12 @@
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
     $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.isGuest&&net.joinable&&!seat.player;
-      return `<article class="crew-card ${picked?'selected':''}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.text)}</span></div><div class="crew-actions">${take?`<button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button>`:''}<button class="pick" type="button" data-pick="${p.id}" aria-label="${t('lobby.detailsBtn')}: ${p.name}" aria-pressed="${picked}">${t('lobby.detailsBtn')}</button></div></article>`;}).join('');
-    $$('#crew-grid [data-pick]').forEach(b=>b.addEventListener('click',()=>{state.detail={kind:'crew',id:b.dataset.pick};renderLobby();}));
+      return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.text)}</span></div>${take?`<div class="crew-actions"><button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button></div>`:''}</article>`;}).join('');
+    $$('#crew-grid [data-pick]').forEach(card=>{
+      const select=()=>{state.detail={kind:'crew',id:card.dataset.pick};renderLobby();$(`#crew-grid [data-pick="${card.dataset.pick}"]`)?.focus();};
+      card.addEventListener('click',e=>{if(!e.target.closest('button'))select();});
+      card.addEventListener('keydown',e=>{if(e.target===card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();select();}});
+    });
     $$('#crew-grid [data-take]').forEach(b=>b.addEventListener('click',()=>net.setSeat(b.dataset.take)));
     renderModeStep();renderDifficultyStep();renderSiteStep();renderRoom();renderLobbyStepper();renderDetail();syncSetup();
   }
@@ -692,13 +706,14 @@
       const p=crew.find(c=>c.id===d.id);
       $('#detail-kind').textContent=t('lobby.kindCrew');$('#detail-name').textContent=p.name;$('#detail-role').textContent=p.role;$('#detail-desc').textContent='“'+p.quote+'”';
       $('#detail-status').textContent=seatStatus(p.id).text;
-      $('#detail-extra').innerHTML=p.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')+`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
+      $('#detail-specialties').innerHTML=p.tags.map((label,i)=>specialtyIcon(p,label,i)).join('');
+      $('#detail-extra').innerHTML=`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
       view.classList.remove('site');view.style.setProperty('--crew',p.color);
     }else{
       const s=SITES_INFO[d.id];
       $('#detail-kind').textContent=t('lobby.kindSite');$('#detail-name').textContent=s.name;$('#detail-role').textContent=s.tag;$('#detail-desc').textContent=s.desc;
       $('#detail-status').textContent=state.site===d.id?t('lobby.siteSelected'):t('lobby.siteAvailable');
-      $('#detail-extra').innerHTML='';$('#detail-site').innerHTML=sitePhoto(d.id,true);view.classList.add('site');
+      $('#detail-extra').innerHTML='';$('#detail-specialties').innerHTML='';$('#detail-site').innerHTML=sitePhoto(d.id,true);view.classList.add('site');
     }
     window.dispatchEvent(new CustomEvent('astro:detail',{detail:d}));
   }

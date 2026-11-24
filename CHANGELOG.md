@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.1] - 2026-11-24
+
+### Changed
+- Simplified the play-mode cards and used Offline, Online, player-count and NPC labels consistently across English, Portuguese and Spanish.
+- Made crew cards select the character shown in a fixed 3D preview. Each specialty appears once beside its full localized name in the preview, with a compact layout for portrait and landscape phones.
+
 ## [1.7.0] - 2026-11-24
 
 ### Added

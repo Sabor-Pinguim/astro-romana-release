@@ -80,6 +80,7 @@ All of them are CSS `clip-path`.
 
 - **Keyboard focus:** `clip-path` cuts off the `outline`. On clipped elements, focus is `box-shadow: inset 0 0 0 2px var(--solar-amber)`.
 - **Icons:** draw them with the shapes in the table above. No emoji or icon fonts.
+- **Crew specialties:** the selected character's preview shows filled geometric pictograms in crew-coloured hexagons, each beside its full localized name.
 
 ## 5. Surfaces
 
