@@ -256,7 +256,6 @@
         selectSite(btn.dataset.site, true);
       }));
     }
-    const title = $('#site-step-mission'); if(title) title.textContent = site.mission;
     const coords = $('#mars-globe-coords'); if(coords) coords.textContent = `${site.name.toUpperCase()} · ${site.coords}`;
     const readout = $('#crew-site-readout'); if(readout) readout.textContent = `${worldName('mars')} · ${site.name}`;
     $$('#mars-pins [data-mars-pin]').forEach(pin => {
@@ -638,7 +637,6 @@
   }
   function renderLobby(){
     const site=SITES_INFO[state.site];
-    $('#mission-name').textContent=site.mission;
     $('#planner-title').textContent=t('common.missionPrefix',{name:site.mission});
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
@@ -708,7 +706,7 @@
       $('#detail-status').textContent=seatStatus(p.id).text;
       $('#detail-specialties').innerHTML=p.tags.map((label,i)=>specialtyIcon(p,label,i)).join('');
       $('#detail-extra').innerHTML=`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
-      view.classList.remove('site');view.style.setProperty('--crew',p.color);
+      view.classList.remove('site');view.style.setProperty('--crew',p.color);$('#crew-details').style.setProperty('--crew',p.color);
     }else{
       const s=SITES_INFO[d.id];
       $('#detail-kind').textContent=t('lobby.kindSite');$('#detail-name').textContent=s.name;$('#detail-role').textContent=s.tag;$('#detail-desc').textContent=s.desc;

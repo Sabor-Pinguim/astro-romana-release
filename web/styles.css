@@ -361,6 +361,10 @@
     .crew-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     /* Multiplayer room (web/net.js): create or join under the crew, then the code and the invite link. */
     .room-panel{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .6rem;margin-top:10px;padding:.65rem .75rem;background:var(--f1);clip-path:var(--chamfer)}
+    @media (min-width:1101px){
+      #lobby-step-crew .dossier-block{display:flex;flex:1;flex-direction:column}
+      #lobby-step-crew .room-panel{margin-top:auto}
+    }
     .room-panel[hidden]{display:none}
     .room-panel .button{min-height:38px;padding:.55rem 1.05rem;font-size:.68rem}
     .room-code{font:700 1.3rem var(--heading);letter-spacing:.22em;color:var(--solar-amber)}
@@ -410,6 +414,12 @@
     .detail-extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
     .detail-extra .perk{flex-basis:100%;padding:.8rem 1rem;background:var(--f1)}
     #lobby-step-crew .detail-head .eyebrow,#lobby-step-crew #detail-role,#lobby-step-crew #detail-desc,#lobby-step-crew .detail-status,#lobby-step-crew .detail-extra{display:none}
+    @media (min-width:1101px){
+      #lobby-step-crew .dossier-right{position:relative}
+      #lobby-step-crew .detail-head{position:absolute;top:14px;left:14px;z-index:4}
+      #lobby-step-crew #detail-name{display:block;padding:.3rem .8rem;background:var(--crew);color:var(--bg-void)}
+      #lobby-step-crew .detail-specialties{top:78px}
+    }
     .perk strong{font-family:var(--heading);letter-spacing:.06em;color:var(--solar-amber)}
     .perk p{margin-top:.2rem;font-size:.86rem;color:var(--muted)}
 

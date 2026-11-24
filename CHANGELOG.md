@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.2] - 2026-11-24
+
+### Changed
+- Replaced the site and crew lobby dossier titles with localized action-focused headings and removed the redundant site instruction.
+- Moved the selected crew member's name into the desktop 3D preview above their specialties and anchored the multiplayer room panel to the bottom of the left crew column.
+
 ## [1.7.1] - 2026-11-24
 
 ### Changed
