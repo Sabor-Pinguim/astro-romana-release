@@ -1,5 +1,5 @@
-// Dev Mode launcher (Shift+D, Menu "Dev Mode", or ?dev=1 / #dev): lets developers jump directly to any
-// game phase/difficulty/landing site or play any of the 21 experiment minigames individually via ASTRO_RUN.
+// Dev Mode launcher (hidden by default; hover Mars on the menu and type 13136767 to unlock):
+// lets developers jump directly to any game phase/difficulty/landing site or play any of the 21 experiment minigames individually.
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -7,11 +7,36 @@
 
   const dlg = $('dev-dialog');
   const expDlg = $('dev-exp-dialog');
+  const devBtn = $('dev-button');
   if (!dlg || !expDlg) return;
 
+  const UNLOCK_KEY = 'astro-romana-dev-unlocked';
+  const SECRET_CODE = '13136767';
   const EXP = window.ASTRO_EXPERIMENTS;
   const MG = window.ASTRO_MINIGAMES;
   const RUN = window.ASTRO_RUN;
+
+  let memUnlocked = false;
+  function isUnlocked() {
+    try {
+      return localStorage.getItem(UNLOCK_KEY) === '1';
+    } catch {
+      return memUnlocked;
+    }
+  }
+
+  function setUnlocked(val) {
+    memUnlocked = Boolean(val);
+    try {
+      if (val) localStorage.setItem(UNLOCK_KEY, '1');
+      else localStorage.removeItem(UNLOCK_KEY);
+    } catch {
+      /* ignore storage errors */
+    }
+    if (devBtn) devBtn.hidden = !val;
+  }
+
+  setUnlocked(isUnlocked());
 
   const devState = {
     difficulty: window.ASTRO?.state?.difficulty || 'normal',
@@ -152,6 +177,10 @@
 
   $('dev-button')?.addEventListener('click', open);
   $('dev-close')?.addEventListener('click', close);
+  $('dev-hide-btn')?.addEventListener('click', () => {
+    setUnlocked(false);
+    close();
+  });
   dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
 
   $('dev-difficulty')?.addEventListener('change', e => {
@@ -199,10 +228,137 @@
     playExperiment(devState.lastExp);
   });
 
+  let lastPointer = { x: -1, y: -1 };
+  let codeBuf = '';
+  let codeTimer = null;
+  let eggPlaying = false;
+
+  addEventListener('pointermove', e => {
+    lastPointer.x = e.clientX;
+    lastPointer.y = e.clientY;
+  }, { passive: true });
+
+  function isPointerOverMars() {
+    if (window.ASTRO_MENU_MARS) return window.ASTRO_MENU_MARS.isHovered();
+    const marsEl = document.querySelector('#menu .mars');
+    if (!marsEl || lastPointer.x < 0) return false;
+    const r = marsEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return Math.hypot(lastPointer.x - cx, lastPointer.y - cy) <= Math.min(r.width, r.height) * .36;
+  }
+
+  function getTargetRect() {
+    if (!devBtn) return { left: window.innerWidth * .18, top: window.innerHeight * .7, width: 180, height: 36 };
+    const wasHidden = devBtn.hidden;
+    const prevVis = devBtn.style.visibility;
+    if (wasHidden) {
+      devBtn.style.visibility = 'hidden';
+      devBtn.hidden = false;
+    }
+    const rect = devBtn.getBoundingClientRect();
+    if (wasHidden) {
+      devBtn.hidden = true;
+      devBtn.style.visibility = prevVis;
+    }
+    return rect;
+  }
+
+  function spawnImpactExplosion(rect) {
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const layer = document.createElement('div');
+    layer.className = 'sabobor-impact-layer';
+    layer.setAttribute('aria-hidden', 'true');
+
+    const wave = document.createElement('div');
+    wave.className = 'sabobor-shockwave';
+    wave.style.left = `${cx}px`;
+    wave.style.top = `${cy}px`;
+    layer.appendChild(wave);
+
+    const emojis = ['🔥', '💥', '🐧', '✨', '⚡', '🔥', '💥'];
+    const total = 32;
+    for (let i = 0; i < total; i++) {
+      const angle = (i / total) * Math.PI * 2 + (Math.random() - .5) * .35;
+      const dist = 65 + Math.random() * 190;
+      const node = document.createElement('span');
+      const isEmoji = i % 2 === 0;
+      node.className = isEmoji ? 'sabobor-emoji' : 'sabobor-spark';
+      if (isEmoji) node.textContent = emojis[i % emojis.length];
+      node.style.left = `${cx}px`;
+      node.style.top = `${cy}px`;
+      node.style.setProperty('--tx', `${(Math.cos(angle) * dist).toFixed(1)}px`);
+      node.style.setProperty('--ty', `${(Math.sin(angle) * dist).toFixed(1)}px`);
+      node.style.setProperty('--rot', `${Math.round((Math.random() - .5) * 540)}deg`);
+      node.style.setProperty('--dur', `${(.55 + Math.random() * .45).toFixed(2)}s`);
+      node.style.setProperty('--delay', `${(Math.random() * .07).toFixed(2)}s`);
+      layer.appendChild(node);
+    }
+
+    document.body.appendChild(layer);
+    const menu = $('menu');
+    if (menu) {
+      menu.classList.remove('is-shaking');
+      void menu.offsetWidth;
+      menu.classList.add('is-shaking');
+      setTimeout(() => menu.classList.remove('is-shaking'), 300);
+    }
+    setTimeout(() => layer.remove(), 1200);
+  }
+
+  function runEasterEgg() {
+    if (eggPlaying) return;
+    eggPlaying = true;
+    window.ASTRO_OVERDRIVE_MARS?.();
+    try {
+      const audio = new Audio('assets/audio/sabobor-pinguim.mp3');
+      audio.volume = .85;
+      audio.play().catch(() => {});
+    } catch {
+      /* ignore audio errors */
+    }
+
+    const onImpact = () => {
+      setUnlocked(true);
+      const rect = getTargetRect();
+      spawnImpactExplosion(rect);
+      if (devBtn) {
+        devBtn.classList.remove('is-popping');
+        void devBtn.offsetWidth;
+        devBtn.classList.add('is-popping');
+        setTimeout(() => devBtn.classList.remove('is-popping'), 520);
+      }
+    };
+    const onDone = () => { eggPlaying = false; };
+
+    if (window.ASTRO_MENU_MARS?.triggerPenguin) {
+      window.ASTRO_MENU_MARS.triggerPenguin({ getTargetRect, onImpact, onDone });
+    } else {
+      setTimeout(() => { onImpact(); onDone(); }, 250);
+    }
+  }
+
   addEventListener('keydown', e => {
-    if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.code !== 'KeyD') return;
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) return;
+
+    if (!e.ctrlKey && !e.altKey && !e.metaKey && /^[0-9]$/.test(e.key)) {
+      if ($('menu')?.classList.contains('active') && isPointerOverMars()) {
+        codeBuf = (codeBuf + e.key).slice(-SECRET_CODE.length);
+        clearTimeout(codeTimer);
+        codeTimer = setTimeout(() => { codeBuf = ''; }, 3500);
+        if (codeBuf === SECRET_CODE) {
+          codeBuf = '';
+          clearTimeout(codeTimer);
+          runEasterEgg();
+        }
+        return;
+      }
+      codeBuf = '';
+    }
+
+    if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.code !== 'KeyD') return;
+    if (!isUnlocked()) return;
     e.preventDefault();
     if (dlg.open) close();
     else open();
@@ -212,10 +368,19 @@
     addEventListener(ev, () => { if (dlg.open) renderExperiments(); });
   }
 
-  window.ASTRO_DEV = Object.freeze({ open, close, playExperiment, jump, state: devState });
+  window.ASTRO_DEV = Object.freeze({
+    open,
+    close,
+    playExperiment,
+    jump,
+    isUnlocked,
+    lock: () => setUnlocked(false),
+    triggerEasterEgg: runEasterEgg,
+    state: devState,
+  });
 
   const params = new URLSearchParams(location.search);
-  if (params.get('dev') === '1' || location.hash === '#dev') {
+  if (isUnlocked() && (params.get('dev') === '1' || location.hash === '#dev')) {
     setTimeout(open, 80);
   }
 })();

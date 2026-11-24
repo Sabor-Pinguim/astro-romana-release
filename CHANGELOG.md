@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.6.2] - 2026-11-24
+
+### Added
+- **Hidden Dev Mode unlock easter egg (`web/dev.js`, `web/views.js`, `assets/audio/sabobor-pinguim.mp3`):**
+  - Hid the Dev Mode menu button (`#dev-button`) by default and persisted unlock state in `localStorage` (`astro-romana-dev-unlocked`), also gating `Shift+D` and `?dev=1` / `#dev` until unlocked, with a **Hide Dev Mode** (`#dev-hide-btn`) toggle added inside the Dev panel (`dev.hideBtn` localized across EN/PT-BR/ES).
+  - Added the Gentoo Penguin SVG icon inside `#dev-button` alongside a dedicated `<span data-i18n="dev.openBtn">` so `ASTRO_I18N.applyDOM()` updates only the label.
+  - Hovering Mars on `#menu` and typing `13136767` triggers `sabobor-pinguim.mp3`, bursts a custom 3D flat-shaded low-poly **Gentoo Penguin** ("Absolute Cinema" raised gold hands + white belly + Gentoo head bonnet + blazing fire eyes) out of Mars in front of the menu UI, spin-dives into `#dev-button`, and triggers a radial shockwave/particle explosion revealing the button (replayable even after unlocking).
+- **Menu Mars moons & overdrive (`web/app.js`, `web/styles.css`):**
+  - Updated the faceted Mars SVG (`menuMars()`) to animate both **Phobos** and **Deimos** orbiting along dashed back/front orbital arcs in real time (`startMenuMoons()`), plus `window.ASTRO_OVERDRIVE_MARS()` which spins Mars faster and accelerates Mars and both moons indefinitely when the easter egg triggers.
+
 ## [1.6.1] - 2026-11-23
 
 ### Changed

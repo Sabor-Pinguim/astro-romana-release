@@ -29,7 +29,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.6.1',
+        version: 'v1.6.2',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -53,6 +53,7 @@
         places: { orbit: 'Mars orbit', surface: 'Surface', descent: 'Descent' },
         backToDev: '← Dev Mode',
         replayBtn: 'New seed / Replay',
+        hideBtn: 'Hide Dev Mode',
         closeBtn: 'Close',
         phase: {
           lobbyMode: 'Lobby · Mode',

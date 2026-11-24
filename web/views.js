@@ -33,75 +33,340 @@ function makeView(container, { fov = 30, append = false } = {}) {
   const rim = new THREE.DirectionalLight(0xe04f26, 1.8); rim.position.set(5, 1, -4); scene.add(rim);
   container[append ? 'append' : 'prepend'](renderer.domElement);
   const view = { renderer, scene, camera, width: 0, height: 0, onResize: null };
-  new ResizeObserver(() => {
+  const syncSize = () => {
     view.width = container.clientWidth; view.height = container.clientHeight;
     if (!view.width || !view.height) return;
     renderer.setSize(view.width, view.height, false);
     camera.aspect = view.width / view.height; camera.updateProjectionMatrix();
     view.onResize?.();
-  }).observe(container);
+  };
+  syncSize();
+  new ResizeObserver(syncSize).observe(container);
+  view.syncSize = syncSize;
   return view;
 }
 const isActive = id => document.getElementById(id)?.classList.contains('active');
 
-// Menu: Saturn V in flight. Play makes it burn hard and fly away before the screen changes.
+// Menu: Saturn V in flight + secret 3D Gentoo Penguin easter egg bursting from the SVG Mars.
 (async () => {
   const art = document.querySelector('#menu .space-art'), view = art && makeView(art, { fov: 28, append: true });
   if (!view) return;
   view.renderer.domElement.classList.add('saturn-canvas');
   const { scene, camera } = view;
-  const flight = new THREE.Group(), spin = new THREE.Group(), body = await loadGLB('rocket/saturn_v_lowpoly.glb');
-  const height = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3()).y;
-  body.position.y = -height / 2;
-  spin.add(body); flight.add(spin); scene.add(flight);
-  // Exhaust: three nested 7-sided cones, additive, flickering.
-  const plume = new THREE.Group();
-  plume.position.y = -height / 2;
-  [[.62, 3.4, 0xe04f26, .5], [.42, 2.4, 0xf59e0b, .7], [.2, 1.4, 0xfce8a6, .95]].forEach(([r, h, color, opacity]) => {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    cone.rotation.x = Math.PI; cone.position.y = -h / 2;
-    plume.add(cone);
-  });
-  spin.add(plume);
-  camera.position.set(0, 0, 30); camera.lookAt(0, 0, 0);
+
+  function toFlat(geo) {
+    const out = geo.index ? geo.toNonIndexed() : geo;
+    out.computeVertexNormals();
+    return out;
+  }
+
+  function buildLowPolyPenguin() {
+    const group = new THREE.Group();
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x162033, roughness: .72, metalness: .06, flatShading: true });
+    const wingTrimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, emissive: 0x334155, emissiveIntensity: .35, roughness: .52, flatShading: true });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x334155, emissiveIntensity: .42, roughness: .48, metalness: .02, flatShading: true });
+    const beakMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: .55, flatShading: true });
+    const footMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: .6, flatShading: true });
+    const handMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: .5, metalness: .08, flatShading: true });
+    const handCreaseMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: .55, flatShading: true });
+
+    const part = (geo, mat, pos, rot, scale) => {
+      const m = new THREE.Mesh(toFlat(geo), mat);
+      if (pos) m.position.set(...pos);
+      if (rot) m.rotation.set(...rot);
+      if (scale) m.scale.set(...scale);
+      return m;
+    };
+
+    // Body (pushed back slightly) + proud white tuxedo belly + wedge tail & orange webbed feet
+    group.add(part(new THREE.CylinderGeometry(.28, .38, .86, 8), darkMat, [0, -.06, -.04]));
+    group.add(part(new THREE.IcosahedronGeometry(.37, 1), darkMat, [0, -.42, -.04], null, [1, .46, .88]));
+    group.add(part(new THREE.CylinderGeometry(.25, .35, .78, 7), whiteMat, [0, -.07, .16], null, [.96, 1, .72]));
+    group.add(part(new THREE.IcosahedronGeometry(.33, 1), whiteMat, [0, -.40, .17], null, [.92, .44, .65]));
+    group.add(part(new THREE.ConeGeometry(.14, .34, 4), darkMat, [0, -.46, -.36], [-Math.PI * .62, Math.PI * .25, 0], [1, 1, .5]));
+
+    [-1, 1].forEach(s => {
+      const foot = new THREE.Group();
+      foot.position.set(s * .17, -.58, .13);
+      foot.rotation.y = s * .24;
+      foot.add(part(new THREE.CylinderGeometry(.11, .14, .06, 5), footMat, [0, 0, .06], null, [.95, 1, 1.45]));
+      foot.add(part(new THREE.ConeGeometry(.07, .12, 3), beakMat, [0, -.01, .21], [Math.PI * .5, 0, 0], [1.2, 1, .35]));
+      group.add(foot);
+    });
+
+    // Head, iconic Gentoo white crown bonnet & prominent red-orange beak
+    group.add(part(new THREE.IcosahedronGeometry(.32, 1), darkMat, [0, .54, 0], null, [1, .95, .95]));
+    group.add(part(new THREE.TorusGeometry(.265, .085, 5, 8, Math.PI), whiteMat, [0, .60, .06], [-.25, 0, 0], [1.06, .96, 1.25]));
+    [-1, 1].forEach(s => {
+      group.add(part(new THREE.BoxGeometry(.13, .08, .08), whiteMat, [s * .18, .63, .21], [0, s * .25, -s * .28]));
+    });
+    group.add(part(new THREE.ConeGeometry(.095, .28, 4), beakMat, [0, .48, .39], [Math.PI * .53, Math.PI * .25, 0], [1.1, 1, .82]));
+    group.add(part(new THREE.BoxGeometry(.032, .028, .20), darkMat, [0, .52, .38], [.08, 0, 0]));
+
+    // Eyes with blazing multi-cone low-poly fire jets
+    const eyeFlames = [];
+    const flameColors = [0xea580c, 0xf59e0b, 0xfef08a];
+    const flameSizes = [[.078, .34, .15], [.054, .24, .11], [.030, .15, .07]];
+    [-1, 1].forEach(s => {
+      const eyeGroup = new THREE.Group();
+      eyeGroup.position.set(s * .14, .56, .295);
+      eyeGroup.rotation.y = s * .28;
+      eyeGroup.add(part(new THREE.CylinderGeometry(.066, .066, .03, 7), whiteMat, [0, 0, 0], [Math.PI * .5, 0, 0]));
+      eyeGroup.add(part(new THREE.CylinderGeometry(.042, .042, .036, 7), darkMat, [0, 0, .006], [Math.PI * .5, 0, 0]));
+
+      const flamePivot = new THREE.Group();
+      flamePivot.position.set(0, .01, .03);
+      flamePivot.rotation.set(.92, 0, -s * .16);
+      flameSizes.forEach(([r, h, yOff], idx) => {
+        const cone = new THREE.Mesh(
+          toFlat(new THREE.ConeGeometry(r, h, 5)),
+          new THREE.MeshBasicMaterial({ color: flameColors[idx], side: THREE.DoubleSide }),
+        );
+        cone.position.y = yOff;
+        flamePivot.add(cone);
+      });
+      eyeGroup.add(flamePivot);
+      eyeFlames.push(flamePivot);
+      group.add(eyeGroup);
+    });
+
+    const eyeLight = new THREE.PointLight(0xff6b1a, 1.8, 4.5, 1.6);
+    eyeLight.position.set(0, .65, .85);
+    group.add(eyeLight);
+
+    // Flippers raised in the "Absolute Cinema" open-hands pose
+    const hands = [];
+    [-1, 1].forEach(s => {
+      const shoulder = new THREE.Group();
+      shoulder.position.set(s * .34, .22, .04);
+      shoulder.rotation.set(.26, 0, -s * .45);
+      shoulder.add(part(new THREE.BoxGeometry(.36, .10, .15), darkMat, [s * .17, 0, 0], [0, 0, s * .15]));
+      shoulder.add(part(new THREE.BoxGeometry(.34, .03, .05), wingTrimMat, [s * .17, -.045, .07], [0, 0, s * .15]));
+
+      const elbow = new THREE.Group();
+      elbow.position.set(s * .36, .03, .02);
+      elbow.rotation.set(-.18, 0, s * .56);
+      elbow.add(part(new THREE.BoxGeometry(.09, .24, .12), darkMat, [0, .12, 0]));
+
+      // Low-poly open hand (palm facing +Z, thumb inward toward head, 4 fanned fingers up)
+      const hand = new THREE.Group();
+      hand.position.set(0, .27, .02);
+      hand.rotation.set(0, -s * .12, -s * .14);
+      hand.add(part(new THREE.BoxGeometry(.16, .16, .055), handMat, [0, 0, 0]));
+      hand.add(part(new THREE.BoxGeometry(.10, .025, .062), handCreaseMat, [0, -.01, .004], [0, 0, s * .25]));
+      [-1.5, -.5, .5, 1.5].forEach((slot, idx) => {
+        const len = idx === 1 || idx === 2 ? .145 : .12;
+        hand.add(part(
+          new THREE.BoxGeometry(.032, len, .042),
+          handMat,
+          [slot * .042, .078 + len * .42, 0],
+          [0, 0, -slot * .08],
+        ));
+      });
+      // Thumb facing inward toward the penguin
+      hand.add(part(new THREE.BoxGeometry(.038, .105, .045), handMat, [-s * .10, .01, .01], [0, 0, s * .68]));
+      elbow.add(hand);
+      shoulder.add(elbow);
+      group.add(shoulder);
+      hands.push({ s, shoulder, baseZ: -s * .45 });
+    });
+
+    return { group, eyeFlames, eyeLight, hands };
+  }
+
+  const penguin = buildLowPolyPenguin();
+  penguin.group.visible = false;
+  scene.add(penguin.group);
+
+  camera.position.set(0, 0, 30);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+
+  // Saturn V in foreground (loaded asynchronously so the penguin easter egg never blocks on it)
+  let flight = null, spin = null, plume = null, saturnHeight = 1;
   const home = new THREE.Vector3(), tilt = -.42;
-  let scale = 1, launch = null, wasActive = true;
+  let scale = 1, launch = null, wasActive = true, penguinSeq = null;
+  let lastPointerX = -1, lastPointerY = -1;
+
+  const pointerNdc = new THREE.Vector2(), rectTmp = new THREE.Vector3();
+  addEventListener('pointermove', e => { lastPointerX = e.clientX; lastPointerY = e.clientY; }, { passive: true });
+
+  function isMarsHovered() {
+    if (!isActive('menu') || lastPointerX < 0) return false;
+    const marsEl = document.querySelector('#menu .mars');
+    if (!marsEl) return false;
+    const r = marsEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return Math.hypot(lastPointerX - cx, lastPointerY - cy) <= Math.min(r.width, r.height) * .34;
+  }
+
+  function screenToWorld(clientX, clientY, targetZ) {
+    const rect = view.renderer.domElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return new THREE.Vector3(0, 0, targetZ);
+    camera.updateMatrixWorld();
+    pointerNdc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+    rectTmp.set(pointerNdc.x, pointerNdc.y, .5).unproject(camera).sub(camera.position).normalize();
+    const dist = (targetZ - camera.position.z) / (rectTmp.z || -1);
+    const out = camera.position.clone().addScaledVector(rectTmp, dist);
+    return Number.isFinite(out.x) && Number.isFinite(out.y) && Number.isFinite(out.z)
+      ? out
+      : new THREE.Vector3(0, 0, targetZ);
+  }
+
   view.onResize = () => {
     const H = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), W = H * camera.aspect, narrow = camera.aspect < .9;
     home.set(narrow ? W * .2 : W * .07, narrow ? H * .22 : -H * .02, 0);
-    scale = (narrow ? .36 : .56) * H / height;
+    scale = (narrow ? .36 : .56) * H / saturnHeight;
   };
+
   window.ASTRO_LAUNCH = () => new Promise(resolve => {
     if (reduce || !view.width) return resolve();
     launch = { start: performance.now(), resolve, done: false };
   });
+
+  window.ASTRO_MENU_MARS = {
+    isHovered: isMarsHovered,
+    triggerPenguin({ getTargetRect, onImpact, onDone } = {}) {
+      if (!view.width || !view.height) view.syncSize?.();
+      if (reduce || !view.width) {
+        onImpact?.();
+        onDone?.();
+        return;
+      }
+      const marsEl = document.querySelector('#menu .mars');
+      let startWorld = new THREE.Vector3(8, 0, -10);
+      if (marsEl) {
+        const mr = marsEl.getBoundingClientRect();
+        startWorld = screenToWorld(mr.left + mr.width * .5, mr.top + mr.height * .5, -10);
+        marsEl.classList.remove('is-bursting');
+        void marsEl.offsetWidth;
+        marsEl.classList.add('is-bursting');
+        setTimeout(() => marsEl.classList.remove('is-bursting'), 450);
+      }
+      art.classList.add('is-penguin-front');
+      penguinSeq = {
+        start: performance.now(),
+        startWorld,
+        getTargetRect,
+        onImpact,
+        onDone,
+        impacted: false,
+        targetWorld: null,
+      };
+      penguin.group.visible = true;
+    },
+  };
+
+  const easeOutCubic = x => 1 - Math.pow(1 - x, 3);
+  const easeInCubic = x => x * x * x;
   const up = new THREE.Vector3();
+
   function frame(now) {
     requestAnimationFrame(frame);
     const active = isActive('menu');
-    if (active && !wasActive) launch = null; // back on the menu: the rocket is waiting again
+    if (active && !wasActive) {
+      launch = null;
+      if (penguinSeq) {
+        penguin.group.visible = false;
+        art.classList.remove('is-penguin-front');
+        const cancelled = penguinSeq;
+        penguinSeq = null;
+        cancelled.onDone?.();
+      }
+    }
     wasActive = active;
     if (!active || !view.width) return;
     const t = reduce ? 0 : now / 1000;
-    flight.rotation.set(-.12, 0, tilt);
-    spin.rotation.y = t * .25;
-    flight.scale.setScalar(scale);
-    flight.position.copy(home);
-    flight.position.y += Math.sin(t * 1.3) * .12;
-    let burn = 1;
-    if (launch) {
-      const e = (now - launch.start) / 1000;
-      up.set(0, 1, -.55).normalize().applyQuaternion(flight.quaternion);
-      flight.position.addScaledVector(up, 26 * e * e);
-      burn = 1 + e * 2.2;
-      if (e > 1.05 && !launch.done) { launch.done = true; launch.resolve(); }
+
+    if (penguinSeq) {
+      const e = (now - penguinSeq.start) / 1000;
+      const heroPos = new THREE.Vector3(0, 0, 21.5);
+      if (e < 1.25) {
+        const k = easeOutCubic(e / 1.25);
+        penguin.group.position.lerpVectors(penguinSeq.startWorld, heroPos, k);
+        penguin.group.scale.setScalar(THREE.MathUtils.lerp(.25, 1.38, k));
+        penguin.group.rotation.set(0, (1 - k) * Math.PI * 10, Math.sin(e * 12) * .12 * (1 - k));
+      } else if (e < 1.95) {
+        const k = (e - 1.25) / .70;
+        penguin.group.position.copy(heroPos);
+        penguin.group.position.y += Math.sin(k * Math.PI * 2) * .12;
+        penguin.group.scale.setScalar(1.38 + Math.sin(k * Math.PI) * .18);
+        penguin.group.rotation.set(-.06, Math.sin(k * Math.PI * 2) * .18, 0);
+      } else if (e < 2.65) {
+        if (!penguinSeq.targetWorld) {
+          const rect = penguinSeq.getTargetRect?.();
+          penguinSeq.targetWorld = rect
+            ? screenToWorld(rect.left + rect.width * .5, rect.top + rect.height * .5, 14)
+            : new THREE.Vector3(-4, -3, 14);
+        }
+        const k = easeInCubic((e - 1.95) / .70);
+        penguin.group.position.lerpVectors(heroPos, penguinSeq.targetWorld, k);
+        penguin.group.scale.setScalar(THREE.MathUtils.lerp(1.42, .32, k));
+        penguin.group.rotation.set(k * .75, k * Math.PI * 8, -k * .45);
+      } else {
+        penguin.group.visible = false;
+        art.classList.remove('is-penguin-front');
+        const seq = penguinSeq;
+        penguinSeq = null;
+        if (!seq.impacted) {
+          seq.impacted = true;
+          seq.onImpact?.();
+        }
+        seq.onDone?.();
+      }
+
+      // Animate eye flames & "Absolute Cinema" hand pump while visible
+      penguin.eyeFlames.forEach((f, idx) => {
+        const flick = .86 + Math.sin(t * 42 + idx * 2.1) * .22 + Math.random() * .2;
+        f.scale.set(1 + Math.random() * .16, flick, 1 + Math.random() * .16);
+      });
+      penguin.eyeLight.intensity = 1.6 + Math.random() * 1.1;
+      penguin.hands.forEach(({ s, shoulder, baseZ }) => {
+        shoulder.rotation.z = baseZ + s * Math.sin(t * 9) * .08;
+      });
     }
-    plume.scale.set(1 + Math.random() * .08, burn * (1 + Math.random() * .18), 1 + Math.random() * .08);
+
+    // Saturn V (when loaded)
+    if (flight && spin && plume) {
+      flight.rotation.set(-.12, 0, tilt);
+      spin.rotation.y = t * .25;
+      flight.scale.setScalar(scale);
+      flight.position.copy(home);
+      flight.position.y += Math.sin(t * 1.3) * .12;
+      let burn = 1;
+      if (launch) {
+        const e = (now - launch.start) / 1000;
+        up.set(0, 1, -.55).normalize().applyQuaternion(flight.quaternion);
+        flight.position.addScaledVector(up, 26 * e * e);
+        burn = 1 + e * 2.2;
+        if (e > 1.05 && !launch.done) { launch.done = true; launch.resolve(); }
+      }
+      plume.scale.set(1 + Math.random() * .08, burn * (1 + Math.random() * .18), 1 + Math.random() * .08);
+    }
     view.renderer.render(scene, camera);
   }
   view.onResize();
   requestAnimationFrame(frame);
-})().catch(err => console.warn('Saturn V not shown:', err));
+
+  loadGLB('rocket/saturn_v_lowpoly.glb').then(body => {
+    saturnHeight = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3()).y || 1;
+    body.position.y = -saturnHeight / 2;
+    const f = new THREE.Group(), sp = new THREE.Group();
+    sp.add(body);
+    const pl = new THREE.Group();
+    pl.position.y = -saturnHeight / 2;
+    [[.62, 3.4, 0xe04f26, .5], [.42, 2.4, 0xf59e0b, .7], [.2, 1.4, 0xfce8a6, .95]].forEach(([r, h, color, opacity]) => {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      cone.rotation.x = Math.PI; cone.position.y = -h / 2;
+      pl.add(cone);
+    });
+    sp.add(pl);
+    f.add(sp);
+    scene.add(f);
+    flight = f; spin = sp; plume = pl;
+    view.onResize();
+  }).catch(err => console.warn('Saturn V not shown:', err));
+})().catch(err => console.warn('Menu 3D scene not shown:', err));
 
 // Lobby: the selected crew member (avatar GLB): idle loop, a wave when picked again.
 (async () => {

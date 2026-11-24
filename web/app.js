@@ -1377,11 +1377,62 @@
   // The big view marks the 512 m walkable terrain (centre third of the 1.5 km photo) and credits the source.
   const sitePhoto = (id, big) => `<img class="site-photo" src="assets/sites/${id}.png" alt="${big ? t('lobby.sitePhotoAlt', { name: SITES_INFO[id].name }) : ''}">`
     + (big ? `<span class="site-walk" aria-hidden="true"><small>${t('lobby.walkArea', { dist: U.distanceM(512, 0) })}</small></span><span class="site-credit">${t('lobby.siteCredit', { width: U.distanceKm(1.5, 1) })}</span>` : '');
+  const MENU_MOONS = [
+    { id: 'phobos', rx: 1.38, ry: .34, deg: -14, angle: Math.PI * .8, speed: .72, scale: .088, seed: 5 },
+    { id: 'deimos', rx: 1.72, ry: .43, deg: -8, angle: Math.PI * .18, speed: .18, scale: .056, seed: 9 },
+  ];
+  const moonPoint = (m, angle) => {
+    const tilt = m.deg * Math.PI / 180;
+    const x = m.rx * Math.cos(angle), y = m.ry * Math.sin(angle);
+    return [x * Math.cos(tilt) - y * Math.sin(tilt), x * Math.sin(tilt) + y * Math.cos(tilt)];
+  };
+  let menuMoonsRaf = 0;
+  let marsAngle = 0, marsSpinVel = 0, overdriveAccel = 0, moonSpeedMult = 1;
+  window.ASTRO_OVERDRIVE_MARS = () => {
+    overdriveAccel += 1.6;
+    marsSpinVel += 2.2;
+    moonSpeedMult += 1.6;
+  };
+  function startMenuMoons() {
+    if (menuMoonsRaf) cancelAnimationFrame(menuMoonsRaf);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let lastNow = performance.now();
+    const tick = now => {
+      menuMoonsRaf = requestAnimationFrame(tick);
+      const dt = Math.min(.1, (now - lastNow) / 1000);
+      lastNow = now;
+      if (!$('#menu')?.classList.contains('active')) return;
+      if (overdriveAccel > 0) {
+        marsSpinVel += overdriveAccel * dt;
+        marsAngle += marsSpinVel * dt;
+        moonSpeedMult += overdriveAccel * .45 * dt;
+        const marsBody = $('#menu-mars-body');
+        if (marsBody) marsBody.setAttribute('transform', `rotate(${((marsAngle * 180 / Math.PI) % 360).toFixed(2)})`);
+      }
+      for (const m of MENU_MOONS) {
+        m.angle += m.speed * moonSpeedMult * dt;
+        const [x, y] = moonPoint(m, m.angle);
+        const depth = Math.sin(m.angle);
+        const front = depth >= 0;
+        const sc = (m.scale * (1 + .12 * depth)).toFixed(4);
+        const tf = `translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${sc})`;
+        const b = $(`#menu-${m.id}-back`), f = $(`#menu-${m.id}-front`);
+        if (b) { b.style.display = front ? 'none' : ''; if (!front) b.setAttribute('transform', tf); }
+        if (f) { f.style.display = front ? '' : 'none'; if (front) f.setAttribute('transform', tf); }
+      }
+    };
+    menuMoonsRaf = requestAnimationFrame(tick);
+  }
   function menuMars() {
-    const tilt = -14 * Math.PI / 180, at = t => { const x = 1.45 * Math.cos(t), y = .36 * Math.sin(t); return [x * Math.cos(tilt) - y * Math.sin(tilt), x * Math.sin(tilt) + y * Math.cos(tilt)]; };
-    const arc = (t0, t1) => Array.from({ length: 13 }, (_, k) => at(t0 + (t1 - t0) * k / 12).map(v => v.toFixed(3)).join(',')).join(' ');
-    const [px, py] = at(Math.PI * .8);
-    return `<svg viewBox="-1.6 -1.6 3.2 3.2" aria-hidden="true"><polyline class="orbit-back" points="${arc(Math.PI, Math.PI * 2)}"/>${facetPolys({ ...PLANETS.mars, seed: 11, rings: [6, 12, 18, 24] })}<polyline points="${arc(0, Math.PI)}"/><g transform="translate(${px.toFixed(3)} ${py.toFixed(3)}) scale(.09)">${facetPolys({ ramp: RAMPS.rock, seed: 5, rings: [5, 9] })}</g></svg>`;
+    const arc = (m, t0, t1) => Array.from({ length: 15 }, (_, k) => moonPoint(m, t0 + (t1 - t0) * k / 14).map(v => v.toFixed(3)).join(',')).join(' ');
+    const moon = (m, layer) => {
+      const [x, y] = moonPoint(m, m.angle);
+      const front = Math.sin(m.angle) >= 0;
+      const show = (layer === 'front') === front;
+      const sc = (m.scale * (1 + .12 * Math.sin(m.angle))).toFixed(4);
+      return `<g id="menu-${m.id}-${layer}" transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${sc})"${show ? '' : ' style="display:none"'}>${facetPolys({ ramp: RAMPS.rock, seed: m.seed, rings: [5, 9] })}</g>`;
+    };
+    return `<svg viewBox="-1.6 -1.6 3.2 3.2" aria-hidden="true">${MENU_MOONS.slice().reverse().map(m => `<polyline class="orbit-back" points="${arc(m, Math.PI, Math.PI * 2)}"/>`).join('')}${MENU_MOONS.slice().reverse().map(m => moon(m, 'back')).join('')}<g id="menu-mars-body">${facetPolys({ ...PLANETS.mars, seed: 11, rings: [6, 12, 18, 24] })}</g>${MENU_MOONS.map(m => `<polyline points="${arc(m, 0, Math.PI)}"/>`).join('')}${MENU_MOONS.map(m => moon(m, 'front')).join('')}</svg>`;
   }
   // Polygonal orbits plus a Hohmann-style transfer from Earth (r 26, 200°) to Mars arrival (r 38.5, 20°).
   function orbitRings() {
@@ -1392,6 +1443,7 @@
   }
   function paintArt() {
     $('.mars').innerHTML = menuMars();
+    startMenuMoons();
     $('.orbit-system').insertAdjacentHTML('afterbegin', orbitRings());
     $('.orbit-sun').innerHTML = facetPlanet({ ramp: RAMPS.sun, seed: 7, rings: [6, 12], light: [0, 0, 1] });
     $('.earth .planet-disc').innerHTML = facetPlanet({ ...PLANETS.earth, seed: 2, rings: [5, 10, 15] });

@@ -29,7 +29,7 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.6.1',
+        version: 'v1.6.2',
         quitEyebrow: 'Abandonar misión',
         quitTitle: '¿Salir de la misión?',
         quitBody: 'Este es un prototipo local. Puedes cerrar la pestaña en cualquier momento.',
@@ -53,6 +53,7 @@
         places: { orbit: 'Órbita de Marte', surface: 'Superficie', descent: 'Descenso' },
         backToDev: '← Modo Dev',
         replayBtn: 'Nueva semilla / Repetir',
+        hideBtn: 'Ocultar Modo Dev',
         closeBtn: 'Cerrar',
         phase: {
           lobbyMode: 'Sala · Modo',
