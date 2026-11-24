@@ -1,4 +1,4 @@
-// Texts of L-S2 · Drilling (English and Portuguese). Merged into translation.experiments['L-S2'].
+// Texts of L-S2 · Drilling (English, Portuguese and Spanish). Merged into translation.experiments['L-S2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -96,5 +96,52 @@
       usedSpare: 'Uma reserva já foi usada num furo anterior: o Curiosity leva só 2 brocas reserva para todos os furos.',
     },
     mods: { looseSoil: 'Solo solto', usedSpare: 'Reserva usada' },
+  });
+
+  put('es', {
+    title: 'Perforación',
+    minigame: 'Perforar sin romper',
+    basis: 'Taladro del Curiosity y el «topo» HP3 de InSight',
+    desc: 'Empuja la broca en el pico de cada golpe, cuando la fuerza esté en la franja verde. Con poca fuerza no avanza; con demasiada, la broca se desgasta hasta romperse, y solo hay 2 de repuesto.',
+    fact: 'Dato real: el «topo» de InSight debía bajar {{need}}, pero se detuvo en {{stop}}: el suelo no le daba fricción. El equipo lo intentó durante 2 años, incluso empujándolo con el brazo robótico.',
+    depthReadout: 'PROFUNDIDAD {{depth}} / {{goal}}',
+    bitReadout: 'BROCA {{pct}}%',
+    sparesReadout: 'BROCAS DE REPUESTO {{left}}',
+    strokesReadout: 'GOLPES RESTANTES {{left}}',
+    strikeBtn: 'Empujar la broca (Espacio)',
+    armOffBtn: 'Apoyar con el brazo (A)',
+    armOnBtn: '✓ Brazo apoyando (A)',
+    gaugeWeak: 'DÉBIL',
+    gaugeOver: 'DEMASIADO',
+    badgeBuild: 'La fuerza sube: empuja en el pico',
+    badgeNow: '✓ Pico del golpe: empuja ya',
+    badgeLate: 'Pasó el pico: demasiada fuerza',
+    badgeLoose: 'Suelo suelto: la broca rebota',
+    badgeSwap: '✕ Cambiando la broca',
+    badgeDone: '✓ Muestra perforada',
+    badge: { good: '✓ Buen golpe', weak: 'Poca fuerza', over: '✕ Demasiada fuerza', bounce: 'Rebotó: sin fricción' },
+    statusInitial: 'Perfora {{goal}} en la roca. Empuja la broca (Espacio, el botón o la imagen) una vez por golpe, cuando la fuerza suba hasta la franja verde. Brocas de repuesto: {{spares}}.',
+    statusGood: 'Buen golpe: el agujero tiene {{depth}} de profundidad.',
+    statusWeak: 'Poca fuerza: la broca golpeó la roca y no avanzó.',
+    statusLate: 'Demasiado tarde: el golpe salió con demasiada fuerza.',
+    statusDouble: 'Segundo empujón en el mismo golpe: demasiada fuerza.',
+    statusStress: 'La broca está al {{pct}}%.',
+    statusBroken: '¡La broca se rompió! Colocando un repuesto (quedan {{left}}).',
+    statusSwapped: 'Broca nueva colocada. Retoma el ritmo.',
+    statusLayer: 'Nueva capa: {{rock}}. El ritmo cambia.',
+    statusBounce: 'El golpe rebotó: este suelo no le da fricción a la broca. Apoya con el brazo.',
+    statusArmOn: 'El brazo empuja el taladro hacia abajo: el ritmo es más lento y los golpes vuelven a morder.',
+    statusArmOff: 'Brazo levantado: en suelo suelto, los golpes van a rebotar.',
+    statusArmBack: 'Roca firme otra vez: el brazo se levanta.',
+    statusDone: 'Agujero terminado con {{depth}} de profundidad: el polvo de roca está listo para las muestras de Maya.',
+    failBit: 'La última broca se rompió a {{depth}} de {{goal}}. Sin repuestos, el taladro queda fuera de la misión, y el agujero es demasiado poco profundo para darle a Maya una buena muestra.',
+    failShallow: 'Se acabó el sol marciano con el agujero a {{depth}} de {{goal}}. Un agujero poco profundo da una muestra peor, y el brazo se necesita para otros trabajos.',
+    summary: '{{pct}}% de eficiencia en los golpes · {{broken}} broca(s) rota(s)',
+    rocks: { crust: 'corteza polvorienta', sandstone: 'arenisca', mudstone: 'lutita', bedrock: 'roca madre dura', loose: 'suelo suelto' },
+    event: {
+      looseSoil: '¡Suelo suelto! La broca rebota sin fricción, como el «topo» de InSight. Activa «Apoyar con el brazo» (A) y encuentra el nuevo ritmo.',
+      usedSpare: 'Ya se usó un repuesto en un agujero anterior: el Curiosity lleva solo 2 brocas de repuesto para todos sus agujeros.',
+    },
+    mods: { looseSoil: 'Suelo suelto', usedSpare: 'Repuesto usado' },
   });
 })();

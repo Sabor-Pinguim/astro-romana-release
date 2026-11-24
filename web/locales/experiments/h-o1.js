@@ -1,4 +1,4 @@
-// Texts of H-O1 · Aerobraking (English and Portuguese). Merged into translation.experiments['H-O1'].
+// Texts of H-O1 · Aerobraking (English, Portuguese and Spanish). Merged into translation.experiments['H-O1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -94,5 +94,51 @@
       conjunction: 'Conjunção solar na próxima passagem: o Sol bloqueia os comandos (a TGO pausou a aerofrenagem por causa de uma). Deixe uma altitude segura antes de a passagem começar.',
     },
     mods: { dustStorm: 'Tempestade de poeira', conjunction: 'Conjunção solar' },
+  });
+
+  put('es', {
+    title: 'Aerofrenado',
+    minigame: 'Inmersión',
+    basis: 'MRO (2006) y TGO (2017–18)',
+    desc: 'En cada pasada por el punto más bajo de la órbita, ajusta la altitud de la inmersión para mantener la nave en el corredor de arrastre. Demasiado profunda la sobrecalienta; demasiado superficial apenas frena. Alcanza la meta de frenado con las pasadas que tienes.',
+    fact: 'Dato real: MRO hizo ~400 inmersiones a lo largo de ~5 meses. Cada una la frenó ~{{dv}} y ahorró ~{{kg}} de combustible. En total, fueron ~{{total}} menos que transportar.',
+    altReadout: 'INMERSIÓN {{alt}}',
+    passReadout: 'PASADA {{k}}/{{n}}',
+    coastReadout: 'APOAPSIS · SIGUIENTE {{k}}/{{n}}',
+    doneReadout: '{{n}}/{{n}} PASADAS HECHAS',
+    dvReadout: '{{dv}} / {{goal}} Δv',
+    zoneShallow: '↑ SUPERFICIAL',
+    zoneCorridor: 'CALOR × FRENADO',
+    zoneDeep: 'PROFUNDO ↓',
+    tagCold: 'APENAS FRENA',
+    tagGood: 'CORREDOR',
+    tagHot: 'SE CALIENTA',
+    dvLabel: 'Frenado Δv (meta {{goal}})',
+    heatLabel: 'Calor en los paneles · {{pct}}%',
+    integrityLabel: 'Integridad de la nave · {{pct}}%',
+    climbBtn: '▲ Subir',
+    diveBtn: '▼ Bajar',
+    canvasPass: 'PASADA {{k}}/{{n}}',
+    canvasCoast: 'APOAPSIS',
+    canvasLocked: 'SIN COMANDOS',
+    canvasForecast: 'SIN PRONÓSTICO',
+    canvasNext: 'PRÓXIMA PASADA',
+    statusInitial: 'Mantén ▼ Bajar / ▲ Subir (↓ ↑ o S W) o arrastra sobre la vista para mantener la nave en el corredor verde en cada pasada. Meta: {{goal}} de frenado en {{n}} pasadas.',
+    statusPass: 'Pasada {{k}}/{{n}} por el aire: el borde inferior del corredor es el que más frena, pero es el límite de calor.',
+    statusGood: 'En el corredor: frenando. Pégate al borde inferior para frenar más, sin cruzarlo.',
+    statusDeep: 'Demasiado profundo: los paneles se están calentando. Vuelve a subir al corredor.',
+    statusShallow: 'Demasiado superficial: el aire es demasiado tenue para frenar. Baja al corredor.',
+    statusCoast: 'En vuelo libre hacia la apoapsis. Sigue la pasada {{k}}/{{n}}: ajusta ahora la altitud de la inmersión.',
+    statusLocked: 'Volando con comandos grabados: sin ajustes hasta que termine esta pasada.',
+    statusOverheat: '¡Sobrecalentamiento! La nave subió por su cuenta y perdió un {{hit}}% de integridad.',
+    statusDone: 'Aerofrenado completado: {{dv}} de frenado, unos {{kg}} de propelente ahorrados.',
+    failShort: 'La órbita sigue demasiado alta: {{dv}} de los {{goal}} necesarios. La misión necesita más pasadas, y eso cuesta tiempo (el aerofrenado de TGO duró cerca de un año).',
+    failIntegrity: 'Demasiados sobrecalentamientos: la nave perdió su integridad y se canceló el aerofrenado. El resto del frenado tendrá que salir del propelente, justo la masa que el aerofrenado debía ahorrar.',
+    summary: '{{dv}} de frenado ({{pct}}% del mejor) · ~{{kg}} de propelente ahorrados · {{over}} sobrecalentamiento(s)',
+    event: {
+      dustStorm: 'Tormenta de polvo: Marte tiene tormentas globales cada pocos años marcianos, y el aire se hincha. El corredor sube: sube con él.',
+      conjunction: 'Conjunción solar en la próxima pasada: el Sol bloquea los comandos (TGO pausó su aerofrenado por una). Fija una altitud segura antes de que empiece la pasada.',
+    },
+    mods: { dustStorm: 'Tormenta de polvo', conjunction: 'Conjunción solar' },
   });
 })();

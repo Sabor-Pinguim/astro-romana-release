@@ -1,4 +1,4 @@
-// Texts of M-S4 · Choosing samples (English and Portuguese). Merged into translation.experiments['M-S4'].
+// Texts of M-S4 · Choosing samples (English, Portuguese and Spanish). Merged into translation.experiments['M-S4'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -82,5 +82,45 @@
     failTimeout: 'O rover precisou seguir viagem antes de encher qualquer tubo: o afloramento fica sem amostra.',
     summary: '{{value}} de {{best}} pts possíveis · {{hits}} de {{tubes}} tubos com um dos melhores núcleos',
     mods: { depot: 'Depósito reserva', fluorescent: 'Minerais fluorescentes', dust: 'Afloramento empoeirado' },
+  });
+
+  put('es', {
+    title: 'Elegir muestras',
+    minigame: '¿Qué rocas guardar?',
+    basis: 'Tubos de muestras de Perseverance (2021–)',
+    desc: 'Hay más núcleos que tubos, y un tubo sellado no se puede reutilizar. Lee las pistas de cada núcleo y elige los que vale la pena guardar. Su valor real solo se revela después de sellar los tubos.',
+    fact: 'Dato real: Perseverance llevó 43 tubos de un solo uso. Recogió 27 núcleos de roca y dejó un depósito de 10 tubos de respaldo en el suelo de Marte, en «Three Forks». Mars Sample Return se canceló en ene. de 2026, así que hoy las muestras esperan una misión futura.',
+    notes: 'Prioridades de Maya: la lutita de lago y los carbonatos conservan mejor los rastros; luego vienen el sulfato, la arenisca y la roca ígnea; el regolito suelto es lo que menos vale. Las capas y las vetas indican agua. Las manchas de leopardo y los orgánicos son las pistas más fuertes (●●● = fuerte). Una costra de polvo puede falsear una pista.',
+    listAria: 'Núcleos candidatos',
+    cardAria: 'Núcleo {{name}}: {{rock}}, {{texture}}, {{chem}} {{tell}}',
+    coreName: 'Núcleo {{name}}',
+    tubesRead: '{{used}} / {{tubes}} tubos',
+    coresRead: '{{n}} núcleos',
+    rocks: { mudstone: 'Lutita', carbonate: 'Carbonato', sulfate: 'Sulfato', sandstone: 'Arenisca', igneous: 'Ígnea', regolith: 'Regolito' },
+    textures: { laminated: 'Capas finas', veined: 'Vetas minerales', conglomerate: 'Guijarros', vesicular: 'Burbujas de gas', massive: 'Uniforme', loose: 'Granos sueltos' },
+    chem: { spots: 'Manchas de leopardo', organics: 'Orgánicos', hydrated: 'Hidratado', none: 'Sin señal notable' },
+    tell: '⚠ costra de polvo',
+    partial: '⚠ núcleo partido',
+    origin: { drill: 'Perforado por Lucas', biosig: 'De M-S1' },
+    tubeTag: 'Tubo {{n}}',
+    valueTag: '{{v}} pts',
+    bestTag: '★ mejor',
+    decoyTag: '✕ pista falsa',
+    pickBtn: 'Elige hasta {{tubes}} núcleos',
+    sealBtn: 'Sellar {{n}} de {{tubes}} tubos (definitivo)',
+    sealedBtn: 'Tubos sellados',
+    statusInit: 'Elige {{tubes}} de los {{n}} núcleos y séllalos. Teclas: 1–9 / 0 eligen un núcleo, las flechas se mueven entre núcleos.',
+    statusPicked: 'El núcleo {{name}} va a un tubo (quedan {{left}}).',
+    statusAllPicked: 'Los {{tubes}} tubos están asignados. Séllalos o cambia antes un núcleo: sellar es definitivo.',
+    statusFreed: 'El núcleo {{name}} sale: su tubo vuelve a estar libre.',
+    statusFull: 'Los {{tubes}} tubos ya están asignados: toca un núcleo elegido para liberar su tubo.',
+    statusNone: 'Primero elige al menos un núcleo.',
+    statusAuto: 'El rover tuvo que seguir su camino: los núcleos elegidos se sellaron.',
+    statusReveal: 'Resultados del laboratorio: tus tubos guardan {{value}} de los {{best}} pts posibles ({{hits}} de {{tubes}} están entre los mejores núcleos). Mejor tubo: núcleo {{name}}, {{v}} pts.',
+    statusFooled: '{{n}} tubo(s) se fueron en una pista falsa: una costra o un mineral fluorescente.',
+    failOrdinary: 'Los tubos se gastaron en rocas comunes: {{value}} de {{best}} pts posibles. Los tubos son de un solo uso, así que esa ciencia se pierde en esta misión.',
+    failTimeout: 'El rover tuvo que seguir su camino antes de llenar ningún tubo: el afloramiento queda sin muestrear.',
+    summary: '{{value}} de {{best}} pts posibles · {{hits}} de {{tubes}} tubos con uno de los mejores núcleos',
+    mods: { depot: 'Depósito de respaldo', fluorescent: 'Minerales fluorescentes', dust: 'Afloramiento polvoriento' },
   });
 })();

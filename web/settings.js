@@ -1,24 +1,27 @@
-// Settings persistence and UI controller for Language, Measurement System, Engineering Hints, and Multiplayer Server.
+// Settings persistence and UI controller for Language, Measurement System, Engineering Hints, Interface Scale, and Multiplayer Server.
 (() => {
   'use strict';
   const STORAGE_KEY = 'astro-romana-settings';
+  const UI_SCALES = ['auto', '75', '85', '100', '115'];
   function defaultLanguage() {
     return window.ASTRO_I18N?.language || 'en';
   }
-  const DEFAULTS = { get language() { return defaultLanguage(); }, unitSystem: 'metric', hints: true, serverUrl: '' };
+  const DEFAULTS = { get language() { return defaultLanguage(); }, unitSystem: 'metric', hints: true, uiScale: 'auto', serverUrl: '' };
 
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
+      const scale = String(parsed.uiScale ?? '');
       return {
         language: parsed.language || defaultLanguage(),
         unitSystem: parsed.unitSystem === 'imperial' ? 'imperial' : DEFAULTS.unitSystem,
         hints: typeof parsed.hints === 'boolean' ? parsed.hints : DEFAULTS.hints,
+        uiScale: UI_SCALES.includes(scale) ? scale : DEFAULTS.uiScale,
         serverUrl: typeof parsed.serverUrl === 'string' ? parsed.serverUrl : DEFAULTS.serverUrl,
       };
     } catch {
-      return { language: defaultLanguage(), unitSystem: 'metric', hints: true, serverUrl: '' };
+      return { language: defaultLanguage(), unitSystem: 'metric', hints: true, uiScale: 'auto', serverUrl: '' };
     }
   }
 
@@ -30,7 +33,16 @@
     }
   }
 
+  function applyUiScale(scale) {
+    if (scale && scale !== 'auto' && UI_SCALES.includes(scale)) {
+      document.documentElement.dataset.uiScale = scale;
+    } else {
+      delete document.documentElement.dataset.uiScale;
+    }
+  }
+
   let current = loadSettings();
+  applyUiScale(current.uiScale);
   const i18n = () => window.ASTRO_I18N;
   const units = () => window.ASTRO_UNITS;
   const net = () => window.ASTRO_NET;
@@ -112,6 +124,9 @@
     document.querySelectorAll('#settings-hints [data-hints]').forEach(btn => {
       btn.setAttribute('aria-pressed', String((btn.dataset.hints === 'on') === current.hints));
     });
+    document.querySelectorAll('#settings-ui-scale [data-ui-scale]').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.uiScale === current.uiScale));
+    });
     const input = document.getElementById('settings-server-input');
     const n = net();
     if (input && n) {
@@ -143,6 +158,17 @@
   function setHints(enabled, silent = false) {
     current.hints = Boolean(enabled);
     saveSettings(current);
+    syncUI();
+    emitChange();
+    if (!silent) showToast(t('settings.savedToast'));
+  }
+
+  function setUiScale(val, silent = false) {
+    const candidate = String(val ?? '');
+    const target = UI_SCALES.includes(candidate) ? candidate : DEFAULTS.uiScale;
+    current.uiScale = target;
+    saveSettings(current);
+    applyUiScale(target);
     syncUI();
     emitChange();
     if (!silent) showToast(t('settings.savedToast'));
@@ -181,6 +207,7 @@
   async function resetAll() {
     current = { ...DEFAULTS };
     saveSettings(current);
+    applyUiScale(current.uiScale);
     units()?.setSystem(current.unitSystem);
     net()?.setServerUrl('');
     await i18n()?.changeLanguage(current.language);
@@ -195,6 +222,9 @@
     });
     document.querySelectorAll('#settings-hints [data-hints]').forEach(btn => {
       btn.addEventListener('click', () => setHints(btn.dataset.hints === 'on'));
+    });
+    document.querySelectorAll('#settings-ui-scale [data-ui-scale]').forEach(btn => {
+      btn.addEventListener('click', () => setUiScale(btn.dataset.uiScale));
     });
     const serverInput = document.getElementById('settings-server-input');
     const serverSave = document.getElementById('settings-server-save');
@@ -226,6 +256,7 @@
     setLanguage,
     setUnitSystem,
     setHints,
+    setUiScale,
     setServerUrl,
     resetAll,
     syncUI,

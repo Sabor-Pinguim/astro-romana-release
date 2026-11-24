@@ -1,4 +1,4 @@
-// Texts of M-O2 · Ice radar (English and Portuguese). Merged into translation.experiments['M-O2'].
+// Texts of M-O2 · Ice radar (English, Portuguese and Spanish). Merged into translation.experiments['M-O2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -90,5 +90,49 @@
       dataCap: 'Limite de dados: o SHARAD só pode usar 15% dos dados do orbitador, então esta passagem veio com menos ecos somados e mais ruído.',
     },
     mods: { rugged: 'Terreno acidentado', faintEcho: 'Eco fraco', dataCap: 'Limite de dados' },
+  });
+
+  put('es', {
+    title: 'Radar de hielo',
+    minigame: 'Lee el radargrama',
+    basis: 'SHARAD en Mars Reconnaissance Orbiter',
+    desc: 'En el gráfico de ecos de radar, traza la línea tenue del hielo enterrado bajo el eco brillante de la superficie. Los ecos laterales de las colinas (clutter) y el ruido son trampas: marcarlos pone hielo donde no lo hay.',
+    fact: 'Dato real: bajo la llanura de Utopia, SHARAD encontró hielo enterrado con tanta agua como el lago Superior, en EE. UU. (~14.300 km³).',
+    axisTrack: 'A LO LARGO DE LA ÓRBITA →',
+    axisDelay: 'RETARDO DEL ECO ↓',
+    axisScale: 'PROFUNDIDAD 0–{{depth}}',
+    simTag: 'SIM. DE CLUTTER',
+    chartAria: 'Radargrama de SHARAD: {{marked}} de {{cols}} columnas marcadas',
+    simBtn: 'Simular clutter · quedan {{n}}',
+    clearBtn: 'Borrar marcas',
+    sendBtn: 'Enviar mapa de hielo ({{n}})',
+    legendSurface: 'Eco de la superficie',
+    legendEcho: 'Eco',
+    legendMark: 'Tu trazo de hielo',
+    legendSim: 'Eco lateral (simulación)',
+    legendIce: 'Hielo real',
+    marksReadout: 'TRAZADAS {{n}} / {{cols}} COL',
+    timeReadout: 'ENLACE {{s}} S',
+    simReadout: 'SIM ×{{n}}',
+    depthNone: 'PROFUND. —',
+    depthReadout: 'PROFUND. ~{{depth}}',
+    statusInit: 'SHARAD ({{watts}} W, {{gb}} Gb al día, como máximo el {{share}}% de los datos del orbitador) sondeó la llanura. Toca o arrastra a lo largo de la línea plana y tenue bajo el eco brillante de la superficie; los arcos ∩ bajo las colinas son ecos laterales. Teclas: flechas, Espacio para marcar (mantén y mueve para trazar), C = simular clutter, Enter = enviar.',
+    statusMarked: 'Hielo marcado a ~{{depth}} bajo la superficie.',
+    statusErased: 'Marca eliminada.',
+    statusCleared: 'Se borraron todas las marcas.',
+    statusSim: 'Simulación de clutter: los ecos contorneados vienen de colinas al lado de la órbita, no de debajo de ella.',
+    statusSimOff: 'Simulación apagada. Sigue trazando el hielo enterrado.',
+    statusSent: 'Mapa de hielo enviado: {{hits}} de {{total}} columnas de hielo trazadas, {{falses}} marca(s) falsa(s), hielo a ~{{depth}} de profundidad.',
+    statusAuto: 'Llegó la hora del enlace: el mapa se envió tal como estaba. {{hits}} de {{total}} columnas de hielo trazadas, {{falses}} marca(s) falsa(s).',
+    failFalse: 'Falso positivo: {{falses}} marca(s) pusieron hielo donde no lo hay (se permiten como máximo {{max}}). En 2018 un radar anunció un «lago» bajo el hielo del polo sur; en 2025 SHARAD giró 120° para volver a mirar y solo vio un eco tenue. Una base tripulada planificada sobre hielo falso no encontraría agua.',
+    failThin: 'Solo se trazó el {{pct}}% de la línea de hielo: muy poco para mapear el depósito. Para extraer agua del hielo enterrado, primero hay que mapear ese hielo.',
+    failEmpty: 'El enlace de bajada se fue con un mapa vacío: el hielo enterrado sigue sin conocerse y ningún sitio de aterrizaje puede contar con su agua.',
+    summary: '{{hits}}/{{total}} columnas de hielo · {{falses}} marca(s) falsa(s) · hielo a ~{{depth}} de profundidad',
+    event: {
+      rugged: 'Terreno accidentado: las colinas al lado de la órbita envían más ecos laterales que parecen capas enterradas.',
+      faintEcho: 'Eco tenue: parte de la línea de hielo es débil, como el retorno tenue que SHARAD vio en el polémico «lago» polar en 2025.',
+      dataCap: 'Límite de datos: SHARAD solo puede usar el 15% de los datos del orbitador, así que esta pasada llegó con menos ecos sumados y más ruido.',
+    },
+    mods: { rugged: 'Terreno accidentado', faintEcho: 'Eco tenue', dataCap: 'Límite de datos' },
   });
 })();

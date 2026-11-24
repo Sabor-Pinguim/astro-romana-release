@@ -2,6 +2,28 @@
 
 Plano para colocar no jogo os **21 experimentos** de [minigames.md](minigames.md), com um **sorteio diferente a cada partida (run)**. Escrito em 2026-11-23, a partir da versão 1.5.1.
 
+## Estado em 2026-11-24
+
+As fases 0 a 3 estão implementadas e ligadas ao jogo; a seção 1 abaixo descreve o ponto de partida.
+
+- **Sorteio:** a partida (`state.run`) nasce em `startFlight`, com 8 experimentos (1 de órbita e 1 de chão por tripulante). No multiplayer, o host envia a partida no estado do voo.
+- **Órbita de Marte:** etapa nova no cockpit entre o acoplamento orbital e o pouso (item "04 · Órbita de Marte" no indicador). Tem 4 cards, bots nas vagas de IA e uma janela de 150 s (`game-balance`). O botão "Iniciar a descida" libera quando todos terminam.
+- **Descida:** se o H-S2 foi sorteado, ele abre antes da queima de pouso.
+- **Superfície:**
+  - os blocos e as metas são os experimentos de chão sorteados;
+  - os minigames novos abrem no `#minigame-dialog`;
+  - os bots fazem os experimentos dos tripulantes de IA;
+  - o `web/scout.js` antigo saiu.
+- **Pontuação:** estrelas × 25 por tripulante, com multiplicador 0,75 / 1 / 1,5 (a nota vem antes dele). A tela de resultados lista os 8 experimentos. O placar recebe `experiments`, `runSeed` e `scoreMultiplier`.
+- **Textos:** os 21 experimentos em inglês, português e espanhol. O validador confere os três idiomas.
+- **Dev Mode:** botão "Cockpit · Órbita de Marte", que usa a semente do Dev Mode.
+- **Pendente:**
+  - deploy do servidor de placar (precisa do OK do time);
+  - teste do multiplayer com jogadores reais;
+  - ligações entre experimentos (fase 4);
+  - remover as chaves antigas `surface.tasks.*` e `minigames.scout|moxie|relay|bio` de `en.js`, `pt.js` e `es.js`, e o CSS antigo dos 4 minigames em `styles.css`;
+  - arte e conferência de fatos (fase 5).
+
 ## 1. Onde estamos hoje
 
 ### O que já existe

@@ -1,4 +1,4 @@
-// Texts of M-S6 · Martian greenhouse (English and Portuguese). Merged into translation.experiments['M-S6'].
+// Texts of M-S6 · Martian greenhouse (English, Portuguese and Spanish). Merged into translation.experiments['M-S6'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -100,5 +100,54 @@
       simulant: 'Solo marciano simulado: ele drena mais rápido e a faixa boa de água é mais estreita (em testes de 2019, o espinafre foi mal nele).',
     },
     mods: { dustStorm: 'Tempestade de poeira', wickClog: 'Pavio entupido', simulant: 'Solo simulado' },
+  });
+
+  put('es', {
+    title: 'Invernadero marciano',
+    minigame: 'Hazlo brotar',
+    basis: 'Veggie/APH en la ISS y pruebas con simulante de suelo marciano',
+    desc: 'Mantén el agua del suelo y la luz del invernadero de la tripulación dentro de sus franjas durante unos soles. Poca o demasiada agua mata las plantas, la luz fuerte seca el suelo y, de noche, solo los LED dan luz.',
+    fact: 'Dato real: en la primera cosecha en la ISS hubo semillas que no germinaron y plantas que murieron de sed. La primera lechuga espacial no se comió hasta 2015. Ninguna planta ha crecido jamás en suelo marciano real, solo en imitaciones de él en la Tierra.',
+    solReadout: 'SOL {{k}}/{{n}} · {{part}}',
+    day: 'DÍA',
+    night: 'NOCHE',
+    ledReadout: 'LED {{level}}/{{max}} · {{watts}} W',
+    stage: { 0: 'SEMILLAS', 1: 'BROTÓ', 2: 'HOJAS', 3: 'LISTA PARA COSECHAR' },
+    waterDry: '← SECO',
+    waterName: 'AGUA DEL SUELO',
+    waterWet: 'ENCHARCADO →',
+    lightDim: '← TENUE',
+    lightName: 'LUZ · VENTANA + LED',
+    lightBright: 'INTENSA →',
+    tagDry: 'SECO',
+    tagSoggy: 'ENCHARCADO',
+    tagDim: 'TENUE',
+    tagHarsh: 'INTENSA',
+    waterBtn: 'Regar',
+    ledDown: 'LED −',
+    ledUp: 'LED +',
+    growthLabel: 'Crecimiento · {{pct}}% hasta la cosecha',
+    healthLabel: 'Salud de las plantas · {{pct}}%',
+    canvasSol: 'SOL {{k}}/{{n}}',
+    statusInitial: 'Toca Regar (Espacio / W / ↑) para irrigar y ajusta las luces con LED − / LED + (← → o A D). Mantén las dos agujas en verde: la luz de la ventana cambia a lo largo del sol, y la luz fuerte seca el suelo más rápido.',
+    statusSol: 'Comienza el sol {{k}}/{{n}}.',
+    statusSunrise: 'Amanecer: la ventana suma luz. Baja los LED antes de que sea demasiado intensa.',
+    statusSunset: 'Atardecer: ahora solo los LED iluminan las plantas. Súbelos.',
+    statusDry: 'El suelo se está secando: riégalo.',
+    statusSoggy: 'Demasiada agua: las raíces se ahogan. Deja que drene.',
+    statusDim: 'Luz demasiado tenue: las plantas se estiran y se debilitan. Más LED.',
+    statusHarsh: 'Demasiada luz: las hojas se queman y el suelo se seca. Menos LED.',
+    statusDone: 'El ciclo de cultivo terminó: {{stage}}.',
+    failSprout: 'Las semillas no germinaron: el agua y la luz estuvieron mal demasiadas veces. En el primer cultivo de la ISS, una almohadilla de semillas tampoco germinó.',
+    failThirst: 'Las plantas murieron de sed, igual que dos plantas del primer cultivo de la ISS murieron por estrés hídrico en 2014.',
+    failDrowned: 'El exceso de agua ahogó las raíces y las plantas murieron.',
+    failLight: 'Sin la luz adecuada durante demasiado tiempo, las plantas se marchitaron y murieron.',
+    summary: '{{stage}} · {{pct}}% del mejor crecimiento · salud {{health}}%',
+    event: {
+      dustStorm: 'Tormenta de polvo: la luz de la ventana baja en este sol. Los LED tienen que compensarlo.',
+      wickClog: 'Mecha obstruida: cada riego aporta la mitad durante unos segundos (los primeros cultivos de la ISS sufrieron estrés hídrico).',
+      simulant: 'Simulante de suelo marciano: drena más rápido y su franja buena de agua es más estrecha (en pruebas de 2019, a la espinaca le fue mal en él).',
+    },
+    mods: { dustStorm: 'Tormenta de polvo', wickClog: 'Mecha obstruida', simulant: 'Simulante de suelo' },
   });
 })();

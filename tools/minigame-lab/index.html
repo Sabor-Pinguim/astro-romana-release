@@ -118,7 +118,7 @@
       root: stage, seed: state.seed, level: state.level,
       onFinish(result) {
         state.result = result;
-        $('lab-stars').textContent = MG.lib && result.gaveUp ? '☆☆☆' : '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars);
+        $('lab-stars').innerHTML = MG.starsHtml(result.stars);
         $('lab-summary-line').textContent = result.summary;
         $('lab-fact').textContent = MG.fact(e.id);
         $('lab-result').hidden = false;
@@ -134,7 +134,7 @@
   $('lab-width').addEventListener('change', e => { $('lab-panel').classList.toggle('wide', e.target.value === 'wide'); });
   $('lab-bot').addEventListener('click', () => {
     const r = window.ASTRO_MINIGAMES.botResult(state.id, state.seed, state.level);
-    log(`bot: ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)} in ~${r.seconds} s`);
+    log(`bot: ${window.ASTRO_MINIGAMES.starsText(r.stars)} in ~${r.seconds} s`);
   });
 })();
 </script>

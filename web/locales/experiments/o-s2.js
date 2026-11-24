@@ -1,4 +1,4 @@
-// Texts of O-S2 · Radio geodesy (English and Portuguese). Merged into translation.experiments['O-S2'].
+// Texts of O-S2 · Radio geodesy (English, Portuguese and Spanish). Merged into translation.experiments['O-S2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -74,5 +74,41 @@
       dustyPanels: 'Painéis solares empoeirados (a poeira encerrou o InSight em 2022): menos energia, e o tom fica fraco no ruído.',
     },
     mods: { earthSet: 'Terra se pondo', conjunction: 'Perto da conjunção', dustyPanels: 'Painéis empoeirados' },
+  });
+
+  put('es', {
+    title: 'Geodesia por radio',
+    minigame: 'Sintoniza el Doppler',
+    basis: 'RISE en InSight (2018–22)',
+    desc: 'El tono de radio del módulo de aterrizaje se desliza lentamente por el receptor mientras Marte gira. Mueve el sintonizador para mantener el tono dentro de la ventana de enganche: cada minuto enganchado de la sesión de hoy suma a la medición del núcleo del planeta.',
+    fact: 'Dato real: solo siguiendo la radio de InSight durante ~{{sols}} soles los científicos pudieron medir que el núcleo líquido de Marte tiene un radio de ~{{core}} y que la rotación del planeta se está acelerando.',
+    powerReadout: 'BANDA X · {{watts}} W',
+    timeReadout: 'ENGANCHADO {{got}}/{{max}} MIN · {{left}} s',
+    lockLabel: 'Tiempo enganchado (meta {{need}} de {{max}} min)',
+    signalLabel: 'Señal en el sintonizador · {{pct}}%',
+    dialLabel: 'Sintonizador',
+    tuneDown: 'Sintonizar más bajo',
+    tuneUp: 'Sintonizar más alto',
+    canvasSol: 'SOL {{sol}} DE ~{{total}}',
+    canvasAxis: 'DOPPLER ↔',
+    canvasNoLink: 'SIN ENLACE CON LA TIERRA',
+    state: { locked: '✓ ENGANCHADO', acquiring: 'ADQUIRIENDO…', searching: 'BUSCANDO', nolink: 'SIN ENLACE' },
+    status: {
+      locked: 'Enganchado: mantén el tono dentro de la ventana mientras se desliza.',
+      acquiring: 'El tono está en la ventana: mantenlo ahí para engancharlo.',
+      searching: 'Enganche perdido: encuentra el tono brillante en la cascada y lleva la ventana sobre él.',
+      nolink: '',
+    },
+    statusInitial: 'Gira el dial (o mantén ◀ ▶, ← → o A D) para llevar la ventana de enganche sobre el tono brillante y mantenerla ahí. Meta: {{need}} de los {{max}} minutos de la sesión enganchados.',
+    statusBack: 'Enlace recuperado: el tono siguió deslizándose mientras no había señal. Encuéntralo de nuevo.',
+    statusDone: 'Sesión terminada: {{got}} minutos de Doppler enganchado para medir el núcleo.',
+    failLost: 'El enganche duró solo {{got}} de los {{need}} minutos necesarios: la sesión de hoy se pierde y el experimento tarda más (RISE necesitó ~{{sols}} soles de seguimiento).',
+    summary: 'Enganchado {{got}} de {{max}} min ({{pct}}% del mejor resultado)',
+    event: {
+      earthSet: 'La Tierra se está poniendo: RISE necesita un enlace directo con la Tierra, y la señal desaparece unos segundos. El tono sigue deslizándose.',
+      conjunction: 'Cerca de la conjunción solar: el Sol está cerca de la línea hacia la Tierra y el tono tiembla.',
+      dustyPanels: 'Paneles solares con polvo (el polvo acabó con InSight en 2022): menos energía, así que el tono es débil entre el ruido.',
+    },
+    mods: { earthSet: 'Puesta de la Tierra', conjunction: 'Cerca de la conjunción', dustyPanels: 'Paneles con polvo' },
   });
 })();

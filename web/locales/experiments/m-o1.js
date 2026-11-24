@@ -1,4 +1,4 @@
-// Texts of M-O1 · High-resolution photo (English and Portuguese). Merged into translation.experiments['M-O1'].
+// Texts of M-O1 · High-resolution photo (English, Portuguese and Spanish). Merged into translation.experiments['M-O1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -62,5 +62,35 @@
       fullRecorder: 'Gravador quase cheio: uma imagem reserva a menos nesta passagem.',
     },
     mods: { dustStorm: 'Tempestade de poeira', fullRecorder: 'Gravador cheio' },
+  });
+
+  put('es', {
+    title: 'Foto de alta resolución',
+    minigame: 'Toma perfecta',
+    basis: 'HiRISE en Mars Reconnaissance Orbiter (2006–hoy)',
+    desc: 'Marte se desplaza bajo el orbitador. Toma cada foto cuando el objetivo cruce el centro del encuadre: cuanto más cerca del centro, más nítida la imagen. La grabadora solo guarda unas pocas imágenes.',
+    fact: 'Dato real: HiRISE distingue detalles de {{detail}} desde la órbita y tomó su foto número 100.000 en 2025. Sus imágenes ayudan a elegir dónde aterrizar con seguridad.',
+    photosReadout: 'OBJETIVOS {{got}} / {{n}}',
+    recorderReadout: 'GRABADORA {{left}} IMG',
+    qualityReadout: 'NITIDEZ {{pct}}%',
+    shootBtn: 'Tomar la foto (Espacio)',
+    readoutBtn: 'Leyendo la imagen…',
+    kinds: { crater: 'cráter', delta: 'delta fluvial', dunes: 'campo de dunas' },
+    statusInitial: 'El MRO sobrevuela {{n}} objetivos. Toma cada foto (Espacio, o toca el botón o la imagen) cuando el objetivo cruce la línea central del encuadre. HiRISE ({{kg}}, {{watts}} W) hace imágenes de hasta {{gb}} Gb, así que la grabadora solo guarda {{shots}}.',
+    statusPerfect: 'Toma perfecta: el {{kind}} está centrado, nítido al {{pct}}%.',
+    statusShot: 'Foto del {{kind}}: nítida al {{pct}}%. Más cerca de la línea central, más nitidez.',
+    statusHazy: 'Foto del {{kind}} a través del polvo: nítida solo al {{pct}}%.',
+    statusEmpty: 'Encuadre vacío: no hay ningún objetivo. Esa imagen (hasta {{gb}} Gb) es espacio desperdiciado en la grabadora.',
+    statusMissed: 'El {{kind}} salió del encuadre sin foto.',
+    statusReadout: 'Todavía se está leyendo la última imagen: espera un momento.',
+    statusFull: 'La grabadora está llena: no hay espacio para otra imagen.',
+    statusDone: 'Paso terminado: {{got}} de {{n}} objetivos fotografiados para los mapas de sitios de aterrizaje.',
+    failBlur: 'Solo {{got}} de {{n}} objetivos salieron en el encuadre. Cada imagen de HiRISE puede ocupar hasta {{gb}} Gb, así que las borrosas y las vacías le hicieron perder a Oscar horas de enlace de bajada, y los sitios de aterrizaje quedan sin mapear.',
+    summary: '{{got}} de {{n}} objetivos · {{pct}}% de la mejor nitidez · {{wasted}} imagen(es) desperdiciada(s)',
+    event: {
+      dustStorm: 'Tormenta de polvo más adelante: la bruma sobre esta parte del paso suavizará las imágenes. Las tormentas de polvo de Marte pueden cubrir el planeta: una acabó con el rover Opportunity en 2018.',
+      fullRecorder: 'Grabadora casi llena: una imagen de reserva menos en este paso.',
+    },
+    mods: { dustStorm: 'Tormenta de polvo', fullRecorder: 'Grabadora llena' },
   });
 })();

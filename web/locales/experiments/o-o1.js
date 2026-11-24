@@ -1,4 +1,4 @@
-// Texts of O-O1 · Laser to Earth (English and Portuguese). Merged into translation.experiments['O-O1'].
+// Texts of O-O1 · Laser to Earth (English, Portuguese and Spanish). Merged into translation.experiments['O-O1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -76,5 +76,42 @@
       thrusterPointing: 'Rodas de reação desligadas: a nave aponta com pulsos de propulsor, e cada pulso dá um tranco no feixe.',
     },
     mods: { sunNoise: 'Sol perto da linha de visada', cloudFront: 'Frente fria', thrusterPointing: 'Apontamento por propulsor' },
+  });
+
+  put('es', {
+    title: 'Láser a la Tierra',
+    minigame: 'Haz estable',
+    basis: 'Láser DSOC en la sonda Psyche (2023–25)',
+    desc: 'Mantén el láser sobre la estación terrestre mientras la nave vibra, para vaciar la memoria de a bordo antes de que termine la sesión. Cuanto más lejos está la Tierra, más pequeño es el blanco y menor la tasa de datos; las nubes sobre la estación cortan la señal.',
+    fact: 'Dato real: el láser del DSOC transmitió 267 Mbps desde {{near}}, pero solo ~8 Mbps desde ~{{far}}. La comunicación empeora mucho con la distancia.',
+    viewAria: 'Vista del telescopio hacia la Tierra, con la estación terrestre y la retícula del láser',
+    distReadout: 'TIERRA A {{dist}}',
+    rateReadout: '{{rate}} Mbps',
+    timeReadout: 'SESIÓN {{left}} s',
+    timeReady: 'LISTO',
+    memLabel: 'Memoria enviada · {{sent}} de {{total}}',
+    badgeReady: 'Mueve el haz para iniciar el enlace',
+    badgeLocked: '✓ Fijado en la estación · {{rate}} Mbps',
+    badgeSearching: 'Fuera del blanco: devuelve el haz al anillo',
+    badgeCloud: 'Nube sobre la estación: señal cortada',
+    hint: 'Arrastra sobre la vista (o ← ↑ → ↓ / WASD) para guiar el haz. 1★ con {{one}}% y 2★ con {{two}}% del máximo que permite este paso; 3★ vacía la memoria.',
+    statusInitial: 'Pon la retícula dentro del anillo que rodea la estación terrestre. La sesión empieza cuando te muevas (o en {{s}} s).',
+    statusGo: 'Sesión de enlace iniciada: mantén el haz sobre la estación.',
+    statusLocked: 'Fijado: los datos fluyen mientras el haz siga dentro del anillo.',
+    statusSearching: 'La vibración desvía el haz: corrige la deriva.',
+    statusCloud: 'Espera a que pase la nube y mantén el haz listo sobre la estación.',
+    statusEmpty: 'Memoria vacía en {{time}} s: todos los datos de Maya van camino a la Tierra.',
+    statusEnded: 'Sesión terminada con {{left}} todavía a bordo.',
+    failStuck: 'La sesión terminó con {{left}} de {{total}} todavía en la memoria. Los datos se quedan atascados a bordo y las nuevas observaciones tienen que esperar: en una misión real, los datos solo se convierten en ciencia cuando llegan a la Tierra.',
+    summary: '{{sent}} enviados · {{pct}}% del mejor resultado posible ({{best}}) a {{rate}} Mbps',
+    event: {
+      cloud: 'Nubes sobre la estación terrestre: el láser no puede atravesarlas, así que el enlace se pausa hasta que pasen.',
+      front: 'Un frente meteorológico sobre la estación: una larga banda de nubes corta el enlace.',
+      kick: 'Pulso de propulsor: la nave da un salto y el haz se mueve. ¡Vuelve a apuntar!',
+      sunNoise: 'El Sol está cerca de la línea de visión (cerca de la conjunción solar): su luz añade ruido, así que el anillo de fijación es más pequeño.',
+      cloudFront: 'Se acerca un frente meteorológico: una de las bandas de nubes durará mucho más.',
+      thrusterPointing: 'Ruedas de reacción apagadas: la nave apunta con pulsos de propulsores, y cada pulso sacude el haz.',
+    },
+    mods: { sunNoise: 'Sol cerca de la línea de visión', cloudFront: 'Frente meteorológico', thrusterPointing: 'Apuntado con propulsores' },
   });
 })();

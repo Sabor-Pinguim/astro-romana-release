@@ -151,6 +151,10 @@
       else ast.jumpCockpit?.(0);
       return;
     }
+    if (target === 'cockpit-orbit') {
+      ast.jumpMarsOrbit?.(Number(devState.seed));
+      return;
+    }
     if (target.startsWith('cockpit-')) {
       const step = Number(target.slice(8)) || 0;
       ast.jumpCockpit?.(step);

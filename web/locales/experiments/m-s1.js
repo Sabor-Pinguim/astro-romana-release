@@ -1,4 +1,4 @@
-// Texts of M-S1 · Biosignature hunter (English and Portuguese). Merged into translation.experiments['M-S1'].
+// Texts of M-S1 · Biosignature hunter (English, Portuguese and Spanish). Merged into translation.experiments['M-S1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -86,5 +86,47 @@
     statusEmpty: 'Lamito comum: varra mais da rocha com o SHERLOC para poupar orçamento.',
     summary: '{{found}} manchas · {{left}}% do orçamento sobrando · {{decoys}} falso(s) positivo(s) testado(s)',
     mods: { dust: 'Rocha empoeirada', fluorescent: 'Minerais fluorescentes' },
+  });
+
+  put('es', {
+    title: 'Cazador de biofirmas',
+    minigame: 'Manchas de leopardo',
+    basis: 'PIXL + SHERLOC en Cheyava Falls (2024–25)',
+    desc: 'Barre zonas de 3×3 de la roca con SHERLOC para que brillen los sospechosos y luego confirma las manchas de leopardo reales con PIXL antes de que se acaben el tiempo o la energía.',
+    fact: 'Dato real: en sept. de 2025 la NASA calificó las «manchas de leopardo» de vivianita y greigita de la roca Cheyava Falls como posible biofirma. Confirmarla exige traer la muestra a la Tierra, y Mars Sample Return se canceló en ene. de 2026.',
+    found: '{{found}} / {{need}} MANCHAS',
+    timeMin: '{{min}} min',
+    sherlocTitle: 'Barrer · SHERLOC 3×3 UV',
+    sherlocSub: '{{min}} min · {{wh}} Wh · muestra sospechosos ✦',
+    pixlTitle: 'Analizar · PIXL 1×1 rayos X',
+    pixlSub: '{{min}} min · {{wh}} Wh · confirma manchas ✓',
+    boardAria: 'Cuadrícula de escaneo de la roca Cheyava Falls',
+    legendSuspect: '✦ Sospechoso',
+    legendSpot: '✓ Mancha (necesitas {{need}})',
+    legendDecoy: '✕ Señuelo',
+    legendNear: '↗ Mancha al lado',
+    cellAria: 'Fila {{row}}, columna {{col}}, {{desc}}',
+    descUnscanned: 'sin escanear',
+    descSuspect: 'sospechoso brillante',
+    descSpot: 'mancha de leopardo confirmada',
+    descDecoy: 'señuelo mineral',
+    descNear: 'hay una mancha al lado',
+    descEmpty: 'lutita común',
+    statusInit: 'Barre con SHERLOC (UV 3×3) para hallar sospechosos ✦ y luego confirma {{need}} con PIXL. Teclas: 1 = SHERLOC, 2 = PIXL.',
+    dustNote: 'Roca polvorienta: el brazo raspa primero cada zona, así que los barridos de SHERLOC tardan más.',
+    statusVerified: 'Candidata a biofirma: {{need}} manchas de leopardo confirmadas con PIXL.',
+    statusExhausted: 'Se acabaron el tiempo o la energía con {{found}} de {{need}} manchas confirmadas. La roca queda sin analizar.',
+    statusAlreadySwept: 'Toda esa zona de 3×3 ya fue barrida: prueba otra zona o cambia a PIXL.',
+    statusNoBudgetSherloc: 'No hay tiempo ni energía suficientes para un barrido de SHERLOC. Cambia a PIXL.',
+    statusGlowFound: '✦ {{count}} sospechoso(s) brillando en ese bloque 3×3. Analízalos con PIXL (1×1).',
+    statusNoGlow: 'Nada brilla en ese bloque 3×3: barre otra parte de la roca.',
+    statusAlreadyPixl: 'Ya analizado con PIXL: elige un sospechoso ✦ o una casilla nueva.',
+    statusNoBudgetPixl: 'No queda tiempo ni energía suficientes para un análisis con PIXL.',
+    statusSpotConfirmed: '✓ Mancha de leopardo confirmada ({{found}} / {{need}}).',
+    statusDecoy: '✕ Un mineral que brilla sin vida. Analiza otro sospechoso ✦.',
+    statusHalo: '↗ Halo mineral: hay una mancha real justo al lado de esta casilla.',
+    statusEmpty: 'Lutita común: barre más roca con SHERLOC para ahorrar presupuesto.',
+    summary: '{{found}} manchas · {{left}}% del presupuesto restante · {{decoys}} señuelo(s) analizado(s)',
+    mods: { dust: 'Roca polvorienta', fluorescent: 'Minerales fluorescentes' },
   });
 })();

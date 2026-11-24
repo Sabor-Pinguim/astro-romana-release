@@ -1733,7 +1733,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       } else if (s.look?.id === e.pointerId) { turn(e.clientX - s.look.x, e.clientY - s.look.y, .006); s.look.x = e.clientX; s.look.y = e.clientY; }
     });
     const release = e => {
-      if (s.stick?.id === e.pointerId) { s.stick = null; stickEl.classList.remove('on'); stickEl.firstElementChild.style.translate = ''; }
+      if (s.stick?.id === e.pointerId) { s.stick = null; stickEl.classList.remove('on'); stickEl.style.left = ''; stickEl.style.top = ''; stickEl.firstElementChild.style.translate = ''; }
       if (s.look?.id === e.pointerId) s.look = null;
     };
     canvas.addEventListener('pointerup', release); canvas.addEventListener('pointercancel', release);
@@ -1744,15 +1744,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   $s('surface-board').addEventListener('click', () => { release(); sim()?.board(); });
   promptEl.addEventListener('click', interact);
 
-  // Experiments: the owner runs the minigame next to the block.
-  const COMPLETE_DELAY_MS = 3400; // game-balance: time to read the confirmation and real fact card.
-  const MINIGAME_PANELS = { 'H-S1': 'scout-game', 'L-S1': 'moxie-game', 'O-S1': 'relay-game', 'M-S1': 'bio-game' };
-  let completionTimer = null;
-  const confirmation = document.createElement('div');
-  confirmation.className = 'minigame-complete';
-  confirmation.setAttribute('role', 'status');
-  confirmation.innerHTML = `<span class="minigame-check" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 24 L19 34 L40 12"/></svg></span><strong id="minigame-complete-banner">${t('minigames.completeBanner')}</strong><p class="minigame-fact" id="minigame-fact"></p>`;
-  dlg.querySelector('.dialog-inner').append(confirmation);
+  // Experiments: the owner runs the minigame next to the block. web/experiment-run.js mounts it in #minigame-dialog
+  // (stage, completion card, auto close) and the rules record the stars (sim().completeSurfaceTask).
   const nearBlock = () => world.blocks.find(b => Math.hypot(b.position.x - s.pos.x, b.position.z - s.pos.z) <= REACH) ?? null;
   const nearLander = () => Math.hypot(s.pos.x, s.pos.z) <= BOARD_REACH;
   function interact() {
@@ -1762,44 +1755,21 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const e = b.userData.exp;
     if (isDone(e.id)) return;
     if (e.crew !== s.crew) return;
+    const run = sim()?.surf.run;
+    if (!run || !window.ASTRO_RUN) return;
     const owner = ui.crew.find(c => c.id === e.crew);
     if (document.pointerLockElement) document.exitPointerLock();
     s.keys.clear();
-    $s('minigame-kicker').textContent = t('minigames.kicker', { id: e.id, name: owner.name });
-    $s('minigame-title').textContent = e.title;
-    $s('minigame-brief').textContent = e.desc;
-    $s('minigame-summary').innerHTML = [[t('minigames.summaryMinigame'), e.minigame], [t('minigames.summaryMechanic'), e.mechanic], [t('minigames.summaryBasis'), e.basis]].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
-    dlg.dataset.exp = e.id;
-    const panelId = MINIGAME_PANELS[e.id] || null;
-    Object.values(MINIGAME_PANELS).forEach(id => { $s(id).hidden = id !== panelId; });
-    $s('minigame-summary').hidden = false;
-    $s('minigame-placeholder').hidden = Boolean(panelId);
-    $s('minigame-done').hidden = Boolean(panelId);
-    $s('minigame-done').textContent = t('minigames.completeBtn');
-    $s('minigame-fact').textContent = '';
-    window.ASTRO_MINIGAMES?.open(e.id);
-    dlg.showModal();
+    window.ASTRO_RUN.playInDialog({ run, id: e.id, crewName: owner.name, onFinish: result => finishExperiment(e.id, result) });
   }
   $s('minigame-close').addEventListener('click', () => dlg.close());
   function markDone(b) { b.userData.done = true; b.userData.beam.visible = false; b.userData.gem.material.color.set(0x7edac2); b.userData.tag.classList.add('done'); }
-  function finishExperiment(id) {
-    if (!dlg.open || id !== dlg.dataset.exp || !id || isDone(id)) return;
-    sim()?.completeSurfaceTask(id); s.prompt = '';
+  function finishExperiment(id, result) {
+    if (!id || isDone(id)) return;
+    sim()?.completeSurfaceTask(id, undefined, result?.stars ?? 0); s.prompt = '';
     const b = world.blocks.find(x => x.userData.exp.id === id);
-    if (!isDone(id)) return;
-    if (b) markDone(b);
-    $s('minigame-fact').textContent = b?.userData.exp.fact || '';
-    dlg.classList.add('is-complete');
-    completionTimer = setTimeout(() => { if (dlg.open) dlg.close(); }, COMPLETE_DELAY_MS);
+    if (b && isDone(id)) markDone(b);
   }
-  $s('minigame-done').addEventListener('click', () => finishExperiment(dlg.dataset.exp));
-  dlg.addEventListener('astro:minigame-completed', event => finishExperiment(event.detail.id));
-  dlg.addEventListener('close', () => {
-    clearTimeout(completionTimer);
-    completionTimer = null;
-    dlg.classList.remove('is-complete');
-    window.ASTRO_MINIGAMES?.close();
-  });
   dlg.addEventListener('click', event => {
     if (event.target !== dlg) return;
     const bounds = dlg.getBoundingClientRect();
@@ -2098,7 +2068,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   }
   window.addEventListener('astro:settings', () => {
     syncTouchLabels();
-    const banner = $s('minigame-complete-banner');
+    const banner = document.querySelector('#minigame-dialog .minigame-complete strong'); // card from web/experiment-run.js
     if (banner) banner.textContent = t('minigames.completeBanner');
     if (!world || !s.ready) return;
     $s('surface-goals').innerHTML = tasks().map(e => { const o = ui.crew.find(c => c.id === e.crew);

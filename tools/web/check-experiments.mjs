@@ -1,7 +1,7 @@
 // Validates the experiment minigames without a browser (plan: docs/experiments-implementation.md §4.10).
 // Loads the same classic scripts as the page into a Node vm and checks:
 //   - the registry (21 experiments, every crew member has orbit and ground options);
-//   - texts: required keys in English and Portuguese, the same key set in both languages, modifier names;
+//   - texts: required keys in English, Portuguese and Spanish, the same key set in all three, modifier names;
 //   - each built minigame: 3 levels, layouts that are solvable, plain data, varied and fast to generate;
 //   - bots: 1 or 2 stars; the draw: 8 per run, 1 orbit + 1 ground per crew member, all 21 reachable.
 // Holds no game logic. Usage: node tools/web/check-experiments.mjs [--seeds 300] [--only H-S1,L-S1]
@@ -34,6 +34,7 @@ const load = rel => {
 console.log('Experiments registry');
 load('web/locales/en.js');
 load('web/locales/pt.js');
+load('web/locales/es.js');
 load('web/experiments.js');
 const EXP = context.ASTRO_EXPERIMENTS;
 if (EXP.list.length === 21) ok('21 experiments'); else bad(`${EXP.list.length} experiments (expected 21)`);
@@ -48,26 +49,32 @@ for (const e of EXP.list) if (load(`web/minigames/${e.file}.js`) && MG.has(e.id)
 console.log(`  · ${built.length} / 21 minigames built: ${built.join(', ') || 'none'}`);
 
 // ---------------------------------------------------------------------------
-console.log('Texts (en / pt)');
+// Player texts come in English (reference), Portuguese and Spanish (AGENTS.md §9): the same keys in all three.
+const LANGS = ['en', 'pt', 'es'];
+console.log(`Texts (${LANGS.join(' / ')})`);
 const tr = code => context.ASTRO_LOCALES[code]?.translation?.experiments || {};
 const keysOf = (obj, prefix = '') => Object.entries(obj || {}).flatMap(([k, v]) => (v && typeof v === 'object' ? keysOf(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
 const REQUIRED = ['title', 'minigame', 'basis', 'desc', 'fact'];
-for (const block of ['common', 'mechanics', 'places']) {
-  const en = new Set(keysOf(tr('en')[block])), pt = new Set(keysOf(tr('pt')[block]));
-  const diff = [...en].filter(k => !pt.has(k)).concat([...pt].filter(k => !en.has(k)));
-  if (!en.size) bad(`experiments.${block} missing`); else if (diff.length) bad(`experiments.${block}: keys differ between en and pt: ${diff.join(', ')}`); else ok(`experiments.${block}`);
+const keyDiff = (a, b) => [...a].filter(k => !b.has(k)).concat([...b].filter(k => !a.has(k)).map(k => `+${k}`));
+for (const block of ['common', 'mechanics', 'places', 'orbit', 'descent', 'results']) {
+  const sets = Object.fromEntries(LANGS.map(l => [l, new Set(keysOf(tr(l)[block]))]));
+  if (!sets.en.size) { bad(`experiments.${block} missing`); continue; }
+  const diffs = LANGS.slice(1).map(l => [l, keyDiff(sets.en, sets[l])]).filter(([, d]) => d.length);
+  if (diffs.length) diffs.forEach(([l, d]) => bad(`experiments.${block}: ${l} differs from en: ${d.slice(0, 8).join(', ')}${d.length > 8 ? '…' : ''}`));
+  else ok(`experiments.${block}`);
 }
 for (const id of built) {
-  const en = tr('en')[id], pt = tr('pt')[id];
-  if (!en || !pt) { bad(`${id}: missing texts (${!en ? 'en' : ''} ${!pt ? 'pt' : ''})`); continue; }
-  const missing = REQUIRED.filter(k => typeof en[k] !== 'string' || typeof pt[k] !== 'string');
-  const ek = new Set(keysOf(en)), pk = new Set(keysOf(pt));
-  const diff = [...ek].filter(k => !pk.has(k)).concat([...pk].filter(k => !ek.has(k)));
-  const mods = (MG.def(id).mods || []).filter(m => typeof en.mods?.[m] !== 'string' || typeof pt.mods?.[m] !== 'string');
+  const packs = Object.fromEntries(LANGS.map(l => [l, tr(l)[id]]));
+  const absent = LANGS.filter(l => !packs[l]);
+  if (absent.length) { bad(`${id}: missing texts (${absent.join(', ')})`); continue; }
+  const missing = REQUIRED.filter(k => LANGS.some(l => typeof packs[l][k] !== 'string'));
+  const ek = new Set(keysOf(packs.en));
+  const diffs = LANGS.slice(1).map(l => [l, keyDiff(ek, new Set(keysOf(packs[l])))]).filter(([, d]) => d.length);
+  const mods = (MG.def(id).mods || []).filter(m => LANGS.some(l => typeof packs[l].mods?.[m] !== 'string'));
   if (missing.length) bad(`${id}: missing ${missing.join(', ')}`);
-  if (diff.length) bad(`${id}: keys differ between en and pt: ${diff.join(', ')}`);
+  diffs.forEach(([l, d]) => bad(`${id}: ${l} keys differ from en: ${d.slice(0, 8).join(', ')}${d.length > 8 ? '…' : ''}`));
   if (mods.length) bad(`${id}: modifier names missing: ${mods.join(', ')}`);
-  if (!missing.length && !diff.length && !mods.length) ok(`${id}: ${ek.size} keys in both languages`);
+  if (!missing.length && !diffs.length && !mods.length) ok(`${id}: ${ek.size} keys in ${LANGS.length} languages`);
 }
 
 // ---------------------------------------------------------------------------

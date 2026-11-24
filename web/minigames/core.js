@@ -141,7 +141,10 @@
     distanceM: m => `${Math.round(m)} m`, distanceKm: (km, d = 0) => `${Number(km).toFixed(d)} km`,
     altitudeKm: km => `${Math.round(km)} km`, speedKmh: v => `${Math.round(v)} km/h`, velocityMs: v => `${Math.round(v)} m/s`,
   };
-  const starsText = (n, of = 3) => '★'.repeat(n) + '☆'.repeat(Math.max(0, of - n));
+  // Stars: plain text '★ 2/3' for logs and toasts; HTML for the UI, where the missing stars are dimmed full stars
+  // (the hollow ☆ glyph looks filled in bold Chakra Petch).
+  const starsText = (n, of = 3) => `★ ${n}/${of}`;
+  const starsHtml = (n, of = 3) => `<span class="mg-stars" role="img" aria-label="${n}/${of}">${'<b>★</b>'.repeat(n)}${'<i>★</i>'.repeat(Math.max(0, of - n))}</span>`;
 
   function el(tag, cls, text) {
     const node = document.createElement(tag);
@@ -205,6 +208,7 @@
       return { node, ctx, fit, get w() { return state.w; }, get h() { return state.h; } };
     },
     starsText,
+    starsHtml,
   });
 
   // ---------------------------------------------------------------------------
@@ -286,7 +290,7 @@
           );
           const actions = failBox.lastChild;
           actions.append(
-            ui.button(host.tc('restart', { stars: starsText(starCap(attempt + 1)) }), 'primary', restart),
+            Object.assign(ui.button('', 'primary', restart), { innerHTML: host.tc('restart', { stars: starsHtml(starCap(attempt + 1)) }) }),
             ui.button(host.tc('giveUp'), 'quiet', () => {
               end();
               opts.onFinish?.({ id, level, seed: opts.seed, attempt, stars: 0, rawStars: 0, summary: reason || '', metrics: {}, gaveUp: true });
@@ -334,10 +338,10 @@
       function labelChrome() {
         head.replaceChildren(
           el('span', 'tag mg-level', host.tc(`level.${level}`)),
-          el('span', 'tag mg-cap', host.tc('cap', { stars: starsText(cap) })),
+          Object.assign(el('span', 'tag mg-cap'), { innerHTML: host.tc('cap', { stars: starsHtml(cap) }) }),
           ...made.mods.map(m => el('span', 'tag mg-mod', host.t(`mods.${m}`))),
         );
-        restartBtn.textContent = host.tc('restart', { stars: starsText(starCap(attempt + 1)) });
+        restartBtn.innerHTML = host.tc('restart', { stars: starsHtml(starCap(attempt + 1)) });
       }
       labelChrome();
       instance = def.mount(host) || {};
@@ -364,7 +368,7 @@
   const fact = id => t(`experiments.${id}.fact`, defs.get(id)?.factVars?.(units()));
 
   root.ASTRO_MINIGAMES = Object.freeze({
-    register, open, layout, params, botResult, starCap, lib, BOT, fact,
+    register, open, layout, params, botResult, starCap, lib, BOT, fact, starsHtml, starsText,
     has: id => defs.has(id),
     def: id => defs.get(id) || null,
     ids: () => [...defs.keys()],

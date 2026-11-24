@@ -794,7 +794,10 @@
   $('#hint-dialog-action')?.addEventListener('click', () => {
     const act = activeHintAction;
     $('#hint-dialog')?.close();
-    if (act?.key) selectModule(act.key, act.tab);
+    if (act?.key) {
+      selectModule(act.key, act.tab);
+      if (matchMedia('(max-width:640px), (max-height:500px) and (orientation:landscape)').matches) setPlannerMobileTab('catalog');
+    }
   });
   $('#hint-dialog')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.close();
@@ -879,13 +882,17 @@
       bayKey?{key:bayKey,tab:'power',label:t('planner.hints.goPower')}:null
     );
     $('#budget-remaining').textContent=money(m.budget-m.cost);$('#budget-readout').classList.toggle('negative',m.cost>m.budget);
+    const alertCount=$$('#planner .telemetry-alerts .alert.show').length;
+    const telTab=$('#planner-mobile-tabs [data-planner-tab="telemetry"]'),telBadge=$('#telemetry-tab-badge');
+    if(telTab)telTab.classList.toggle('has-alert',alertCount>0);
+    if(telBadge){telBadge.hidden=alertCount===0;telBadge.textContent=alertCount>0?String(alertCount):'';}
     return m;
   }
   function renderRocket(){
     const r=state.rocket,keys=['booster',...r.stages.map((_,i)=>`stage-${i}`),'cabin'],cur=moduleKey(state.sel),m=DATA?metrics():null;
     $('#stack-overlay').innerHTML=keys.map((k,i)=>{const [title,sub,status]=moduleLabel(k,m),rem=k.startsWith('stage-')?`<button class="remove-stage" type="button" data-remove="${k.slice(6)}" title="${t('planner.removeTitle',{title})}" aria-label="${t('planner.removeTitle',{title})}">×</button>`:'';return `<div class="stage-node ${i%2?'right':'left'}" data-module="${k}"><button class="rocket-stage ${k===cur?'selected':''}" type="button" data-select="${k}" aria-pressed="${k===cur}"><strong>${title}</strong><small>${sub}</small>${status?`<small>${status}</small>`:''}</button>${rem}</div>`;}).join('')
       +(r.stages.length<MAX_STAGES()?Array.from({length:r.stages.length+1},(_,i)=>`<button class="add-stage" type="button" data-insert="${i}" title="${t('planner.addStageTitle')}" aria-label="${t('planner.addStageAria',{pos:i+2})}">+</button>`).join(''):'');
-    $$('#stack-overlay [data-select]').forEach(b=>b.addEventListener('click',()=>selectModule(b.dataset.select)));
+    $$('#stack-overlay [data-select]').forEach(b=>b.addEventListener('click',()=>{selectModule(b.dataset.select);if(matchMedia('(max-width:640px), (max-height:500px) and (orientation:landscape)').matches)setPlannerMobileTab('catalog');}));
     $$('#stack-overlay [data-remove]').forEach(b=>b.addEventListener('click',()=>removeStage(+b.dataset.remove)));
     $$('#stack-overlay [data-insert]').forEach(b=>b.addEventListener('click',()=>addStage(+b.dataset.insert)));
     const installed=[r.booster.engine,r.booster.tank,r.booster.fins,...r.stages.flatMap(s=>s.type==='booster'?[s.engine,s.tank]:[s.item]),...r.cabin].filter(Boolean).length;
@@ -958,6 +965,14 @@
     $$('#parts-list [data-part]').forEach(b=>b.addEventListener('click',()=>togglePart(b.dataset.part)));
     window.dispatchEvent(new Event('astro:catalog'));
   }
+  function setPlannerMobileTab(tab){
+    const p=$('#planner');if(!p)return;
+    const next=['blueprint','catalog','telemetry'].includes(tab)?tab:'blueprint';
+    p.dataset.mobileTab=next;
+    p.dataset.sideTab=next==='telemetry'?'telemetry':'catalog';
+    $$('#planner-mobile-tabs [data-planner-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.plannerTab===next)));
+  }
+  $$('#planner-mobile-tabs [data-planner-tab]').forEach(b=>b.addEventListener('click',()=>setPlannerMobileTab(b.dataset.plannerTab)));
   function renderPlanner(){renderTelemetry();renderRocket();renderCatalog();renderWizard();syncSetup();}
   function selectModule(key,tab){state.sel=parseKey(key);const r=state.rocket;state.tab=tab||(state.sel.kind==='booster'?(r.booster.engine&&!r.booster.tank?'tank':'engine'):state.sel.kind==='cabin'?'helena':'power');window.dispatchEvent(new CustomEvent('astro:focus-module',{detail:key}));renderPlanner();}
   function stepRocketModule(delta){
@@ -1823,6 +1838,11 @@
       flight.docking = null;
       flight.docked = false;
       flight.marsBurn = null;
+      flight.orbit = null;
+      flight.descentHold = false;
+      // The experiments of this run (docs/experiments-implementation.md §3): 8 drawn now, 1 orbit + 1 ground per
+      // crew member, each revealed only when it comes into play (Mars orbit, descent, surface).
+      state.run = window.ASTRO_RUN ? window.ASTRO_RUN.create({ difficulty: state.difficulty }) : null;
 
       logFlight(t('cockpit.logs.deckOnline'));
       if (flight.design.ready) logFlight(t('cockpit.logs.twrClimb', { twr: U.decimal(flight.design.twr, 2), sec: phaseDuration(0) }));
@@ -1885,7 +1905,7 @@
       const stars = g.stars(), share = Math.round(g.share() * 100);
       flight.liftoffStars = stars;
       flight.score += (stars - 1) * 4;
-      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      const starStr = starsText(stars);
       logFlight(t('cockpit.logs.meco', { pct: share, stars: starStr }));
       crewToast(t('cockpit.toasts.liftoffResult', { stars: starStr, pct: share }));
       const abort = flight.design.orbit ? null : abortOf(flight.design); // the stages ran dry short of orbit (not on Easy)
@@ -1896,7 +1916,159 @@
     // After the orbital refuel: the transfer burn either reaches Mars or the crew comes home (abortOf).
     function toMars() {
       const abort = abortOf(flight.design);
-      if (abort) abortMission(abort); else setFlightStep(3);
+      if (abort) abortMission(abort); else if (orbitExperiments().length) startMarsOrbit(); else enterDescent();
+    }
+
+    // -------------------------------------------------------------------------
+    // MARS ORBIT: the drawn orbit experiments, before the descent (docs/experiments-implementation.md §4.5).
+    // flight.step stays 2 (no renumbering of the 4 flight steps); flight.orbit marks the stage. Bots do the AI
+    // seats on average (§4.12). Solo: you play your own and may take over an AI seat while its bot still works.
+    // In a room: each player plays their own seat; the host keeps the AI seats with the bots.
+    // -------------------------------------------------------------------------
+    const ORBIT_WINDOW_S = 150; // game-balance: time in Mars orbit before the descent starts on its own
+    const BOT_START_S = [1.5, 4]; // game-balance: a bot starts its experiment a moment after the stage begins
+    let orbitBots = null;
+    const RUN = () => window.ASTRO_RUN;
+    const starsText = k => (RUN() ? RUN().stars(k) : `★ ${k}/3`);
+    const starsHtml = k => (RUN() ? RUN().starsHtml(k) : `★ ${k}/3`);
+    const orbitExperiments = () => (RUN() && state.run ? RUN().ofPlace(state.run, 'orbit') : []);
+    const soloCrewId = () => (state.detail?.kind === 'crew' ? state.detail.id : 'helena');
+    const humanSeat = id => (net.mode === 'solo' ? id === soloCrewId() : !!net.peerOf(id));
+    const crewNameOf = id => crew.find(c => c.id === id)?.name ?? id;
+    const expTitle = id => t(`experiments.${id}.title`);
+    const orbitAllDone = () => orbitExperiments().every(e => state.run.results[e.id]);
+    const mineHere = e => (net.mode === 'solo' ? true : e.crew === net.seat);
+
+    function startMarsOrbit() {
+      flight.orbit = { active: true, done: false, left: ORBIT_WINDOW_S, bots: {} };
+      orbitBots = RUN().bots(state.run, (id, res) => {
+        logFlight(t('experiments.common.botDone', { name: crewNameOf(window.ASTRO_EXPERIMENTS.byId(id).crew), title: expTitle(id), stars: RUN().stars(res.stars) }));
+        renderFlightUI();
+      });
+      for (const e of orbitExperiments()) if (!humanSeat(e.crew)) orbitBots.start(e.id, BOT_START_S[0] + Math.random() * (BOT_START_S[1] - BOT_START_S[0]));
+      logFlight(t('experiments.orbit.log', { count: orbitExperiments().length }));
+      radAudio.tone(600, 0.14, 'triangle', 0.05);
+      triggerPhaseTransition();
+      renderFlightUI();
+    }
+    function orbitTick(dt) {
+      const o = flight.orbit, list = orbitExperiments();
+      const paused = net.mode === 'solo' && !!$('#minigame-dialog')?.open; // solo: the window waits while you play
+      orbitBots?.pause(paused);
+      orbitBots?.tick(dt);
+      if (!flight.orbit?.active) return;
+      if (!paused) o.left = Math.max(0, o.left - dt);
+      o.bots = Object.fromEntries(list.map(e => [e.id, orbitBots?.progress(e.id)]).filter(([, p]) => p != null));
+      flight.progress = list.length ? (list.filter(e => state.run.results[e.id]).length / list.length) * 100 : 100;
+      if (o.left <= 0) closeOrbitWindow(); else updateOrbitLive();
+    }
+    function recordOrbit(id, stars, by) {
+      if (!RUN()?.record(state.run, id, { stars, by })) return;
+      orbitBots?.take(id);
+      logFlight(t('experiments.common.done', { name: crewNameOf(window.ASTRO_EXPERIMENTS.byId(id).crew), title: expTitle(id), stars: RUN().stars(stars) }));
+      renderFlightUI();
+    }
+    function playOrbit(id) {
+      const e = window.ASTRO_EXPERIMENTS?.byId(id);
+      if (!e || !flight.orbit?.active || state.run.results[id] || !mineHere(e)) return;
+      if (net.mode === 'solo') orbitBots?.take(id); // taking over an AI seat stops its bot
+      RUN().playInDialog({
+        run: state.run, id, crewName: crewNameOf(e.crew),
+        onFinish: r => {
+          if (net.isGuest) { net.act('exp', id, r.stars); RUN().record(state.run, id, { stars: r.stars, by: net.you?.id }); renderFlightUI(); }
+          else recordOrbit(id, r.stars, net.you?.id ?? 'solo');
+        },
+        // Leaving an AI seat unfinished in solo gives it back to its bot.
+        onClose: finished => { if (!finished && net.mode === 'solo' && flight.orbit?.active && !state.run.results[id] && !humanSeat(e.crew)) orbitBots?.start(id); renderFlightUI(); },
+      });
+    }
+    function skipMyOrbit() {
+      for (const e of orbitExperiments()) {
+        if (!humanSeat(e.crew) || !mineHere(e) || state.run.results[e.id]) continue;
+        if (net.isGuest) { net.act('exp', e.id, 0); RUN().record(state.run, e.id, { stars: 0, by: net.you?.id }); } else recordOrbit(e.id, 0, null);
+      }
+      renderFlightUI();
+    }
+    // The window closed: bots still working finish with their planned result; unfinished human seats count 0.
+    function closeOrbitWindow() {
+      for (const e of orbitExperiments()) {
+        if (state.run.results[e.id]) continue;
+        if (!humanSeat(e.crew)) {
+          const plan = window.ASTRO_MINIGAMES.botResult(e.id, state.run.seed, state.run.level);
+          RUN().record(state.run, e.id, { stars: plan.stars, by: 'bot', bot: true });
+        } else RUN().record(state.run, e.id, { stars: 0, by: null });
+      }
+      crewToast(t('experiments.orbit.windowClosed'));
+      endMarsOrbit();
+    }
+    function endMarsOrbit() {
+      if (!flight.orbit?.active || net.isGuest) return;
+      flight.orbit = { ...flight.orbit, active: false, done: true, bots: {} };
+      orbitBots?.clear(); orbitBots = null;
+      if (RUN()?.playing && $('#minigame-dialog')?.open) $('#minigame-dialog').close();
+      enterDescent();
+    }
+    function updateOrbitLive() {
+      const w = $('#orbit-window');
+      if (w) w.textContent = t('experiments.orbit.window', { time: clock(flight.orbit.left) });
+      for (const [id, p] of Object.entries(flight.orbit.bots || {})) {
+        const bar = $(`.orbit-exp[data-exp="${id}"] .orbit-exp-bar span`);
+        if (bar) bar.style.width = `${Math.round(p * 100)}%`;
+      }
+    }
+    function renderOrbitCard(box) {
+      const run = state.run, o = flight.orbit, list = orbitExperiments();
+      const rows = list.map(e => {
+        const c = crew.find(x => x.id === e.crew), res = run.results[e.id], human = humanSeat(e.crew), botP = o.bots?.[e.id];
+        const status = res
+          ? `<span class="orbit-exp-status is-done">${RUN().starsHtml(res.stars)}${res.bot ? ` <em>${t('experiments.results.ai')}</em>` : ''}</span>`
+          : botP != null ? `<span class="orbit-exp-status">${t('experiments.common.botWorking', { name: c.name })}</span>`
+            : `<span class="orbit-exp-status">${human ? (mineHere(e) ? t('experiments.orbit.yours') : t('experiments.orbit.waiting', { name: c.name })) : ''}</span>`;
+        const button = !res && mineHere(e) && (human || net.mode === 'solo')
+          ? `<button class="button ${human ? 'primary' : 'secondary'}" type="button" data-orbit-play="${e.id}">${t(human ? 'experiments.orbit.play' : 'experiments.orbit.takeOver')}</button>` : '';
+        return `<div class="orbit-exp" style="--crew:${c.color}" data-exp="${e.id}"><span class="orbit-exp-name"><small>${c.name} · ${e.id}</small><strong>${expTitle(e.id)}</strong><span>${t(`experiments.mechanics.${e.mechanic}`)}</span></span>${status}${button}<span class="orbit-exp-bar"><span style="width:${res ? 100 : Math.round((botP ?? 0) * 100)}%"></span></span></div>`;
+      }).join('');
+      const all = orbitAllDone(), myPending = list.some(e => humanSeat(e.crew) && mineHere(e) && !run.results[e.id]);
+      box.innerHTML = `
+        <span class="eyebrow">${t('experiments.orbit.eyebrow')}</span>
+        <h4>${t('experiments.orbit.title')}</h4>
+        <p>${t('experiments.orbit.intro')}</p>
+        <div class="orbit-exp-list">${rows}</div>
+        <div class="orbit-foot"><span class="orbit-window" id="orbit-window">${t('experiments.orbit.window', { time: clock(o.left) })}</span>
+          ${myPending ? `<button class="button quiet" type="button" data-orbit-skip>${t('experiments.orbit.skip')}</button>` : ''}
+          ${net.isGuest ? `<span class="mp-watch">${t('experiments.orbit.waitHost')}</span>` : `<button class="button primary" type="button" data-orbit-end ${all ? '' : 'disabled'}>${t(all ? 'experiments.orbit.startDescent' : 'experiments.orbit.locked')}</button>`}</div>`;
+      $$('[data-orbit-play]', box).forEach(b => b.addEventListener('click', () => playOrbit(b.dataset.orbitPlay)));
+      $('[data-orbit-skip]', box)?.addEventListener('click', skipMyOrbit);
+      $('[data-orbit-end]', box)?.addEventListener('click', endMarsOrbit);
+    }
+
+    // DESCENT: when H-S2 (Helena's precision landing) was drawn, it runs before the landing burn starts. Solo and
+    // the host (Helena's seat) play it; otherwise it is done by the AI.
+    function enterDescent() {
+      setFlightStep(3);
+      const id = 'H-S2';
+      if (!RUN() || !state.run?.experiments.includes(id) || state.run.results[id] || net.isGuest) return;
+      const done = (stars, by, bot) => {
+        if (!RUN().record(state.run, id, { stars, by, bot })) return;
+        logFlight(t(bot ? 'experiments.common.botDone' : 'experiments.common.done', { name: crewNameOf('helena'), title: expTitle(id), stars: RUN().stars(stars) }));
+      };
+      if (net.mode === 'solo' || humanSeat('helena')) {
+        flight.descentHold = true;
+        logFlight(t('experiments.descent.log', { name: crewNameOf('helena') }));
+        RUN().playInDialog({
+          run: state.run, id, crewName: crewNameOf('helena'),
+          onFinish: r => done(r.stars, net.you?.id ?? 'solo', false),
+          onClose: finished => {
+            if (!finished) { done(0, null, false); logFlight(t('experiments.descent.skipped')); }
+            flight.descentHold = false;
+            renderFlightUI();
+          },
+        });
+      } else {
+        const plan = window.ASTRO_MINIGAMES.botResult(id, state.run.seed, state.run.level);
+        done(plan.stars, 'bot', true);
+      }
+      renderFlightUI();
     }
 
     // Δv abort: the flight stops, the capsule comes down under parachutes into the sea (web/launch.js) and the
@@ -1952,7 +2124,7 @@
       const share = Math.round(g.share() * 100), stars = g.stars();
       flight.score += (stars - 1) * 5 - (timedOut ? 8 : 0);
       flight.landingShare = share;
-      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      const starStr = starsText(stars);
       logFlight(t('cockpit.logs.touchdown', { pct: share }));
       crewToast(t('cockpit.toasts.landingResult', { stars: starStr, pct: share }));
       finishFlightAndLand();
@@ -2008,6 +2180,7 @@
     // Every cockpit action passes here (buttons, keys, 3D clicks). In a room, only the crew member who owns the
     // action may do it (crewFor); a guest sends it to the host, which checks the seat the server stamped.
     function handleCockpitAction(actionId, arg) {
+      if (flight.orbit?.active || flight.descentHold) return; // Mars orbit experiments or H-S2: no flight controls
       const seats = crewFor(actionId);
       if (!canAct(seats)) { if (flight.active) toast(t('cockpit.toasts.onlyOwner', { names: crewNames(seats), verb: seats.length > 1 ? t('cockpit.toasts.doPlural') : t('cockpit.toasts.doSingular') })); return; }
       if (net.isGuest) { net.act('cockpit', actionId, arg); return; }
@@ -2174,7 +2347,9 @@
         if (keys.has('ArrowDown') || keys.has('KeyS')) flight.pitchY = Math.min(1, flight.pitchY + dt * 1.4);
       }
 
-      if (flight.step === 0) {
+      if (flight.orbit?.active) {
+        orbitTick(dt);
+      } else if (flight.step === 0) {
         if (!flight.liftoff && flight.throttle >= LIFTOFF.throttle) {
           flight.liftoff = startLiftoff();
           logFlight(t('cockpit.logs.liftoffHold', { sec: phaseDuration(0) }));
@@ -2243,7 +2418,7 @@
           flight.progress = 65 + (refuelTarget() ? flight.refuelDone / refuelTarget() : 1) * 35;
         }
         if (flight.phaseElapsed >= phaseDuration(2)) { timeOutFlightPhase(); }
-      } else if (flight.step === 3) {
+      } else if (flight.step === 3 && !flight.descentHold) { // descentHold: H-S2 picks the landing spot first
         const g = flight.marsBurn;
         if (g) {
           const [pitch, yaw] = pilotInput();
@@ -2275,16 +2450,26 @@
       flight.raf = requestAnimationFrame(flightTick);
     }
 
+    // Steps come from data-fstep: the 4 flight steps (0–3) plus "orbit", the Mars orbit stage between 2 and 3.
     function updateFlightStepper() {
-      $$('#flight-stepper .flight-phase').forEach((el, idx) => {
-        const active = idx === flight.step, done = idx < flight.step;
-        const fill = done ? 100 : active ? Math.min(100, (flight.phaseElapsed / phaseDuration(idx)) * 100) : 0;
+      const orbitOn = !!flight.orbit?.active, orbitPassed = !!flight.orbit?.done || flight.step >= 3;
+      $$('#flight-stepper .flight-phase').forEach(el => {
+        let active, done, total, left;
+        if (el.dataset.fstep === 'orbit') {
+          total = ORBIT_WINDOW_S; active = orbitOn; done = !orbitOn && orbitPassed;
+          left = active ? flight.orbit.left : done ? 0 : total;
+        } else {
+          const idx = Number(el.dataset.fstep);
+          total = phaseDuration(idx); active = !orbitOn && idx === flight.step; done = idx < flight.step || (orbitOn && idx === flight.step);
+          left = done ? 0 : active ? total - flight.phaseElapsed : total;
+        }
+        const fill = done ? 100 : active ? Math.min(100, Math.max(0, (1 - left / total) * 100)) : 0;
         el.classList.toggle('active', active);
         el.classList.toggle('done', done);
         el.style.setProperty('--phase-fill', `${fill}%`);
         el.setAttribute('aria-current', active ? 'step' : 'false');
         const readout = el.querySelector('[data-phase-time]');
-        if (readout) readout.textContent = clock(done ? 0 : active ? phaseDuration(idx) - flight.phaseElapsed : phaseDuration(idx));
+        if (readout) readout.textContent = clock(Math.max(0, left));
       });
     }
 
@@ -2350,7 +2535,7 @@
         mark.classList.toggle('out', g.error > g.band);
         $('#kir-time').textContent = t(flight.step === 0 ? 'cockpit.cards.timeToMeco' : 'cockpit.cards.timeToTouchdown', { sec: Math.ceil(g.duration - g.t) });
         $('#kir-share').textContent = t('cockpit.cards.inBandPct', { pct: Math.round(g.share() * 100) });
-        const st = g.stars(); $('#kir-stars').textContent = '★'.repeat(st) + '☆'.repeat(3 - st);
+        const st = g.stars(); $('#kir-stars').innerHTML = starsHtml(st);
       }
       if (flight.step === 2 && flight.docking && !flight.docked && mark) {
         mark.style.left = `${50 + (flight.docking.value[1] / flight.docking.limit) * 50}%`;
@@ -2384,10 +2569,10 @@
 
     function renderFlightUI() {
       updateFlightStepper();
-      const titles = t('cockpit.phaseTitles');
+      const titles = t('cockpit.phaseTitles'), orbitOn = !!flight.orbit?.active;
       $('.cockpit-reticle')?.toggleAttribute('hidden', true);
-      $('#cockpit-eyebrow').textContent = titles[flight.step][0];
-      $('#cockpit-title').textContent = titles[flight.step][1];
+      $('#cockpit-eyebrow').textContent = orbitOn ? t('experiments.orbit.eyebrow') : titles[flight.step][0];
+      $('#cockpit-title').textContent = orbitOn ? t('experiments.orbit.title') : titles[flight.step][1];
       const exterior = $('#flight-exterior'), monitor = $('#docking-monitor');
       exterior?.toggleAttribute('hidden', true);
       exterior?.classList.toggle('is-separated', flight.stageSeparated);
@@ -2407,6 +2592,7 @@
       }
 
       const box = $('#cockpit-minigame');
+      if (orbitOn) { renderOrbitCard(box); updateCockpitHUD(); syncFlight(true); return; }
       if (flight.step === 0) {
         const g = flight.liftoff;
         box.innerHTML = `
@@ -2419,7 +2605,7 @@
               ? '<button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button>'
               : `<button class="button primary" type="button" data-act="throttle_up">${t('cockpit.cards.throttleBtn', { pct: Math.round(flight.throttle * 100) })}</button>`}</div>
           </div>
-          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToMeco', { sec: phaseDuration(0) })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
+          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToMeco', { sec: phaseDuration(0) })}</span><span id="kir-share">—</span><span id="kir-stars">${starsHtml(0)}</span></div>`;
       } else if (flight.step === 1) {
         const dockActive = flight.portDock?.status === 'approach';
         box.innerHTML = `
@@ -2468,7 +2654,7 @@
             <button class="button secondary" type="button" data-act="edl_arm" ${flight.edlChuteDeployed ? 'disabled' : ''}>${t(flight.edlChuteDeployed ? 'cockpit.cards.edlDeployedBtn' : 'cockpit.cards.edlDeployBtn')}</button>
             <button class="button secondary" type="button" data-act="stabilize">${t('cockpit.cards.trimBtn')}</button>
           </div>
-          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToTouchdown', { sec: MARS_BURN.duration })}</span><span id="kir-share">—</span><span id="kir-stars">☆☆☆</span></div>`;
+          <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToTouchdown', { sec: MARS_BURN.duration })}</span><span id="kir-share">—</span><span id="kir-stars">${starsHtml(0)}</span></div>`;
       }
       $$('[data-hold]', box).forEach(btn => {
         btn.addEventListener('pointerdown', e => {
@@ -2536,6 +2722,12 @@
       surf.completed = new Set();
       surf.stranded = [];
       surf.strandedIds = [];
+      // The surface experiments of this run (a jump straight to the surface still gets a draw of its own).
+      if (RUN() && !state.run) state.run = RUN().create({ difficulty: state.difficulty });
+      surf.run = state.run;
+      surf.tasks = RUN() && state.run ? RUN().tasks(state.run, 'surface') : SURFACE_TASKS;
+      for (const task of surf.tasks) if (state.run?.results[task.id]) surf.completed.add(task.id);
+      surf.bots = RUN() && state.run ? RUN().bots(state.run, onSurfaceBotDone) : null;
       // The experiment spots come from this seed, so every screen places them alike (web/views.js, placeBlocks).
       surf.seed = Math.floor(Math.random() * 2 ** 31);
       surf.control = Object.fromEntries(crew.map(c => [c.id, net.peerOf(c.id)?.id ?? null])); // crew → peer id (null: AI)
@@ -2551,19 +2743,49 @@
     }
 
     // by: the peer that sent it (the host checks that it controls the experiment's owner); none: this screen.
-    function completeSurfaceTask(id, by) {
+    // stars: 0–3 from the minigame (web/minigames/core.js).
+    function completeSurfaceTask(id, by, stars = 0) {
       const task = surf.tasks.find(item => item.id === id);
+      stars = Math.max(0, Math.min(3, Number(stars) | 0));
       if (net.isGuest) { // the host confirms; the block shows done right away
-        if (surf.active && task && task.crew === surf.activeCrew && !surf.completed.has(id)) { net.act('task', id); surf.completed.add(id); }
+        if (surf.active && task && task.crew === surf.activeCrew && !surf.completed.has(id)) {
+          net.act('task', id, stars); surf.completed.add(id);
+          if (state.run) RUN()?.record(state.run, id, { stars, by: net.you?.id });
+        }
         return;
       }
       const owner = by ? surf.control?.[task?.crew] === by : task?.crew === surf.activeCrew;
       if (!surf.active || !task || !owner || surf.completed.has(id)) return;
       surf.completed.add(id);
+      surf.bots?.take(id);
+      if (state.run) RUN()?.record(state.run, id, { stars, by: by ?? net.you?.id ?? 'solo' });
       syncSurface(true);
       radAudio.tone(860, 0.14, 'triangle', 0.06);
       crewToast(surf.completed.size === surf.tasks.length ? t('surface.allDoneToast') : t('surface.taskDoneToast', { id, title: task.title, done: surf.completed.size, total: surf.tasks.length }));
       window.dispatchEvent(new CustomEvent('astro:surface', { detail: surf }));
+    }
+
+    // A bot finished an AI crew member's surface experiment (1–2 stars, plan §4.12).
+    function onSurfaceBotDone(id, res) {
+      const task = surf.tasks.find(item => item.id === id);
+      if (!surf.active || !task || surf.completed.has(id)) return;
+      surf.completed.add(id);
+      syncSurface(true);
+      crewToast(t('experiments.common.botDone', { name: crewNameOf(task.crew), title: task.title, stars: RUN().stars(res.stars) }));
+      window.dispatchEvent(new CustomEvent('astro:surface', { detail: surf }));
+    }
+    // Bots work for the crew members nobody controls: solo, everyone but the astronaut on screen; in a room, the
+    // seats without a player. Taking an astronaut over stops its bot; leaving it starts the bot again. Solo pauses
+    // them while you play a minigame, like the return window.
+    function updateSurfaceBots(dt) {
+      if (!surf.bots || net.isGuest) return;
+      for (const task of surf.tasks) {
+        if (surf.completed.has(task.id)) continue;
+        const human = net.mode === 'solo' ? task.crew === surf.activeCrew : !!surf.control?.[task.crew];
+        if (human) surf.bots.take(task.id); else if (!surf.bots.has(task.id)) surf.bots.start(task.id);
+      }
+      surf.bots.pause(!surfaceClockRuns() || (net.mode === 'solo' && !!$('#minigame-dialog')?.open));
+      surf.bots.tick(dt);
     }
 
     function boardShipAndFinish(forcedTimeout = false) {
@@ -2591,6 +2813,7 @@
       const dt = Math.min(0.1, (now - surf.lastTick) / 1000);
       surf.lastTick = now;
       if (surfaceClockRuns()) surf.timerSec = Math.max(0, surf.timerSec - dt);
+      updateSurfaceBots(dt);
       if (surf.timerSec <= 10 && surf.timerSec > 0 && !surf.rushWarned) {
         surf.rushWarned = true;
         radAudio.tone(680, 0.22, 'sawtooth', 0.06);
@@ -2648,7 +2871,14 @@
       surf.stranded = surf.strandedIds.map(id => crew.find(c => c.id === id)?.name ?? id);
       const strandedSet = new Set(surf.strandedIds);
       const strandedCount = strandedSet.size;
-      const tasksDone = surf.completed.size;
+      // Experiments (docs/experiments-implementation.md §4.6): the stars of each crew member's drawn experiments,
+      // ASTRO_RUN.STAR_POINTS per star. Without a draw (older saves), the old fixed surface points.
+      const run = RUN() && state.run ? state.run : null;
+      const expPts = id => (run ? RUN().crewPoints(run, id) : null);
+      const tasksDone = run ? run.experiments.filter(id => (run.results[id]?.stars || 0) > 0).length : surf.completed.size;
+      const tasksTotal = run ? run.experiments.length : surf.tasks.length;
+      // game-balance (decided 2026-11-23): easy ×0.75, normal ×1, hard ×1.5 on points; the grade comes before it.
+      const mult = RUN()?.multiplier(state.difficulty) ?? 1;
       const scienceBonus = (d.hasDrill ? 6 : 0) + (d.hasSpec ? 6 : 0) + (d.hasDna ? 6 : 0) + (d.hasDish ? 5 : 0);
       const edlBonus = (d.hasLoftid && d.hasTrn) ? 14 : (d.hasLoftid || d.hasTrn) ? 9 : 4;
       const timeBonus = Math.round(surf.timerSec * 0.08);
@@ -2657,10 +2887,10 @@
       // their score is zeroed (0 pts), and the team total is the sum of the astronauts' points plus shared flight/time bonuses,
       // so the team's score drops strictly through the stranded astronaut's lost points.
       const rawScores = {
-        helena: Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (surf.completed.has('H-S1') ? 60 : 0)),
-        lucas: Math.round(200 + (d.powerDeficit ? 10 : 45) + (surf.completed.has('L-S1') ? 130 : 25)),
-        oscar: Math.round(195 + (d.hasDish ? 45 : 15) + (surf.completed.has('O-S1') ? 130 : 25)),
-        maya: Math.round(200 + scienceBonus * 4 + (surf.completed.has('M-S1') ? 145 : 25)),
+        helena: Math.round(210 + flight.stability * 1.1 + edlBonus * 4 + (expPts('helena') ?? (surf.completed.has('H-S1') ? 60 : 0))),
+        lucas: Math.round(200 + (d.powerDeficit ? 10 : 45) + (expPts('lucas') ?? (surf.completed.has('L-S1') ? 130 : 25))),
+        oscar: Math.round(195 + (d.hasDish ? 45 : 15) + (expPts('oscar') ?? (surf.completed.has('O-S1') ? 130 : 25))),
+        maya: Math.round(200 + scienceBonus * 4 + (expPts('maya') ?? (surf.completed.has('M-S1') ? 145 : 25))),
       };
       const helenaPts = strandedSet.has('helena') ? 0 : rawScores.helena;
       const lucasPts = strandedSet.has('lucas') ? 0 : rawScores.lucas;
@@ -2670,9 +2900,10 @@
       const crewSum = helenaPts + lucasPts + oscarPts + mayaPts;
       const total = Math.max(0, Math.round(crewSum + flight.score * 2.5 + timeBonus));
       const grade = total >= 1150 ? 'S+' : total >= 950 ? 'A' : total >= 740 ? 'B' : 'C';
+      const scored = Math.round(total * mult);
 
       $('#results-rank-letter').textContent = grade;
-      $('#results-score-text').textContent = t('results.totalScore', { pts: number(total), done: tasksDone, total: surf.tasks.length });
+      $('#results-score-text').textContent = t(run ? 'experiments.results.totalScore' : 'results.totalScore', { pts: number(scored), done: tasksDone, total: tasksTotal });
       $('#results-status-badge').textContent = strandedCount ? t('results.leftBehind', { names: surf.stranded.join(', ').toUpperCase() }) : t('results.allReturned');
       $('#results-headline').textContent = strandedCount ? t('results.headlinePartial') : grade === 'S+' ? t('results.headlineTriumph') : t('results.headlineComplete');
       $('#podium-site-tag').textContent = t('results.podiumTagSuccess', { site: SITES_INFO[state.site].name.toUpperCase(), grade });
@@ -2687,7 +2918,7 @@
         ...c,
         pos: positions[idx],
         grade: c.stranded ? 'F' : c.pts >= 360 ? 'S+' : c.pts >= 310 ? 'A' : c.pts >= 240 ? 'B' : 'C',
-      }));
+      })).map(c => ({ ...c, pts: Math.round(c.pts * mult) })); // grade on the raw points, shown points multiplied
 
       $('#results-leaderboard').innerHTML = ranked.map(r => `
         <div class="leader-row">
@@ -2701,6 +2932,13 @@
         [t('results.breakdown.budgetTwr'), `${d.overBudget ? (d.budgetPenalty ? t('results.breakdown.exceeded') : t('results.breakdown.exceededWarn')) : t('results.breakdown.onBudget')} · ${d.lowTwr ? (d.overweight ? t('results.breakdown.lowTwrBuffet') : t('results.breakdown.lowTwrWarn')) : t('results.breakdown.twrNominal')}`],
         [t('results.breakdown.edlLanding'), t('results.breakdown.edlValue', { pct: flight.landingShare ?? 0, suite: hasEdlLabel(d) })],
         [t('results.breakdown.surfaceWindow'), forcedTimeout ? (strandedCount ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', '), pts: lostFromStranded }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
+        ...(run ? [
+          ...run.experiments.map(id => {
+            const r = run.results[id], who = crew.find(c => c.id === window.ASTRO_EXPERIMENTS?.byId(id)?.crew)?.name || '';
+            return [`${id} · ${expTitle(id)} · ${who}`, r ? `${RUN().starsHtml(r.stars)}${r.bot ? ` · ${t('experiments.results.ai')}` : ''}` : t('experiments.results.notDone')];
+          }),
+          [t('experiments.results.multiplier', { mult: U.number(mult, { maximumFractionDigits: 2 }) }), t('experiments.results.points', { raw: number(total), mult: U.number(mult, { maximumFractionDigits: 2 }), total: number(scored) })],
+        ] : []),
       ].map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
 
       $('#podium-fallback').innerHTML = ranked.map((r, i) => `
@@ -2735,9 +2973,10 @@
         site: state.site,
         difficulty: state.difficulty,
         grade,
-        teamScore: total,
+        teamScore: scored,
         tasksDone,
-        tasksTotal: surf.tasks.length,
+        tasksTotal,
+        ...(run ? { experiments: RUN().summary(run).map(e => (e.bot ? { id: e.id, stars: e.stars, bot: true } : { id: e.id, stars: e.stars })), runSeed: run.seed, scoreMultiplier: mult } : {}),
         strandedCount,
         players: lbPlayers,
         createdAt: Date.now(),
@@ -2846,14 +3085,14 @@
     // travel as plain numbers and get their share()/stars() back on the guest.
     const FLIGHT_FIELDS = ['active', 'step', 'progress', 'altKm', 'velMs', 'hull', 'propellant', 'throttle', 'pitchX', 'pitchY', 'stability', 'breakers',
       'stageSeparated', 'separationAdvancing', 'refuelDone', 'stormShielded', 'edlChuteDeployed', 'score', 'phaseElapsed', 'phaseTimedOut', 'docked',
-      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock'];
+      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold'];
     const FLIGHT_SYNC_MS = 100; // game-balance: snapshot interval
     const kirOut = g => g && { t: g.t, value: g.value, rate: g.rate, inBand: g.inBand, duration: g.duration, band: g.band, limit: g.limit, error: g.error, done: g.done, axes: g.axes };
     const kirIn = o => o && { ...o, share() { return this.t ? this.inBand / this.t : 1; }, stars() { const k = this.share(); return k >= 0.85 ? 3 : k >= 0.65 ? 2 : k >= 0.4 ? 1 : 0; }, tick() { return this; } };
     function flightSnapshot() {
       const o = Object.fromEntries(FLIGHT_FIELDS.map(k => [k, flight[k] ?? null]));
       Object.assign(o, { liftoff: kirOut(flight.liftoff), docking: kirOut(flight.docking), marsBurn: kirOut(flight.marsBurn),
-        completedPhases: [...flight.completedPhases], sparksIn: Math.max(0, (flight.sparksUntil || 0) - performance.now()), log: flightLog });
+        completedPhases: [...flight.completedPhases], run: state.run, sparksIn: Math.max(0, (flight.sparksUntil || 0) - performance.now()), log: flightLog });
       return o;
     }
     let flightSentAt = 0;
@@ -2865,7 +3104,7 @@
       net.setState('flight', flightSnapshot());
     }
     let guestFlight = false, shownLog = '';
-    const flightUiKey = () => JSON.stringify([flight.step, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.edlChuteDeployed, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
+    const flightUiKey = () => JSON.stringify([flight.orbit?.active, flight.descentHold, Object.keys(state.run?.results || {}).length, flight.step, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.edlChuteDeployed, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
     function applyFlight(o) {
       if (!net.isGuest || !o) return;
       const first = !guestFlight;
@@ -2879,6 +3118,9 @@
       for (const k of FLIGHT_FIELDS) flight[k] = o[k];
       flight.liftoff = kirIn(o.liftoff); flight.docking = kirIn(o.docking); flight.marsBurn = kirIn(o.marsBurn);
       flight.completedPhases = new Set(o.completedPhases || []);
+      if (o.run) state.run = o.run; // the host's experiment draw and results
+      const playing = RUN()?.playing, playingOrbit = playing && window.ASTRO_EXPERIMENTS?.byId(playing)?.place === 'orbit';
+      if (playingOrbit && !flight.orbit?.active && $('#minigame-dialog')?.open) $('#minigame-dialog').close();
       flight.sparksUntil = o.sparksIn ? performance.now() + o.sparksIn : 0;
       const log = (o.log || []).join('\n');
       if (log !== shownLog) { shownLog = log; renderFlightLog(o.log || []); }
@@ -2890,7 +3132,7 @@
     // done and who controls each astronaut. The astronauts themselves travel as poses (web/views.js).
     const SURFACE_SYNC_MS = 500, LOAD_WAIT_MS = 20000; // game-balance
     let surfaceSentAt = 0;
-    const surfaceSnapshot = () => ({ site: state.site, seed: surf.seed, timerSec: surf.timerSec, completed: [...surf.completed], control: surf.control, active: surf.active });
+    const surfaceSnapshot = () => ({ site: state.site, seed: surf.seed, timerSec: surf.timerSec, completed: [...surf.completed], control: surf.control, active: surf.active, results: state.run?.results || null });
     function syncSurface(force) {
       if (!net.isHost || !surf.active) return;
       const now = performance.now();
@@ -2912,10 +3154,13 @@
       if (!net.isGuest || !o?.seed) return;
       flight.active = false;
       surf.timerSec = o.timerSec; surf.completed = new Set(o.completed); surf.control = o.control; surf.active = o.active;
+      if (o.results && state.run) state.run.results = o.results;
       if (!guestSurface) {
         guestSurface = true; shownControl = '';
         flight.design ||= captureDesign();
         surf.stranded = []; surf.seed = o.seed;
+        surf.run = state.run; // the host's draw (flight snapshot): the same surface experiments here
+        if (RUN() && state.run) surf.tasks = RUN().tasks(state.run, 'surface');
         surf.activeCrew = myCrew() || net.seat;
         if (SITES_INFO[o.site]) state.site = o.site;
         showScreen('surface');
@@ -2971,7 +3216,11 @@
         const [keys, hold] = args;
         remoteInput.set(from.seat, { keys: new Set((Array.isArray(keys) ? keys : []).filter(k => PILOT_KEYS.includes(k))),
           hold: hold && typeof hold === 'object' ? Object.fromEntries(HOLDS.filter(h => hold[h]).map(h => [h, true])) : null });
-      } else if (data.name === 'task') completeSurfaceTask(String(args[0]), from.id);
+      } else if (data.name === 'task') completeSurfaceTask(String(args[0]), from.id, args[1]);
+      else if (data.name === 'exp') { // an orbit experiment finished by its seat owner
+        const id = String(args[0]), e = window.ASTRO_EXPERIMENTS?.byId(id);
+        if (e && e.place === 'orbit' && e.crew === from.seat && flight.orbit?.active && state.run?.experiments.includes(id)) recordOrbit(id, Math.max(0, Math.min(3, Number(args[1]) | 0)), from.id);
+      }
       else if (data.name === 'control') { const error = grantCrew(String(args[0]), from.id); if (error) reply(error); else window.dispatchEvent(new CustomEvent('astro:control')); }
       else if (data.name === 'board') board(from.id);
       else if (data.name === 'loaded' && surf.active) surf.loaded.add(from.id);
@@ -3012,6 +3261,7 @@
         flight.active = false;
         surf.active = false;
         surf.completed = new Set(data.surf?.completed || []);
+        if (data.flight?.run) state.run = data.flight.run;
         surf.stranded = data.surf?.stranded || [];
         surf.strandedIds = data.surf?.strandedIds || [];
         surf.timerSec = data.surf?.timerSec ?? 0;
@@ -3025,7 +3275,9 @@
 
     return { startFlight, failLaunch, handleCockpitAction, setPilotHold, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,
-      jumpCockpit: step => { startFlight(); if (step > 0) setFlightStep(step); },
+      jumpCockpit: step => { startFlight(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); },
+      // Dev Mode: straight to the Mars orbit experiments (after the refuelling step), with a fresh draw.
+      jumpMarsOrbit: seed => { startFlight(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
       jumpResults: () => { flight.active = false; cancelAnimationFrame(flight.raf); if (!flight.design) flight.design = captureDesign(); surf.tasks = surf.tasks?.length ? surf.tasks : SURFACE_TASKS(); showResults(false); },
       refreshUI: () => { if (flight.active) renderFlightUI(); },
       get isMuted() { return radAudio.muted; },
@@ -3035,7 +3287,7 @@
   // Shared with the 3D modules below.
   function renderBadge(){const lv=LV(),s=lv.surfaceS,badge=$('#modifier-badge');badge.textContent=`${lv.label.toUpperCase()} · ${t('lobby.badge',{budget:money(budgetOf(state.difficulty)),time:formatSurfaceClock(s),rules:lv.rules})}`;badge.title=lv.about;}
   window.ASTRO_ART={RAMPS,PLANETS};
-  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,setDifficulty:id=>{if(difficulty[id])setDifficulty(id);},setLobbyStep,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),jumpCockpit:step=>SIM.jumpCockpit(step),jumpResults:()=>SIM.jumpResults(),launchPad:()=>window.ASTRO_LAUNCHPAD?.({ok:true,accel:1.4}),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),wizard:{open:(step=0)=>setWizardOpen(true,{step,gesture:true}),close:()=>setWizardOpen(false),goTo:step=>setWizardStep(step),isOpen:()=>wizardState.open},CREW_MODELS,COCKPIT_MODEL};
+  window.ASTRO={state,crew,sites:SITES_INFO,selectSite,setDifficulty:id=>{if(difficulty[id])setDifficulty(id);},setLobbyStep,toast,show:showScreen,showScreen,land:()=>SIM.startSurface(),jumpCockpit:step=>SIM.jumpCockpit(step),jumpMarsOrbit:seed=>SIM.jumpMarsOrbit(seed),jumpResults:()=>SIM.jumpResults(),launchPad:()=>window.ASTRO_LAUNCHPAD?.({ok:true,accel:1.4}),data:()=>DATA,selectedKey:()=>moduleKey(state.sel),select:(key,tab)=>selectModule(key,tab),wizard:{open:(step=0)=>setWizardOpen(true,{step,gesture:true}),close:()=>setWizardOpen(false),goTo:step=>setWizardStep(step),isOpen:()=>wizardState.open},CREW_MODELS,COCKPIT_MODEL};
   // ---- Multiplayer: lobby, screens and the shared planner (docs/multiplayer.md, items 1–4; 5–7 live in SIM) ------
   // The host sends the mission setup (state 'setup') whenever it changes; guests copy it. Only what everyone must
   // agree on travels: the selection, the tab and the open details stay on each screen.

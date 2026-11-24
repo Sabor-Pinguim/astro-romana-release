@@ -1,4 +1,4 @@
-// Texts of H-O2 · Roll for the radar (English and Portuguese). Merged into translation.experiments['H-O2'].
+// Texts of H-O2 · Roll for the radar (English, Portuguese and Spanish). Merged into translation.experiments['H-O2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -98,5 +98,53 @@
       lowFuel: 'Pouca hidrazina depois de anos em órbita: o tanque está menor para esta rolagem.',
     },
     mods: { sunPressure: 'Pressão da luz solar', leakyThruster: 'Propulsor com vazamento', lowFuel: 'Pouco combustível' },
+  });
+
+  put('es', {
+    title: 'Giro para el radar',
+    minigame: 'Giro preciso',
+    basis: 'Giro de MRO para el radar SHARAD (2025)',
+    desc: 'Gira la nave hasta el ángulo pedido con los menos pulsos de propulsor que puedas y luego mantenla firme mientras el sitio del «lago» pasa bajo el radar. En órbita el giro sigue hasta que lo frenas, así que pasarte cuesta combustible.',
+    fact: 'Dato real: en 2025 MRO giró {{roll}}° para que su radar SHARAD pudiera mirar el supuesto «lago» bajo el hielo del polo sur de Marte. Solo vio un eco débil, y el descubrimiento de 2018 pasó a ser muy difícil de sostener: en ciencia, mejores datos pueden echar abajo las conclusiones.',
+    viewAria: 'La nave vista a lo largo de su trayectoria, un dial de giro con el ángulo objetivo y la traza en el suelo con el sitio del lago',
+    dirCw: 'en sentido horario',
+    dirCcw: 'en sentido antihorario',
+    pulseNeg: '↺ Pulso',
+    tapNeg: '↺ Toque',
+    tapPos: 'Toque ↻',
+    pulsePos: 'Pulso ↻',
+    ariaPulse: 'Pulso de propulsor {{dir}}: {{rate}}°/s, 1 unidad de combustible',
+    ariaTap: 'Toque corto {{dir}}: {{rate}}°/s, ¼ de unidad de combustible',
+    gaugeTarget: 'OBJETIVO {{target}} ± {{tol}}°',
+    rollReadout: 'GIRO {{roll}} → {{target}}',
+    rateReadout: 'ROTACIÓN {{rate}}/s',
+    timeReady: 'LISTO',
+    timeSite: 'SITIO EN {{s}} s',
+    timeMeasure: 'MIDIENDO {{s}} s',
+    timeOver: 'PASADA TERMINADA',
+    fuelLabel: 'Hidracina · {{left}} de {{total}} unidades',
+    echoLabel: 'Eco de radar registrado · {{pct}}%',
+    hint: '← → (A / D): pulso, ±{{pulse}}°/s por 1 unidad. Q / E o Shift + flechas: toque, ±{{tap}}°/s por ¼ de unidad. Acelera, deja que gire, frena antes del objetivo y quédate firme (verde) cuando el sitio esté entre las marcas ámbar.',
+    statusInitial: 'MRO debe girar {{target}} ({{dir}}; el giro real fue de {{real}}°) antes de que llegue el sitio del «lago». El reloj arranca con tu primer pulso (o en {{s}} s).',
+    statusGo: 'Reloj en marcha: el sitio llega en {{time}} s.',
+    statusTurn: 'Dispara {{dir}} para empezar el giro.',
+    statusCoast: 'Girando por inercia hacia el objetivo: frena con los propulsores opuestos antes de llegar.',
+    statusWrongWay: 'Girando lejos del objetivo: dispara hacia el otro lado.',
+    statusBrake: 'En el objetivo, pero aún rotando: frena con toques cortos.',
+    statusWaiting: 'Firme en el objetivo. Mantenlo hasta que pase el sitio.',
+    statusOpen: 'El sitio está bajo el radar: mantente firme para registrar el eco.',
+    statusEcho: 'Registrando el eco: mantente firme.',
+    statusLost: 'Sin eco: devuelve el giro a la banda verde y detén la rotación.',
+    statusNoFuel: 'No hay hidracina suficiente para ese encendido.',
+    statusDone: 'Pasada completa: {{pct}}% del eco registrado para el mapa de radar de Maya.',
+    failFuel: 'La hidracina se agotó con la nave aún rotando. El combustible marca la vida de un orbitador: Dawn y Kepler terminaron sus misiones cuando se les acabó.',
+    failWindow: 'El sitio del «lago» pasó con solo un {{pct}}% del eco registrado. Volver a intentarlo exige otro giro y más combustible, lo que acorta la vida de la misión.',
+    summary: '{{pct}}% del eco · {{used}} unidades de combustible en {{pulses}} encendidos (mínimo posible ≈ {{best}})',
+    event: {
+      sunPressure: 'La luz del Sol empuja las alas solares: un pequeño torque constante gira la nave {{dir}} todo el tiempo.',
+      leakyThruster: 'Un propulsor con fuga: los encendidos {{dir}} empujan solo un {{pct}}% de lo normal.',
+      lowFuel: 'Poca hidracina tras años en órbita: el tanque es más pequeño para este giro.',
+    },
+    mods: { sunPressure: 'Presión de la luz solar', leakyThruster: 'Propulsor con fuga', lowFuel: 'Poco combustible' },
   });
 })();

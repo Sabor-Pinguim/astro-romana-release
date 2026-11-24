@@ -92,4 +92,40 @@
   .mg-meters{grid-template-columns:1fr}
   .mg-list{max-height:38vh}
 }
+@media (max-height:500px) and (orientation:landscape){
+  .mg-canvas{max-height:42dvh;object-fit:contain}
+  .mg-grid{width:min(100%,46dvh,calc(var(--cols) * 40px))}
+  .mg-list{max-height:38dvh}
+  .mg-gauge{height:26px}
+  .mg-pad button{width:46px;height:36px}
+}
 @media (prefers-reduced-motion:reduce){.mg *{animation:none!important;transition:none!important}}
+
+/* Mars orbit stage in the cockpit (web/app.js, renderOrbitCard; docs/experiments-implementation.md §4.5).
+   The flight stepper gains a fifth item, "Mars orbit", between orbital docking and the landing. */
+.flight-stepper,#cockpit .flight-stepper{grid-template-columns:repeat(5,minmax(0,1fr))}
+.orbit-exp-list{display:grid;gap:5px}
+.orbit-exp{--crew:var(--amethyst);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:.5rem .7rem .4rem;background:linear-gradient(112deg,var(--f3) 0 24%,var(--f2) 24%);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);box-shadow:inset 3px 0 0 var(--crew)}
+.orbit-exp-name{display:grid;gap:2px;min-width:0}
+.orbit-exp-name small{font:700 .58rem/1.2 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--crew)}
+.orbit-exp-name strong{font:700 .78rem/1.2 var(--heading);letter-spacing:.03em;color:var(--starlight-cream)}
+.orbit-exp-name span{font-size:.68rem;color:var(--muted)}
+.orbit-exp-status{font:700 .66rem/1.2 var(--heading);letter-spacing:.06em;text-align:right;color:var(--solar-amber)}
+.orbit-exp-status.is-done{font-size:.9rem;letter-spacing:.12em}
+.orbit-exp-status em{font-style:normal;font-size:.58rem;letter-spacing:.1em;color:var(--muted)}
+.orbit-exp .button{grid-column:2;min-height:38px;padding:.45rem .9rem;font-size:.62rem}
+.orbit-exp-bar{grid-column:1/-1;height:4px;background:var(--f0)}
+.orbit-exp-bar span{display:block;height:100%;background:var(--crew)}
+.orbit-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+.orbit-window{font:700 .7rem var(--heading);letter-spacing:.08em;font-variant-numeric:tabular-nums;color:var(--solar-amber)}
+@media (max-height:500px) and (orientation:landscape){
+  .orbit-exp{padding:.35rem .55rem .3rem}
+  .orbit-exp-name span{display:none}
+  .orbit-exp .button{min-height:32px}
+}
+
+/* Stars (web/minigames/core.js starsHtml): missing stars are dimmed full stars, because the hollow ☆ glyph looks
+   filled in bold Chakra Petch. */
+.mg-stars{display:inline-flex;gap:.04em;white-space:nowrap}
+.mg-stars b{font-weight:inherit;color:inherit}
+.mg-stars i{font-style:normal;opacity:.28}

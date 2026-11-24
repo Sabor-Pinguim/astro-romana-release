@@ -1,4 +1,4 @@
-// Texts of M-S5 · Radiation alert (English and Portuguese). Merged into translation.experiments['M-S5'].
+// Texts of M-S5 · Radiation alert (English, Portuguese and Spanish). Merged into translation.experiments['M-S5'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -92,5 +92,50 @@
       twoWaves: 'As partículas nem sempre chegam numa onda só: no gráfico real de 20 de maio de 2024, a taxa volta a subir horas depois do pico.',
     },
     mods: { twoWaves: 'Duas ondas', lightDelay: 'Atraso da luz' },
+  });
+
+  put('es', {
+    title: 'Alerta de radiación',
+    minigame: '¡Al refugio!',
+    basis: 'Detector RAD de Curiosity (2012–hoy)',
+    desc: 'Se acerca una tormenta solar. Mantén a la tripulación trabajando y luego envíala al refugio en el momento justo: demasiado pronto se pierde trabajo, demasiado tarde se suma dosis. La gráfica reproduce la tormenta real que RAD midió el 20 de mayo de 2024.',
+    fact: 'Dato real: en la superficie de Marte la dosis es de ~0,67 mSv al día, y durante el viaje de ~1,8 mSv al día. Una misión humana de ~500 días acumularía ~1 Sv.',
+    clockReadout: 'LMST {{time}}',
+    rateReadout: 'RAD {{rate}} µGy/día · ×{{x}}',
+    crew: { out: 'TRIPULACIÓN TRABAJANDO', in: 'TRIPULACIÓN EN EL REFUGIO', toIn: 'TRIPULACIÓN → REFUGIO', toOut: 'TRIPULACIÓN → ZONA DE TRABAJO' },
+    workLabel: 'Tareas hechas · {{pct}}%',
+    doseLabel: 'Dosis de la tripulación · {{dose}} / {{limit}} µGy',
+    shelterBtn: '¡Al refugio ya! (Espacio)',
+    workBtn: 'Volver al trabajo (Espacio)',
+    walkingBtn: 'Caminando…',
+    axisUnit: 'µGy/día',
+    windowTag: 'PRONÓSTICO',
+    lineTag: 'LÍNEA DE REFUGIO',
+    badgeWorking: 'Tripulación trabajando en el exterior',
+    badgeAlert: '⚠ Alerta de tormenta solar',
+    badgeStorm: '⚠ La tormenta golpea: la tripulación está expuesta',
+    badgeToShelter: 'Caminando al refugio',
+    badgeToWork: 'Volviendo al trabajo',
+    badgeSheltered: 'Tripulación en el refugio (tiempo acelerado)',
+    badgeDone: 'Fin del sol',
+    badgeFail: '✕ Límite de dosis alcanzado',
+    tasks: { antenna: 'Alinear la antena', filter: 'Cambiar el filtro de polvo de la esclusa', samples: 'Embolsar muestras de roca', weather: 'Revisar el mástil meteorológico', rover: 'Cargar el rover', greenhouse: 'Revisar los sellos del invernadero' },
+    statusInitial: 'La tripulación trabaja en el exterior mientras RAD ({{mass}}, {{watts}} W) vigila la tasa de dosis. Cuando llegue una alerta de tormenta, pulsa Espacio o el botón del refugio en el momento justo. La tripulación puede recibir {{limit}} µGy en este sol.',
+    lineHint: 'Por encima de la línea discontinua del refugio, cada minuto fuera cuesta más dosis de lo que vale el trabajo.',
+    alertFirst: '⚠ Alerta de tormenta solar: se esperan partículas entre {{from}} y {{to}}. Vigila la gráfica.',
+    alertNext: '⚠ Nueva alerta: se espera otra ola de partículas entre {{from}} y {{to}}.',
+    statusToShelter: 'La tripulación camina al refugio: sigue expuesta hasta entrar.',
+    statusToWork: 'La tripulación vuelve a la zona de trabajo.',
+    statusSheltered: 'Tripulación en el refugio: las paredes bloquean la mayor parte de la dosis. El tiempo pasa más rápido mientras esperan.',
+    statusWorking: 'La tripulación vuelve al trabajo.',
+    statusTasksDone: 'Todas las tareas hechas: la tripulación va al refugio el resto del sol.',
+    statusDone: 'Fin del sol: {{pct}}% de las tareas hechas, {{dose}} µGy de dosis en la tripulación.',
+    failDose: 'La dosis de la tripulación alcanzó el límite de {{limit}} µGy de este sol: su salud baja y la dosis queda en su cuenta de carrera. Una misión de ~500 días a Marte ya acumula ~1 Sv sin tormentas.',
+    summary: '{{pct}}% de las tareas · {{dose}} µGy · {{gap}} pts del mejor momento',
+    event: {
+      lightDelay: 'El pronóstico llegó de la Tierra con {{min}} min de retraso, a la velocidad de la luz.',
+      twoWaves: 'Las partículas no siempre llegan en una sola ola: en la gráfica real del 20 de mayo de 2024, la tasa vuelve a subir horas después del pico.',
+    },
+    mods: { twoWaves: 'Dos olas', lightDelay: 'Retraso de la luz' },
   });
 })();

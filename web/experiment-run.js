@@ -7,7 +7,9 @@
   const EXP = window.ASTRO_EXPERIMENTS, MG = window.ASTRO_MINIGAMES;
   if (!EXP || !MG) return;
   const t = (key, vars) => window.ASTRO_I18N?.t(key, vars) ?? key;
-  const stars = (n, of = 3) => '★'.repeat(n) + '☆'.repeat(Math.max(0, of - n));
+  // '★ 2/3' for logs and toasts; HTML (dimmed full stars) for the UI: the hollow ☆ looks filled in bold Chakra Petch.
+  const stars = (n, of = 3) => `★ ${n}/${of}`;
+  const starsHtml = (n, of = 3) => `<span class="mg-stars" role="img" aria-label="${n}/${of}">${'<b>★</b>'.repeat(n)}${'<i>★</i>'.repeat(Math.max(0, of - n))}</span>`;
 
   // game-balance (plan §4.6): points per star (2 experiments per crew member → up to 6 stars, 150 points, close to
   // the 130–145 a single experiment was worth before the draw) and the score multiplier of each difficulty.
@@ -101,9 +103,11 @@
       onFinish(result) {
         current = { ...current, finished: true };
         if (done) {
-          done.querySelector('[data-stars]').textContent = stars(result.stars);
-          done.querySelector('[data-line]').textContent = result.summary;
-          done.querySelector('[data-fact]').textContent = info.fact;
+          const set = (sel, text) => { const node = done.querySelector(sel); if (node) node.textContent = text; };
+          const starsNode = done.querySelector('[data-stars]');
+          if (starsNode) starsNode.innerHTML = starsHtml(result.stars);
+          set('[data-line]', result.summary);
+          set('[data-fact]', info.fact);
         }
         els.dialog.classList.add('is-complete');
         onFinish?.(result);
@@ -132,9 +136,41 @@
     return card;
   }
 
+  // The game's own #minigame-dialog (surface, Mars orbit, descent). Adds the stage and the completion card the
+  // first time, closes by itself a few seconds after the result and stops the minigame when the dialog closes.
+  const COMPLETE_DELAY_MS = 3400; // game-balance: time to read the result and the "Real fact"
+  let autoClose = 0, dialogWired = false;
+  function playInDialog({ run, id, crewName, onFinish, onClose }) {
+    const $ = name => document.getElementById(name);
+    const dialog = $('minigame-dialog');
+    if (!dialog || !run || !MG.has(id)) return null;
+    const inner = dialog.querySelector('.dialog-inner'), actions = inner.querySelector('.dialog-actions');
+    let stage = $('minigame-stage');
+    if (!stage) { stage = document.createElement('div'); stage.id = 'minigame-stage'; inner.insertBefore(stage, actions); }
+    if (!inner.querySelector('.minigame-complete')) inner.insertBefore(completionCard(), actions);
+    if (!dialogWired) {
+      dialogWired = true;
+      // The close event arrives a moment after dialog.close(). If another experiment opened the dialog in the
+      // meantime (orbit window closing straight into the H-S2 descent), it is not the one to stop: play() already
+      // closed the previous minigame.
+      dialog.addEventListener('close', () => {
+        if (dialog.open) return;
+        clearTimeout(autoClose); close(); dialog.classList.remove('is-complete');
+      });
+    }
+    clearTimeout(autoClose);
+    return play({ dialog, kicker: $('minigame-kicker'), title: $('minigame-title'), brief: $('minigame-brief'), summary: $('minigame-summary'), stage }, {
+      run, id, crewName, onClose,
+      onFinish(result) {
+        onFinish?.(result);
+        autoClose = setTimeout(() => { if (dialog.open) dialog.close(); }, COMPLETE_DELAY_MS);
+      },
+    });
+  }
+
   window.ASTRO_RUN = Object.freeze({
     STAR_POINTS, SCORE_MULTIPLIER, create, ofPlace, ownedBy, task, tasks, record, bots, crewPoints, multiplier, summary,
-    play, close, completionCard, stars,
+    play, playInDialog, close, completionCard, stars, starsHtml,
     get playing() { return current?.id ?? null; },
   });
 })();

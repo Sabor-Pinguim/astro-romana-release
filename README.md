@@ -198,7 +198,9 @@ from `file://`, where the browser blocks `fetch`.
 | [web/launch.js](web/launch.js) | Launch pad, countdown, liftoff, splashdown |
 | [web/flight.js](web/flight.js) | 3D cockpit and the debrief podium |
 | [web/views.js](web/views.js) | 3D views from the generated models: menu, lobby, rocket builder, Mars surface |
-| [web/scout.js](web/scout.js) | The four surface experiment minigames |
+| [web/experiments.js](web/experiments.js) | The 21 experiments and the draw of each run (8: one orbit and one ground experiment per crew member) |
+| [web/minigames/](web/minigames/) | The experiment minigames: a shared core plus one file per experiment (seeded layouts, 3 levels, stars) |
+| [web/experiment-run.js](web/experiment-run.js) | Links the minigames to the game: the run, the experiment dialog, bots and points |
 | [web/net.js](web/net.js) | Link to the room server for team play |
 | [web/styles.css](web/styles.css) | Styles |
 
@@ -237,6 +239,7 @@ npm run models                 # crew, rocket parts and Earth; validates and bun
 npm run terrain                # Mars terrains; then npm run web:models to bundle them
 npm run audio                  # soundscape from the RAD data; validates
 npm run web:sites              # HiRISE photos of the landing sites
+node tools/web/check-experiments.mjs  # experiment minigames: texts (en/pt/es), solvable layouts, the draw
 cd multiplayer && npm install && npm start   # room server and test page on localhost:8787
 ```
 
@@ -255,6 +258,7 @@ tools/
   audio/                 soundscape from the RAD data
   web/                   bundles for the page and landing-site photos
   model-viewer/          HTML viewer for checking the models
+  minigame-lab/          HTML lab for playing any experiment minigame by level, seed and language
 multiplayer/             room server, client and test page (own package)
 references/              data and sources: datasets, rocket parts, experiments, prototypes
 docs/                    challenge description and game design

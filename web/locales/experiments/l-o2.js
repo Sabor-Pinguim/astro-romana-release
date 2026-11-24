@@ -1,4 +1,4 @@
-// Texts of L-O2 · Keep the detector cold (English and Portuguese). Merged into translation.experiments['L-O2'].
+// Texts of L-O2 · Keep the detector cold (English, Portuguese and Spanish). Merged into translation.experiments['L-O2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -100,5 +100,54 @@
       solarStorm: 'Tempestade solar: partículas energéticas adicionam ruído. Por alguns segundos, só a parte mais fria da faixa dá dados limpos.',
     },
     mods: { wornCooler: 'Resfriador desgastado', bigTarget: 'Alvo grande', solarStorm: 'Tempestade solar' },
+  });
+
+  put('es', {
+    title: 'Mantener frío el detector',
+    minigame: 'Criogenia',
+    basis: 'CRISM en MRO (2006–23)',
+    desc: 'Durante las observaciones de Maya, mantén el detector infrarrojo del espectrómetro en la banda fría repartiendo la energía entre el criorrefrigerador y la nave. Forzar el refrigerador lo desgasta, y mientras observa, la nave necesita su parte.',
+    fact: 'Dato real: CRISM cartografió el 86% de Marte y ayudó a elegir los lugares de aterrizaje de Curiosity y Perseverance. Sus refrigeradores se habían desgastado para 2017 y se retiró en 2023: su final llegó por el desgaste del refrigerador, no por la cámara.',
+    obsNow: 'OBSERVANDO {{k}}/{{n}}',
+    obsNext: 'OBS {{k}}/{{n}} EN {{s}} s',
+    obsDone: '{{n}}/{{n}} OBSERVACIONES HECHAS',
+    powerReadout: 'REFRIGERADOR {{cool}} W · NAVE {{rest}} W',
+    dataReadout: '{{got}} / {{total}} LIMPIOS',
+    zoneCold: '← MÁS FRÍO',
+    zoneBand: 'DETECTOR · ✓ BANDA FRÍA',
+    zoneHot: 'MÁS CALIENTE →',
+    coldTag: 'SOBREENFRIADO',
+    bandTag: 'BANDA FRÍA',
+    hotTag: 'CON RUIDO',
+    lessBtn: '◀ Menos enfriamiento',
+    moreBtn: 'Más enfriamiento ▶',
+    splitAria: 'Reparto de energía entre el refrigerador y la nave',
+    coolTxt: 'REFRIGERADOR {{w}} W',
+    restTxt: 'NAVE {{w}} W',
+    wearLabel: 'Desgaste del refrigerador · {{pct}}%',
+    dataLabel: 'Datos limpios · {{got}} de {{total}}',
+    badgeStandby: 'En espera · próxima observación en {{s}} s',
+    badgeDone: 'Observaciones terminadas',
+    badgeGood: '✓ Banda fría: registrando datos limpios',
+    badgeHot: 'Demasiado caliente: la imagen tiene ruido',
+    badgeCold: 'Sobreenfriado: fuera del punto de calibración',
+    badgeBrownout: 'Caída de tensión: la nave necesita su parte',
+    statusInitial: 'El detector empieza caliente. Arrastra la barra de energía o mantén ◀ ▶ (← → o A D) para enfriarlo hasta la {{band}} antes de la primera observación de Maya. El marcador ▼ muestra hacia dónde va la temperatura.',
+    statusObs: 'Observación {{k}}/{{n}} ({{gb}}): mantén el detector en la banda. La parte rayada de la barra ahora es de la nave.',
+    statusObsEnd: 'Observación {{k}} terminada: {{pct}}% limpia. Afloja el refrigerador para ahorrar desgaste, pero vuelve a estar frío antes de la siguiente.',
+    statusGood: 'En la banda: espectros limpios. No uses más enfriamiento del necesario.',
+    statusHot: 'Demasiado caliente: el detector tiene ruido. Más enfriamiento (tarda un momento en responder).',
+    statusCold: 'Sobreenfriado: por debajo del punto de calibración, y el refrigerador se desgasta para nada. Afloja.',
+    statusBrownout: 'El refrigerador se está comiendo la parte de la nave: el espectrómetro dejó de registrar. Mueve el reparto a la izquierda.',
+    statusDone: '{{got}} de datos minerales limpios registrados. Vida restante del refrigerador: {{left}}%.',
+    failWear: 'El refrigerador se desgastó a mitad de la sesión y el detector se calentó para siempre. Así terminó CRISM: sus refrigeradores se habían desgastado para 2017 y el instrumento se retiró en 2023.',
+    failNoisy: 'Solo {{got}} de {{total}} salieron limpios: el mapa mineral tiene demasiado ruido para usarse, y hay que repetir las observaciones en órbitas posteriores.',
+    summary: '{{pct}}% de datos limpios ({{got}}) · desgaste del refrigerador {{wear}}%',
+    event: {
+      wornCooler: 'Refrigerador desgastado: como el de CRISM para 2017, empieza con más desgaste y enfría menos.',
+      bigTarget: 'Objetivo grande: una observación larga de 2,5 Gb.',
+      solarStorm: 'Tormenta solar: las partículas energéticas añaden ruido. Durante unos segundos, solo la parte más fría de la banda da datos limpios.',
+    },
+    mods: { wornCooler: 'Refrigerador desgastado', bigTarget: 'Objetivo grande', solarStorm: 'Tormenta solar' },
   });
 })();

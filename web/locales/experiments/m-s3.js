@@ -1,4 +1,4 @@
-// Texts of M-S3 · Listening for marsquakes (English and Portuguese). Merged into translation.experiments['M-S3'].
+// Texts of M-S3 · Listening for marsquakes (English, Portuguese and Spanish). Merged into translation.experiments['M-S3'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -86,5 +86,47 @@
       dustyPanels: 'Painéis empoeirados: a poeira baixou a energia do InSight de 600–700 W para 200–300 W, então o SEIS fica desligado parte da noite.',
     },
     mods: { windy: 'Sol de vento', dustDevil: 'Redemoinhos de poeira', dustyPanels: 'Painéis empoeirados' },
+  });
+
+  put('es', {
+    title: 'Escuchar martemotos',
+    minigame: 'Sismograma',
+    basis: 'SEIS en el módulo InSight (2018–22)',
+    desc: 'La traza del sismómetro avanza durante un sol entero. Marca los martemotos (una onda P pequeña, luego una onda S mayor y después una cola que se desvanece) e ignora las ráfagas de viento. De noche el viento amaina y los sismos se oyen mejor.',
+    fact: 'Dato real: InSight registró {{quakes}} martemotos y descubrió que el núcleo de Marte es líquido, con un radio de ~{{core}}.',
+    chartAria: 'Traza del sismómetro en movimiento',
+    offTag: 'SEIS APAGADO',
+    pickTag: 'ESPACIO',
+    period: { day: 'DÍA · VIENTO', dusk: 'ANOCHECER', night: 'NOCHE · CALMA' },
+    markBtn: 'Marcar sismo en la línea ámbar (Espacio)',
+    legendQuake: '✓ Martemoto: P, S, cola que se apaga',
+    legendGust: '✕ Viento: ráfaga dentada',
+    legendLine: 'Línea ámbar: Espacio / botón',
+    clockReadout: 'LOCAL {{time}}',
+    quakesReadout: 'SISMOS ✓ {{n}}',
+    falsesReadout: 'FALSOS ✕ {{n}} / {{max}}',
+    dataReadout: '{{mb}} / {{day}} MB',
+    statusInit: 'SEIS (≤{{watts}} W, {{mb}} Mb al día) escucha desde un módulo que no debe moverse. Toca un martemoto en la traza o pulsa Espacio cuando cruce la línea ámbar. Las ráfagas de viento son estallidos cortos y dentados, sin P ni S.',
+    statusQuake: '✓ Martemoto registrado ({{n}}): P, luego S, luego la coda que se desvanece.',
+    statusGust: '✕ Ráfaga de viento: un estallido dentado sin P ni S. Marca falsa {{n}} / {{max}}.',
+    statusDevil: '✕ Remolino de polvo: una oscilación lenta de presión, sin P ni S. Marca falsa {{n}} / {{max}}.',
+    statusNothing: 'Ahí solo hay ruido de fondo.',
+    statusNothingLine: 'Todavía no hay nada bajo la línea ámbar.',
+    statusAlready: 'Ya marcado.',
+    statusMissed: 'Un martemoto pasó sin ser marcado.',
+    statusOff: 'SEIS estaba apagado ahí: sin datos.',
+    statusOffStart: 'SEIS apagado para ahorrar energía: los paneles polvorientos no pueden alimentarlo toda la noche.',
+    statusNight: 'Noche: el viento amaina. El mejor momento para oír martemotos.',
+    statusMorning: 'Mañana: el viento vuelve a soplar.',
+    statusDone: 'Fin del sol: {{caught}} de {{total}} martemotos registrados, {{falses}} marca(s) falsa(s).',
+    failFalse: 'Viento registrado como martemoto {{n}} veces: el catálogo ahora contiene datos falsos. Por eso el sismómetro de InSight estaba bajo un escudo antiviento y térmico: el ruido del viento arruina los registros diurnos.',
+    failNone: 'El sol terminó sin ningún martemoto registrado. Sin sismos no se aprende nada del interior profundo: InSight necesitó {{total}} para demostrar que el núcleo de Marte es líquido.',
+    summary: '{{caught}}/{{total}} martemotos · {{falses}} marca(s) falsa(s)',
+    event: {
+      windy: 'Sol ventoso: ráfagas más fuertes y frecuentes que se prolongan hasta la noche.',
+      dustDevil: 'Remolinos de polvo: pasan junto al módulo (Perseverance cuenta unos 4 al día). Mecen el suelo lentamente, sin P ni S.',
+      dustyPanels: 'Paneles polvorientos: el polvo redujo la energía de InSight de 600–700 W a 200–300 W, así que SEIS se apaga durante parte de la noche.',
+    },
+    mods: { windy: 'Sol ventoso', dustDevil: 'Remolinos de polvo', dustyPanels: 'Paneles polvorientos' },
   });
 })();

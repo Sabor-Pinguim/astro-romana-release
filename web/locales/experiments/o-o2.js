@@ -1,4 +1,4 @@
-// Texts of O-O2 · Image compression (English and Portuguese). Merged into translation.experiments['O-O2'].
+// Texts of O-O2 · Image compression (English, Portuguese and Spanish). Merged into translation.experiments['O-O2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -70,5 +70,39 @@
     summary: '{{pts}} pts de {{best}} possíveis · {{gb}} Gb enviados (o mínimo para o melhor recorte: {{least}} Gb)',
     kinds: { dunes: 'Campo de dunas', layers: 'Afloramento em camadas', crater: 'Cratera recente', ice: 'Gelo exposto', gully: 'Ravinas', hardware: 'Peças de um módulo de pouso', tracks: 'Rastros de redemoinhos' },
     mods: { antennaStuck: 'Antena travada', dustHaze: 'Tempestade de poeira' },
+  });
+
+  put('es', {
+    title: 'Compresión de imágenes',
+    minigame: 'Recorte inteligente',
+    basis: 'Selección de píxeles del Kepler y compresión a bordo de la Galileo',
+    desc: 'Una foto HiRISE de Maya es demasiado pesada para el enlace de bajada. Conserva solo los recuadros con objetivos científicos, dentro del presupuesto de datos, antes del paso. Menos recuadros ahorran datos; recortar un objetivo pierde su ciencia.',
+    fact: 'Dato real: una sola imagen de HiRISE puede ocupar hasta 28 Gb, más de lo que un rover envía en varios días. Kepler enviaba a la Tierra solo los píxeles alrededor de las estrellas elegidas, y Galileo, después de que su antena principal se atascara y se perdiera el enlace previsto de 134,4 kbit/s, multiplicó ~10× su retorno efectivo con compresión a bordo y antenas terrestres mejoradas. Elegir qué enviar vale tanto como una antena más grande.',
+    canvasAria: 'Foto HiRISE dividida en {{cols}} por {{rows}} recuadros; los recuadros seleccionados se envían y los demás se recortan',
+    listAria: 'Objetivos científicos que Maya marcó en esta foto',
+    toolFull: 'Conservar · sin pérdida',
+    toolFullSub: '{{gb}} Gb por recuadro · todos los detalles',
+    toolLossy: 'Conservar · comprimido',
+    toolLossySub: '{{gb}} Gb por recuadro · se pierde el detalle fino',
+    budgetLabel: 'Presupuesto del enlace {{gb}} Gb (~{{min}} min a 6 Mbps) · foto {{photo}} Gb',
+    chipPts: '{{pts}} pts',
+    chipFine: '{{full}} pts · comprimido {{lossy}}',
+    overBtn: 'Fuera de presupuesto: recorta más',
+    needBtn: 'Conserva más objetivos ({{pts}} / {{goal}} pts)',
+    sendBtn: 'Enviar el recorte ({{gb}} Gb · {{pts}} pts)',
+    statusInit: 'Foto de {{photo}} Gb, presupuesto del enlace {{gb}} Gb. Toca o arrastra sobre los recuadros para conservarlos y llegar a {{goal}} pts: hay que conservar todos los recuadros de cada objetivo. Teclas: flechas + Espacio.',
+    lossyNote: 'Los recuadros comprimidos cuestan la mitad, pero los detalles finos (◇ con dos valores) pierden casi toda su ciencia. Las teclas 1 / 2 cambian de herramienta.',
+    hazeNote: 'Tormenta de polvo: la superficie está velada, mira con atención.',
+    statusOver: 'Te pasas del presupuesto por {{over}} Gb: recorta un recuadro o comprímelo.',
+    statusReady: 'Listo: {{pts}} pts en {{gb}} Gb. Envíalo o ajusta el recorte antes del paso.',
+    statusCount: '{{pts}} / {{goal}} pts conservados. Encuentra los objetivos y conserva todos sus recuadros.',
+    statusNeed: 'Necesitas al menos {{goal}} pts (ahora {{pts}}).',
+    statusSent: 'Enviados {{gb}} Gb con {{pts}} pts de ciencia: el {{saved}}% de la foto nunca salió del orbitador.',
+    statusAuto: 'Empezó el paso: el recorte se envió tal como estaba, {{gb}} Gb con {{pts}} pts (se ahorró el {{saved}}% de la foto).',
+    failOver: 'El paso empezó con {{gb}} Gb seleccionados para un presupuesto de {{budget}} Gb: toda la foto espera a bordo otro paso, y la próxima imagen de Maya se retrasa.',
+    failCut: 'El paso empezó con solo {{pts}} de {{goal}} pts conservados ({{cut}} objetivo(s) recortado(s)). Galileo sobrevivió a la falla de su antena eligiendo con cuidado qué enviar; aquí esa ciencia se pierde.',
+    summary: '{{pts}} pts de {{best}} posibles · {{gb}} Gb enviados (lo mínimo para el mejor recorte: {{least}} Gb)',
+    kinds: { dunes: 'Campo de dunas', layers: 'Afloramiento en capas', crater: 'Cráter reciente', ice: 'Hielo expuesto', gully: 'Cárcavas', hardware: 'Piezas de un módulo de aterrizaje', tracks: 'Huellas de remolinos de polvo' },
+    mods: { antennaStuck: 'Antena atascada', dustHaze: 'Tormenta de polvo' },
   });
 })();

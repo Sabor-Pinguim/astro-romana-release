@@ -1,4 +1,4 @@
-// Texts of M-S2 · Laser on rocks (English and Portuguese). Merged into translation.experiments['M-S2'].
+// Texts of M-S2 · Laser on rocks (English, Portuguese and Spanish). Merged into translation.experiments['M-S2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -70,5 +70,39 @@
       farRock: 'Rocha distante: ela está perto do alcance de {{range}} da SuperCam, e os pontos parecem minúsculos.',
     },
     mods: { dustDevil: 'Redemoinho de poeira', heavyDust: 'Poeira grossa', farRock: 'Rocha distante' },
+  });
+
+  put('es', {
+    title: 'Láser sobre rocas',
+    minigame: 'Tiro certero',
+    basis: 'SuperCam (Perseverance) y ChemCam (Curiosity)',
+    desc: 'Dispara el láser a puntos pequeños de una roca a varios metros. Los primeros impactos en un punto solo quitan el polvo; los siguientes leen su química. El mástil se balancea y los disparos son limitados.',
+    fact: 'Dato real: el láser de Curiosity ha disparado más de 1 millón de veces, aunque fue diseñado para 2 años. Lee rocas a más de {{range}}.',
+    viewAria: 'Vista de la cámara del mástil con una roca, puntos objetivo cubiertos de polvo y la retícula del láser',
+    readReadout: 'LEÍDOS {{read}} / {{need}}',
+    shotsReadout: 'DISPAROS {{left}} / {{total}}',
+    distReadout: 'ROCA A {{dist}}',
+    fireBtn: 'Disparar láser · {{watts}} W',
+    legend: { dust: 'Capa de polvo', read: 'Lectura química', done: 'Punto leído' },
+    hint: 'Ratón: apunta y haz clic. Táctil: arrastra para apuntar y toca o pulsa el botón para disparar. Teclas: ← ↑ → ↓ / WASD y Espacio. Elige puntos con poco polvo: 3★ con hasta {{three}} disparos, 2★ hasta {{two}}.',
+    statusInitial: 'Lee {{need}} puntos de la roca a {{dist}}. Acierta en un punto para quitarle el polvo y sigue acertando para leer su química.',
+    statusAim: 'Elige el momento del disparo: el mástil se balancea y los puntos se desplazan bajo la retícula.',
+    statusMiss: 'Fallaste: el pulso dio en roca desnuda. Disparo perdido.',
+    statusAlready: 'Ese punto ya fue leído: disparo perdido.',
+    statusDust: 'Polvo retirado: queda(n) {{left}} capa(s) en este punto.',
+    statusDustClear: '¡Roca limpia! Los próximos impactos leen su química.',
+    statusReading: 'Leyendo la luz del plasma: {{done}} de {{total}}.',
+    statusSpotRead: 'Punto leído: rico en {{el}} ({{sym}}). {{mb}} de datos.',
+    statusDevilGone: 'El remolino siguió su camino: el mástil vuelve a estar firme.',
+    statusDone: '{{read}} puntos leídos sin tocar la roca: {{mb}} de química para la Tierra.',
+    failShots: 'No quedan disparos para leer el resto: {{read}} de {{need}} puntos leídos. Los pulsos se fueron en polvo y roca desnuda, se acabó el tiempo de láser de este sol y el rover sigue su camino sin la química de esta roca.',
+    summary: '{{read}} puntos leídos con {{shots}} disparos (mínimo posible {{best}}) · {{mb}}',
+    elements: { Fe: 'hierro', Si: 'silicio', Mg: 'magnesio', Ca: 'calcio' },
+    event: {
+      dustDevil: 'Un remolino de polvo pasa junto al rover (pasan ~4 al día, y muchos llevan polvo): el mástil tiembla y el polvo vuelve a cubrir {{count}} punto(s) ya limpio(s).',
+      heavyDust: 'Una capa gruesa de polvo: cada punto necesita un impacto más para limpiarse.',
+      farRock: 'Roca lejana: está cerca del alcance de {{range}} de SuperCam, así que los puntos se ven diminutos.',
+    },
+    mods: { dustDevil: 'Remolino de polvo', heavyDust: 'Polvo grueso', farRock: 'Roca lejana' },
   });
 })();

@@ -32,6 +32,7 @@ const MIME = {
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
   '.glb': 'model/gltf-binary',
 };
 
@@ -239,7 +240,7 @@ const MEASURE_EXPR = `(function(isMobile){
 })`;
 
 async function auditScreen(cdp, sessionId, vp, stageName, errors) {
-  await delay(180);
+  await delay(saveScreenshots ? 600 : 180);
   const res = await cdp.send('Runtime.evaluate', {
     expression: MEASURE_EXPR + `(${vp.mobile})`,
     returnByValue: true,
@@ -334,13 +335,34 @@ async function runViewport(cdp, baseUrl, vp) {
   await click('#wizard-prompt-dismiss');
   await delay(140);
   results.push(await auditScreen(cdp, sessionId, vp, '07-planner', errors));
+  if (vp.width <= 640) {
+    await click('[data-planner-tab="catalog"]');
+    results.push(await auditScreen(cdp, sessionId, vp, '07b-planner-parts', errors));
+    await click('[data-planner-tab="telemetry"]');
+    results.push(await auditScreen(cdp, sessionId, vp, '07c-planner-telemetry', errors));
+  } else if (vp.height <= 500) {
+    await click('[data-planner-tab="telemetry"]');
+    results.push(await auditScreen(cdp, sessionId, vp, '07c-planner-telemetry', errors));
+  }
+
+  await cdp.send('Runtime.evaluate', { expression: `window.ASTRO?.jumpCockpit?.(0)` }, sessionId);
+  await waitFor(`document.querySelector('#cockpit.active')`, '#cockpit.active');
+  results.push(await auditScreen(cdp, sessionId, vp, '08-cockpit-liftoff', errors));
+
+  await cdp.send('Runtime.evaluate', { expression: `window.ASTRO?.jumpCockpit?.(2)` }, sessionId);
+  await delay(180);
+  results.push(await auditScreen(cdp, sessionId, vp, '09-cockpit-dock', errors));
+
+  await cdp.send('Runtime.evaluate', { expression: `window.ASTRO?.jumpResults?.()` }, sessionId);
+  await waitFor(`document.querySelector('#results.active')`, '#results.active');
+  results.push(await auditScreen(cdp, sessionId, vp, '10-results', errors));
 
   await navigate(`${baseUrl}/index.html?audit=surface#surface-jezero`);
   await waitFor(`document.querySelector('#surface.active')`, '#surface.active', 12000);
   await waitFor(`document.querySelectorAll('#surface-goals li').length > 0`, '#surface-goals items', 12000);
   await click('#surface-start');
   await delay(250);
-  results.push(await auditScreen(cdp, sessionId, vp, '08-surface', errors));
+  results.push(await auditScreen(cdp, sessionId, vp, '11-surface', errors));
 
   await cdp.send('Target.closeTarget', { targetId });
   await cdp.send('Target.disposeBrowserContext', { browserContextId });

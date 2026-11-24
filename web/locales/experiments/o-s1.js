@@ -1,4 +1,4 @@
-// Texts of O-S1 · Orbiter pass (English and Portuguese). Merged into translation.experiments['O-S1'].
+// Texts of O-S1 · Orbiter pass (English, Portuguese and Spanish). Merged into translation.experiments['O-S1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -78,5 +78,43 @@
       quake: { name: 'SEIS: martemoto registrado', what: 'Evento raro' },
     },
     mods: { orbiterLost: 'Orbitador perdido', lowPass: 'Passagem baixa', quake: 'Martemoto' },
+  });
+
+  put('es', {
+    title: 'Paso del orbitador',
+    minigame: 'Ventana de contacto',
+    basis: 'Enlace UHF Electra (MRO / TGO)',
+    desc: 'Un orbitador pasa por encima durante unos segundos. Elige los paquetes científicos que caben en este paso y alcanza la meta antes de que se oculte tras el horizonte. Pueden llegar paquetes nuevos durante el paso.',
+    fact: 'Dato real: un rover pasa ~12 h al día sin línea de visión con la Tierra. Un paso UHF de un orbitador, de unos 8 minutos, retransmite 100–250 Mb a hasta 2 Mbps, y Perseverance envía más de 1 Gbit por sol en 4–5 pasos. Con la pérdida de MAVEN en dic. de 2025, cada paso de relevo restante importa aún más.',
+    passLabel: 'Paso del orbitador',
+    capLabel: 'Presupuesto del enlace ({{cap}} Mb)',
+    listAria: 'Paquetes de datos en espera en la memoria del rover',
+    required: 'Siempre se envía · obligatorio',
+    overLimitBtn: 'Más de {{cap}} Mb: quita un paquete grande',
+    needMoreBtn: 'Selecciona más paquetes ({{pts}} / {{goal}} pts)',
+    transmitBtn: 'Transmitir ahora ({{mb}} Mb · {{pts}} pts)',
+    initialStatus: 'Alcanza {{goal}} pts dentro de {{cap}} Mb antes de que el orbitador se oculte. La telemetría siempre se envía.',
+    bufferFull: 'Te pasas del presupuesto por {{over}} Mb: quita un paquete pesado.',
+    readyStatus: 'Listo ({{mb}} Mb · {{pts}} pts). Transmite, o sigue mejorando antes de que cierre la ventana.',
+    selectedStatus: '{{count}} paquetes seleccionados ({{mb}} Mb · {{pts}} / {{goal}} pts).',
+    needPtsErr: 'Necesitas al menos {{goal}} pts (ahora {{pts}}).',
+    overLimitErr: 'Te pasas del presupuesto por {{over}} Mb: quita un paquete.',
+    relayedStatus: 'Retransmitidos {{mb}} Mb ({{pts}} pts de ciencia) por el enlace UHF Electra.',
+    autoTransmitted: 'El orbitador llegó al horizonte: {{mb}} Mb ({{pts}} pts) se enviaron automáticamente.',
+    missedStatus: 'El orbitador se ocultó antes de una selección válida de {{goal}} pts. Los datos se quedan en la memoria del rover y, cuando se llene, los experimentos se detienen.',
+    packetArrived: 'Nuevo paquete en la cola: {{name}}.',
+    quakeArrived: '¡Sismo marciano! SEIS acaba de registrar uno; ese día de datos vale mucho más.',
+    summary: '{{pts}} pts de {{best}} posibles · {{mb}} Mb enviados',
+    packets: {
+      telemetry: { name: 'Salud de la tripulación y el rover', what: 'Obligatorio' },
+      sherloc: { name: 'Mapa Raman UV de SHERLOC', what: 'Orgánicos y minerales' },
+      rimfax: { name: 'Radar de suelo RIMFAX', what: 'Capas bajo 100 m de recorrido' },
+      seis: { name: 'Día sísmico de SEIS', what: 'Un día de movimiento del suelo' },
+      pixl: { name: 'Escaneo de rayos X de PIXL', what: 'Química de rocas, compacto' },
+      supercam: { name: 'Disparo láser de SuperCam', what: 'Química de rocas, compacto' },
+      mastcam: { name: 'Imágenes de Mastcam-Z', what: 'Un sol de imágenes en bruto' },
+      quake: { name: 'SEIS: sismo marciano registrado', what: 'Evento raro' },
+    },
+    mods: { orbiterLost: 'Orbitador perdido', lowPass: 'Paso bajo', quake: 'Sismo marciano' },
   });
 })();

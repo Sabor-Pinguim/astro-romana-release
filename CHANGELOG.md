@@ -11,6 +11,31 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.0] - 2026-11-24
+
+### Added
+- **Experiment draw in the game (`web/app.js`, `web/experiment-run.js`, `web/experiments.js`):** every mission draws 8 of the 21 experiments when it starts (1 orbit and 1 ground experiment per crew member, pure random, seeded), revealed only when each one comes into play. In a room the host sends the draw with the flight state. Plan and decisions: [docs/experiments-implementation.md](docs/experiments-implementation.md).
+- **Mars orbit stage (`web/app.js`, `index.html`, `web/flight.js`, `web/minigames.css`):** a new cockpit stage between orbital docking and the landing ("04 · Mars orbit" in the flight stepper; the landing becomes 05). Four experiment cards, one per crew member, plus a 150 s orbit window (game-balance) and a "Start the descent" button once every experiment has a result. Mars shows in the cockpit window. Solo: you play your own and may take over an AI seat while its bot works. In a room each player plays their own seat.
+- **H-S2 in the descent:** when drawn, the precision-landing minigame opens before the landing burn starts (the burn waits for it).
+- **Bots for AI seats (`web/experiment-run.js`, `web/app.js`):** AI crew members do their experiments "on average, nothing amazing" (1–2 stars, seeded) after the typical time of each minigame, in orbit and on the surface; taking over an astronaut stops its bot.
+- **Star scoring and difficulty multiplier:** each crew member scores 25 points per star of their experiments, replacing the fixed points per surface experiment. The mission total is multiplied by the difficulty (easy ×0.75, normal ×1, hard ×1.5, game-balance decided by the team), and the grade is computed before the multiplier. The debrief lists the 8 experiments with their stars (and which ones the AI did), plus the multiplier line.
+- **Leaderboard fields (`web/app.js`, `multiplayer/`):** missions send `experiments` (`[{ id, stars, bot? }]`), `runSeed` and `scoreMultiplier`. The room server already accepts and stores them (optional fields; older databases get the columns in place).
+- **Spanish texts for the 21 experiments (`web/locales/experiments/*.js`):** every experiment and the shared texts now have `en`, `pt` and `es`; `tools/web/check-experiments.mjs` checks the three languages.
+- **Dev Mode:** "Cockpit · Mars orbit" jump, using the Dev Mode seed.
+- **Interface scale setting (`web/settings.js`, `index.html`, `web/styles.css`, `web/locales/{en,pt,es}.js`):** Settings → Interface scale (Auto, 75%, 85%, 100%, 115%), applied as the root font size (`html[data-ui-scale]`) and saved with the other settings.
+- **Rocket assembly tabs on phones (`index.html`, `web/app.js`, `web/styles.css`):** Rocket / Parts / Telemetry tabs in portrait and short landscape screens, with an alert badge on Telemetry; selecting a module or following an engineering hint opens the Parts tab.
+
+### Changed
+- **Surface experiments (`web/views.js`, `index.html`):** the blocks and goals are the drawn ground experiments, played with the new minigames in `#minigame-dialog` (seeded layouts, 3 levels, stars). The legacy `web/scout.js` and the four fixed panels are removed (`scout.js` also overwrote `window.ASTRO_MINIGAMES` from the new core).
+- **Compact touch controls and landscape layouts (`web/styles.css`, `web/minigames.css`):** faceted 32 px info, stage and tab buttons on touch screens, tighter Step 01 cards in short landscape screens (merged with the 1.6.3 expandable multiplayer panel), smaller minigame canvases and grids on short screens, and the surface toast moved under the HUD.
+- **Mobile audit (`tools/web/mobile-audit.mjs`):** updated for the new layouts (`npm run web:audit:mobile`: 73 checks over 6 viewports, 0 issues).
+- **README:** file table, the experiments validator command and the minigame lab.
+
+### Fixed
+- **Stars rendering:** the hollow star (☆) looks filled in bold Chakra Petch, so a 0-star result showed as ★★★. Missing stars are now dimmed full stars in the UI (minigame cap, restart button, completion card, orbit cards, debrief, cockpit stars) and "★ n/3" in logs and toasts.
+- **Experiment dialog race (`web/experiment-run.js`):** the dialog `close` event arrives a moment after closing; when another experiment opened in between (orbit window closing straight into the H-S2 descent), it stopped the new minigame. The handler now ignores a dialog that is open again.
+- **Surface joystick (`web/views.js`):** the touch stick returns to its default place when released.
+
 ## [1.6.3] - 2026-11-24
 
 ### Changed

@@ -1,4 +1,4 @@
-// Texts of L-O1 · Roll-out solar array (English and Portuguese). Merged into translation.experiments['L-O1'].
+// Texts of L-O1 · Roll-out solar array (English, Portuguese and Spanish). Merged into translation.experiments['L-O1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -88,5 +88,48 @@
       hardRepair: 'Reparo difícil: este painel não foi feito para manutenção, como o AMS-02, que precisou de 4 caminhadas espaciais e 29 ferramentas novas. Menos EVAs, e cada uma demora mais.',
     },
     mods: { snag: 'Haste emperrada', hardRepair: 'Reparo difícil' },
+  });
+
+  put('es', {
+    title: 'Panel solar enrollable',
+    minigame: 'Desenrollar',
+    basis: 'ROSA / iROSA (ISS 2017, 2021–23) y DART',
+    desc: 'El panel se desenrolla por etapas. Suelta cada segmento mientras la tensión del mástil está en la zona verde: demasiado pronto y el rollo se atasca; demasiado tarde y se desenrolla torcido.',
+    fact: 'Dato real: en su prueba de 2017 en la ISS, ROSA se abrió, pero no pudo volver a cerrarse y fue desechado. El iROSA mejorado aumenta hoy la energía de la estación en ~30%. En Marte, el Sol entrega solo el 43% de la energía que llega a la Tierra.',
+    stepReadout: 'ETAPA {{step}} / {{steps}}',
+    repairsReadout: 'REPARACIONES EVA {{left}}',
+    zoneSlack: '← FLOJO: SE ATASCA',
+    zoneGood: 'SOLTAR',
+    zoneOver: 'SOBRETENSIÓN: TORCIDO →',
+    slackTag: 'FLOJO',
+    goodTag: '✓',
+    overTag: 'EXCESO',
+    gaugeAria: 'Indicador de tensión del mástil',
+    releaseBtn: 'Soltar segmento (Espacio)',
+    repairBtn: 'Mantén: reparación EVA (Espacio)',
+    repairLabel: 'Reparación EVA · liberando el rollo',
+    badgeSlack: 'La tensión sube: espera a la zona verde',
+    badgeGood: '✓ Tensión justa: suelta ahora',
+    badgeOver: 'Sobretensión: el mástil se torcerá',
+    badgeJam: '✕ Rollo atascado: energía parcial',
+    badgeCrooked: 'Se desenrolló torcido',
+    badgeUnrolling: '✓ Segmento desenrollándose',
+    badgeDone: '✓ Panel desplegado',
+    statusInitial: 'Desenrolla {{steps}} segmentos de un panel de {{full}} W (los 6,6 kW del ROSA de DART × 43% de luz solar en Marte). Pulsa Espacio o Soltar mientras la aguja está en la zona verde.',
+    statusStep: 'Etapa {{step}} de {{steps}}: la tensión del mástil sube y oscila. Suelta en una oscilación tranquila dentro de la zona.',
+    statusPerfect: 'Liberación perfecta: el segmento se desenrolla plano, +{{watts}} W.',
+    statusClean: 'Liberación limpia: +{{watts}} W.',
+    statusCrooked: 'Demasiado tarde: el mástil sobretensado se tuerce y el segmento se desenrolla torcido (−{{lost}} W).',
+    statusOverrun: 'El motor se pasó del límite: el segmento se desenrolla torcido (−{{lost}} W).',
+    statusJam: 'Demasiado pronto: la manta floja se engancha y el rollo se atasca. La nave funciona con {{watts}} W. Mantén Reparación EVA para liberarlo (quedan {{left}}).',
+    statusRepaired: 'EVA completada: el rollo está libre. Vuelve a intentar la etapa (quedan {{left}} reparación(es)).',
+    statusDone: 'Panel desplegado: {{watts}} de {{full}} W para todos a bordo.',
+    failJam: 'El rollo se atascó al {{pct}}% y no queda ninguna EVA para liberarlo. Como ROSA en 2017, que no pudo volver a guardarse y fue desechado, la nave tendrá que vivir con {{watts}} de {{full}} W.',
+    summary: '{{pct}}% de la potencia del panel · {{crooked}} torcido(s) · {{jams}} atasco(s)',
+    event: {
+      snag: 'Enganche: este mástil se traba y da saltos (el panel de prueba ROSA de 2017 no se replegó). La tensión sube más rápido y oscila más.',
+      hardRepair: 'Reparación difícil: este panel no se diseñó para recibir mantenimiento, como AMS-02, que necesitó 4 caminatas espaciales y 29 herramientas nuevas. Menos EVA, y cada una tarda más.',
+    },
+    mods: { snag: 'Mástil que se traba', hardRepair: 'Reparación difícil' },
   });
 })();

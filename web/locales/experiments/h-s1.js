@@ -1,4 +1,4 @@
-// Texts of H-S1 · Escort route (English and Portuguese). Merged into translation.experiments['H-S1'].
+// Texts of H-S1 · Escort route (English, Portuguese and Spanish). Merged into translation.experiments['H-S1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -60,5 +60,34 @@
     doneStatus: 'Rota de escolta concluída em {{steps}} passos (melhor possível: {{best}}).',
     summary: '{{steps}} passos · melhor possível {{best}}',
     elements: { O: 'Oxigênio', Si: 'Silício', Fe: 'Ferro', Mg: 'Magnésio', Ca: 'Cálcio' },
+  });
+
+  put('es', {
+    title: 'Escolta en la superficie',
+    minigame: 'Ruta de escolta',
+    basis: 'Travesía en Marte y reconocimiento de Ingenuity (2021–24)',
+    desc: 'Traza un solo camino por los elementos de la corteza en orden, sin pisar la ⚠ arena ni cruzar tu propio camino.',
+    fact: 'Dato real: Las rutas de reconocimiento en Marte evitan las ondulaciones de arena lisas y sin relieve. Ingenuity estaba planeado para 5 vuelos e hizo 72 ({{dist}} en total); terminó en ene. de 2024, cuando su cámara de navegación perdió la referencia visual sobre arena lisa en el vuelo 72.',
+    boardAria: 'Mapa de reconocimiento de la escolta',
+    orderLabel: 'Orden',
+    moveUp: 'Mover arriba', moveLeft: 'Mover a la izquierda', moveDown: 'Mover abajo', moveRight: 'Mover a la derecha',
+    tileSandAria: 'Fila {{row}}, columna {{col}}, arena, intransitable',
+    tileAria: 'Fila {{row}}, columna {{col}}{{el}}{{onRoute}}',
+    tileEl: ', elemento {{el}}',
+    tileOnRoute: ', en el camino',
+    waypoint: 'PUNTO {{reached}} / {{total}}',
+    steps: '{{steps}} PASOS',
+    stepsLimit: '{{steps}} / {{max}} PASOS',
+    startStatus: 'Conecta los elementos de la corteza en orden ({{order}}) sin tocar la ⚠ arena. Arrastra, toca las casillas resaltadas o usa las flechas.',
+    smoothHint: 'Cuidado: la arena lisa (≈) solo aparece cuando la escolta está justo a su lado.',
+    smoothSpotted: '¡Arena lisa a la vista (≈)! De lejos parecía segura, como le pareció a Ingenuity en el vuelo 72. Busca un rodeo.',
+    rewound: 'Camino retrocedido. Siguiente elemento: {{el}}.',
+    adjacentHint: 'Avanza a una casilla adyacente resaltada para extender el camino.',
+    orderHint: 'Visita primero {{el}} (la casilla ámbar que parpadea).',
+    limitHint: 'Límite de batería: {{max}} pasos. Toca una casilla anterior del camino para retroceder y buscar una ruta más corta.',
+    headingTo: 'Rumbo a {{el}} (evita la ⚠ arena).',
+    doneStatus: 'Ruta de escolta completada en {{steps}} pasos (mejor posible: {{best}}).',
+    summary: '{{steps}} pasos · mejor posible {{best}}',
+    elements: { O: 'Oxígeno', Si: 'Silicio', Fe: 'Hierro', Mg: 'Magnesio', Ca: 'Calcio' },
   });
 })();

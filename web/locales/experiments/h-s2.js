@@ -1,4 +1,4 @@
-// Texts of H-S2 · Precision landing (English and Portuguese). Merged into translation.experiments['H-S2'].
+// Texts of H-S2 · Precision landing (English, Portuguese and Spanish). Merged into translation.experiments['H-S2'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -84,5 +84,46 @@
     summaryLucky: 'Pouso arriscado a {{dist}} do alvo',
     hazards: { rocks: 'um campo de rochas', crater: 'a borda de uma cratera', slope: 'uma encosta íngreme', shadow: 'um trecho na sombra' },
     mods: { scatter: 'Dispersão no toque', mapFix: 'Mapa atrasado' },
+  });
+
+  put('es', {
+    title: 'Aterrizaje de precisión',
+    minigame: 'Encuentra el lugar seguro',
+    basis: 'Navegación Relativa al Terreno, Perseverance (2021)',
+    desc: 'Durante el descenso, la cámara muestra el suelo de abajo. En pocos segundos, elige un lugar de aterrizaje libre de rocas, cráteres y pendientes fuertes, dentro del alcance de desvío y lo más cerca posible del objetivo científico.',
+    fact: 'Dato real: Perseverance aterrizó a ~{{landed}} de su objetivo; el requisito era {{req}}, y podía desviarse hasta {{divert}}. Su Navegación Relativa al Terreno decide por sí sola en menos de 10 s, porque todo el aterrizaje dura 7 min y una señal tarda ~11 min en llegar a la Tierra.',
+    canvasAria: 'Imagen de la cámara de descenso: terreno, círculo alcanzable, objetivo científico y el punto de aterrizaje apuntado',
+    cameraWaiting: 'Descenso en paracaídas · cámara lista',
+    fixPendingTag: 'COTEJANDO EL MAPA… POSICIÓN ESTIMADA',
+    timeLeft: '{{s}} s',
+    timeLabel: 'Ventana de decisión ({{s}} s)',
+    distRead: '◆ {{dist}}',
+    distNone: '◆ aún sin apuntar',
+    rangeRead: 'Desvío ≤ {{range}}',
+    startBtn: 'Empezar · {{s}} s',
+    landBtn: 'Aterrizar aquí',
+    waitFixBtn: 'Cotejando el mapa…',
+    moveLeft: 'Mover la mira a la izquierda', moveRight: 'Mover la mira a la derecha', moveUp: 'Mover la mira arriba', moveDown: 'Mover la mira abajo',
+    legendTarget: 'Objetivo científico',
+    legendRange: 'Círculo alcanzable',
+    legendAim: 'Mira: {{clear}} debe estar despejado',
+    legendHazard: 'Rocas, cráteres, pendientes',
+    legendShadow: 'Sombra: suelo oculto',
+    statusReady: 'Descenso en paracaídas. Pulsa Empezar (o Espacio): tienes {{s}} s para tocar un lugar libre de peligros, dentro del círculo y cerca de ◆. Las flechas / WASD mueven la mira; Espacio aterriza.',
+    scatterNote: 'Dispersión al aterrizar: el vehículo toca suelo hasta a {{m}} de la mira, así que deja margen.',
+    fixNote: 'El círculo es solo una estimación hasta que se coteje el mapa.',
+    statusLive: 'Toca o arrastra sobre la imagen para apuntar y luego pulsa Aterrizar aquí. Todo el anillo debe estar despejado.',
+    statusFixPending: 'Cotejando la cámara con el mapa de a bordo: puedes apuntar, pero solo podrás aterrizar después de la corrección.',
+    statusFixed: '¡Mapa cotejado! TRN corrigió la posición y el círculo alcanzable se movió. Revisa tu mira.',
+    statusAssist: '⚠ El anillo toca un peligro: muévelo a suelo despejado.',
+    statusAuto: 'Se acabó el tiempo: TRN fijó el último punto apuntado.',
+    statusLanded: 'Aterrizaje a {{dist}} del objetivo científico y a {{margin}} del peligro más cercano. Lugar seguro más cercano posible: {{best}} (★).',
+    statusLucky: 'El rover bajó sobre {{hazard}} y se salvó por suerte. Quien navega con cuidado nunca cuenta con eso.',
+    failDamage: 'El rover bajó sobre {{hazard}} y la suspensión se dañó: el equipo pierde soles revisándola antes de conducir. Los sitios peligrosos pero ricos en ciencia son justo la razón por la que Perseverance llevaba Navegación Relativa al Terreno.',
+    failNoChoice: 'No se eligió ningún lugar a tiempo: la etapa de descenso mantuvo su mira original, a {{dist}} del objetivo científico. Eso supone al menos {{sols}} sol(es) extra de conducción, incluso al ritmo récord de AutoNav de {{record}} por sol.',
+    summary: '{{dist}} del objetivo · mejor posible {{best}} · {{margin}} de margen',
+    summaryLucky: 'Aterrizaje arriesgado a {{dist}} del objetivo',
+    hazards: { rocks: 'un campo de rocas', crater: 'el borde de un cráter', slope: 'una pendiente pronunciada', shadow: 'una zona en sombra' },
+    mods: { scatter: 'Dispersión al aterrizar', mapFix: 'Cotejo de mapa tardío' },
   });
 })();

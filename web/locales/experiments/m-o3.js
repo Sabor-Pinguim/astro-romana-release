@@ -1,4 +1,4 @@
-// Texts of M-O3 · Methane hunter (English and Portuguese). Merged into translation.experiments['M-O3'].
+// Texts of M-O3 · Methane hunter (English, Portuguese and Spanish). Merged into translation.experiments['M-O3'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -102,5 +102,55 @@
       warmDetector: 'Detector quente: detectores infravermelhos precisam ficar frios (o resfriador do CRISM se desgastou em 2017), então o espectro tem mais ruído.',
     },
     mods: { rumor: 'Dados em conflito', dust: 'Ar empoeirado', warmDetector: 'Detector quente' },
+  });
+
+  put('es', {
+    title: 'Cazador de metano',
+    minigame: 'Huella del gas',
+    basis: 'NOMAD y ACS en el Trace Gas Orbiter',
+    desc: 'Solo al amanecer o al atardecer, vistos desde la órbita, la luz del Sol atraviesa el aire de Marte. En esa breve ventana, superpone la huella de cada gas al espectro: un gas solo está presente si todas sus líneas caen en valles oscuros.',
+    fact: 'Dato real: desde la órbita, el Trace Gas Orbiter no encuentra metano por encima de 0,05 partes por mil millones, pero en el suelo Curiosity mide 0,2–0,7. Nadie sabe todavía quién tiene razón.',
+    gas: {
+      ch4: { formula: 'CH₄', name: 'metano' },
+      h2o: { formula: 'H₂O', name: 'vapor de agua' },
+      hcl: { formula: 'HCl', name: 'cloruro de hidrógeno' },
+      co: { formula: 'CO', name: 'monóxido de carbono' },
+    },
+    axisWave: 'LONGITUD DE ONDA →',
+    axisLight: 'LUZ SOLAR A TRAVÉS DEL AIRE',
+    overlayTag: 'HUELLA DE {{gas}}',
+    chartAria: 'Espectro de ocultación solar; huella mostrada: {{gas}}',
+    cardAria: '{{gas}}, {{n}} líneas, {{state}}',
+    stateOpen: 'sin marcar',
+    stateClaimed: '✓ PRESENTE',
+    stateRight: '✓ HALLADO',
+    stateMissed: 'FALTÓ',
+    stateWrong: '✕ NO ESTÁ',
+    stateAbsent: 'AUSENTE',
+    claimPick: 'Elige un gas para comparar',
+    claimAdd: '✓ Marcar {{gas}} presente',
+    claimRemove: 'Desmarcar {{gas}}',
+    sendBtn: 'Enviar: {{list}}',
+    sendNone: 'Marca un gas para enviar',
+    windowReadout: 'ATARDECER EN {{s}} S',
+    sunReadout: 'LUZ SOLAR {{pct}}%',
+    claimsReadout: 'MARCADOS {{n}}',
+    statusInit: 'El Sol se está poniendo tras el borde de Marte y su luz ya atraviesa la atmósfera. Toca un gas para superponer su huella al espectro; las líneas de CO₂ siempre están ahí. Teclas: 1–4 eligen un gas, Espacio lo marca presente, Enter envía.',
+    statusCompare: 'Huella de {{gas}} sobre el espectro: ¿caen sus {{n}} líneas en valles oscuros?',
+    statusClaimed: '{{gas}} marcado como presente.',
+    statusUnclaimed: '{{gas}} desmarcado.',
+    statusHaze: 'El Sol se hunde en la bruma del aire más bajo: el espectro se vuelve más ruidoso. Envía pronto.',
+    statusSent: 'Resultado enviado: {{right}} de {{total}} gases identificados ({{list}}).',
+    statusAuto: 'Atardecer: el resultado se envió tal como estaba. {{right}} de {{total}} gases identificados ({{list}}).',
+    failMethane: 'Falsa detección de metano: no todas sus líneas coincidían. El metano es el gas más disputado de Marte: desde la órbita el TGO no encuentra nada por encima de {{orbit}} ppb, mientras que Curiosity mide {{ground}} ppb en el suelo. Una detección falsa solo aumenta la confusión.',
+    failFalse: '{{gas}} reportado, pero su huella no coincidía con todas las líneas. Como en la disputa del metano entre la órbita y el suelo, una detección que otros no pueden reproducir queda en duda.',
+    failSunset: 'El Sol se puso tras Marte sin ningún gas identificado. La ocultación solar solo funciona en los amaneceres y atardeceres vistos desde la órbita, así que esta medición espera a la próxima vuelta.',
+    summary: '{{right}}/{{total}} gases identificados ({{list}}) · {{wrong}} detección(es) falsa(s)',
+    event: {
+      rumor: 'Informe del rover: Curiosity mide {{ground}} ppb de metano en el suelo. ¿Lo muestra tu espectro?',
+      dust: 'Aire polvoriento: la bruma oculta el Sol antes, así que la parte limpia de la ventana es más corta.',
+      warmDetector: 'Detector caliente: los detectores infrarrojos deben mantenerse fríos (el enfriador de CRISM se agotó en 2017), así que el espectro tiene más ruido.',
+    },
+    mods: { rumor: 'Datos en conflicto', dust: 'Aire polvoriento', warmDetector: 'Detector caliente' },
   });
 })();

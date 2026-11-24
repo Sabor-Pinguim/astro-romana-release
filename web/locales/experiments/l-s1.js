@@ -1,4 +1,4 @@
-// Texts of L-S1 · Oxygen oven (English and Portuguese). Merged into translation.experiments['L-S1'].
+// Texts of L-S1 · Oxygen oven (English, Portuguese and Spanish). Merged into translation.experiments['L-S1'].
 (() => {
   'use strict';
   const L = window.ASTRO_LOCALES || (window.ASTRO_LOCALES = {});
@@ -78,5 +78,43 @@
       wornCell: 'Célula desgastada: cada ciclo de aquecer e esfriar aumenta um pouco a resistência da pilha, que aquece mais devagar.',
     },
     mods: { thinAir: 'Ar rarefeito', powerShare: 'Energia dividida', wornCell: 'Célula desgastada' },
+  });
+
+  put('es', {
+    title: 'Horno de oxígeno',
+    minigame: 'Producir oxígeno',
+    basis: 'MOXIE en Perseverance (2021–23)',
+    desc: 'Controla el calentador para que el reactor se mantenga en la banda verde, en torno a 800 °C, hasta alcanzar la meta de oxígeno. Demasiado calor daña la celda; demasiado frío no produce nada.',
+    fact: 'Dato real: MOXIE produjo {{total}} de oxígeno con ≥98% de pureza en 16 ensayos en Marte a {{target}} (300 W), con picos de 12 g/h, el doble de la meta original de la NASA. Fue la primera vez que se fabricó un recurso a partir del aire de otro planeta.',
+    targetReadout: 'OBJETIVO {{range}} · {{watts}} W',
+    zoneCold: '< {{cold}} FRÍO',
+    zoneTarget: '{{range}} OBJETIVO',
+    zoneHot: '> {{hot}} CALIENTE',
+    coldTag: 'FRÍO',
+    hotTag: 'CALIENTE',
+    o2Label: 'O₂ liberado (meta {{goal}})',
+    cellLabel: 'Integridad de la celda SOXE · {{pct}}%',
+    batteryLabel: 'Energía restante de la carga útil · {{pct}}%',
+    heatBtn: 'Mantén: calentar reactor ({{watts}} W)',
+    badgeGood: '✓ En la banda verde ({{target}}): produciendo O₂',
+    badgeHot: 'Sobrecalentamiento (> {{hot}}): suelta el calentador',
+    badgeCold: 'Frío (< {{cold}}): mantén el calentador',
+    badgeWarm: 'Margen tibio: apunta a {{range}}',
+    statusInitial: 'Mantén el calentador (o Espacio / W / ↑) para que la aguja siga en la banda verde hasta {{goal}} de O₂.',
+    statusGood: 'Estable cerca de {{target}}: suelta un momento para flotar dentro de la banda.',
+    statusWarmLow: 'Casi: llévalo a {{range}} para la producción máxima.',
+    statusWarmHigh: 'Margen superior: suelta el calentador para que se enfríe y vuelva a la banda.',
+    statusCold: 'Por debajo de {{cold}}: mantén el calentador para calentar la pila.',
+    statusHot: '¡Por encima de {{hot}}! Suelta el calentador ya para proteger la pila cerámica.',
+    statusCutout: 'El corte de seguridad enfrió la pila (−{{loss}} de O₂). Vuelve a subirla con cuidado.',
+    statusDone: '{{goal}} de O₂ respirable producidos y liberados a unos {{target}}.',
+    failBattery: 'La energía de la carga útil se agotó con {{got}} de {{goal}}. En Marte, un ensayo de MOXIE usa la mayor parte de la energía que el rover puede dar a sus instrumentos en un sol.',
+    summary: '{{pct}}% del ensayo en la banda verde · {{cutouts}} corte(s)',
+    event: {
+      thinAir: 'Aire más tenue: la presión de Marte bajó (varió entre 631 y 768 Pa en los ensayos reales), así que llega menos CO₂ a la celda.',
+      powerShare: 'Energía compartida con otros instrumentos: el calentador es más débil durante unos segundos.',
+      wornCell: 'Celda desgastada: cada ciclo de calentar y enfriar sube un poco la resistencia de la pila, así que se calienta más despacio.',
+    },
+    mods: { thinAir: 'Aire tenue', powerShare: 'Energía compartida', wornCell: 'Celda desgastada' },
   });
 })();
