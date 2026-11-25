@@ -80,6 +80,9 @@ All of them are CSS `clip-path`.
 
 - **Keyboard focus:** `clip-path` cuts off the `outline`. On clipped elements, focus is `box-shadow: inset 0 0 0 2px var(--solar-amber)`.
 - **Icons:** draw them with the shapes in the table above. No emoji or icon fonts.
+- **Menu actions:** stack the main actions at equal width. Each action places its icon on the left and centers its label.
+- **Lobby back button:** use the gold button fill at rest and the orange fill on hover, keyboard focus and press.
+- **Expanded multiplayer setup:** on mobile, the card heading identifies the view and the duplicate dossier heading is hidden to save height.
 - **Crew preview:** on desktop, the selected character's name appears in an accent-coloured label inside the 3D viewport. Filled geometric pictograms in crew-coloured hexagons sit below it, each beside its full localized name.
 
 ## 5. Surfaces
@@ -90,7 +93,7 @@ All of them are CSS `clip-path`.
 - **Windows onto space:** `--bg-viewport` with a hexagonal honeycomb mesh (`--honeycomb` SVG tile) at ~12 % opacity.
 - **Gauges:** 9 px blocks with a 3 px gap, slanted at −24° (`skewX`). In danger they turn coral and blink in 2 steps.
 - **Alerts:** crimson background with a strip of hazard stripes (amber and void, at 45°) on the left edge.
-- **Wizard chalkboard (`.chalkboard`):** faceted wooden frame (`#8c5b30` / `#6d4421` / `#523116`) with a bottom chalk tray (white & amber chalk sticks + two-tone eraser) framing a deep slate-green faceted surface (`#1d4233` / `#163529` / `#112920`), dashed chalk dividers, off-white chalk text (`#f3f5ec`), and a chamfered 3D stage for Nancy Grace Roman (`#9B5DE5` accent).
+- **Wizard chalkboard (`.chalkboard`):** faceted wooden frame (`#8c5b30` / `#6d4421` / `#523116`) with a bottom chalk tray (white & amber chalk sticks + two-tone eraser) framing a deep slate-green faceted surface (`#1d4233` / `#163529` / `#112920`), dashed chalk dividers, off-white chalk text (`#f3f5ec`), a red close button by default, and a chamfered 3D stage for Nancy Grace Roman (`#9B5DE5` accent).
 
 ## 6. Generated art
 

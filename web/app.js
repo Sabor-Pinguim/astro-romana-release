@@ -153,6 +153,7 @@
   // Lobby: 5-step setup (01 Play mode → 02 Difficulty → 03 Destination → 04 Landing site → 05 Crew).
   // Guests skip steps 1–4 (host controls) and land straight on step 5 to pick a crew seat.
   const LOBBY_STEPS = ['mode', 'difficulty', 'destination', 'site', 'crew'];
+  const crewNextMedia = window.matchMedia('(max-width:1100px)');
   const lobbyStepMeta = step => ({
     eyebrow: t(`lobby.setup.steps.${step}.eyebrow`),
     title: t(`lobby.setup.steps.${step}.title`),
@@ -206,6 +207,10 @@
     $('#step-summary-crew').textContent = t('lobby.setup.crewSummary', { count: playerCount() });
     const nextBtn = $('#lobby-next');
     if(nextBtn){
+      const inlineCrewNext = step === 'crew' && crewNextMedia.matches;
+      const nextContainer = inlineCrewNext ? $('#crew-next-slot') : $('#lobby-foot-actions');
+      if(nextBtn.parentElement !== nextContainer) nextContainer.append(nextBtn);
+      $('#lobby').classList.toggle('crew-next-inline', inlineCrewNext);
       const showNext = !!meta.next;
       nextBtn.hidden = !showNext;
       if(showNext){
@@ -221,8 +226,8 @@
         }
       }
     }
-    $('#lobby-change-difficulty').hidden = step !== 'crew' || net.isGuest;
   }
+  crewNextMedia.addEventListener('change', renderLobbyStepper);
   function selectSite(id, focus = true){
     if(!SITES_INFO[id]) return;
     if(!net.isGuest) state.site = id;
@@ -1361,7 +1366,6 @@
     else if(state.lobbyStep==='site')setLobbyStep('crew');
     else if(state.lobbyStep==='crew')showScreen('planner');
   });
-  $('#lobby-change-difficulty').addEventListener('click',()=>{if(!net.isGuest)setLobbyStep('difficulty');});
   $$('#mars-pins [data-mars-pin]').forEach(pin=>pin.addEventListener('click',()=>{
     if(net.isGuest)return;
     selectSite(pin.dataset.marsPin,true);

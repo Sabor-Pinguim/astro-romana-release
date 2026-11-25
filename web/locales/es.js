@@ -29,7 +29,7 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.7.2',
+        version: 'v1.7.3',
         quitEyebrow: 'Abandonar misión',
         quitTitle: '¿Salir de la misión?',
         quitBody: 'Este es un prototipo local. Puedes cerrar la pestaña en cualquier momento.',
@@ -260,7 +260,6 @@
         },
         setup: {
           stepperAria: 'Pasos de configuración de la misión',
-          changeDifficulty: 'Cambiar dificultad',
           guestHint: 'El anfitrión controla el destino, la dificultad y el sitio de aterrizaje. Elige un puesto libre abajo.',
           crewSummary: '{{count}}/4 jugadores',
           tabs: {

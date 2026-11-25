@@ -29,7 +29,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.7.2',
+        version: 'v1.7.3',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -260,7 +260,6 @@
         },
         setup: {
           stepperAria: 'Mission setup steps',
-          changeDifficulty: 'Change difficulty',
           guestHint: 'The host controls destination, difficulty, and landing site. Pick a free crew seat below.',
           crewSummary: '{{count}}/4 players',
           tabs: {

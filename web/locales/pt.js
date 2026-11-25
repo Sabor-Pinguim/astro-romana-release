@@ -29,7 +29,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.7.2',
+        version: 'v1.7.3',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',
@@ -260,7 +260,6 @@
         },
         setup: {
           stepperAria: 'Etapas de configuração da missão',
-          changeDifficulty: 'Alterar dificuldade',
           guestHint: 'O anfitrião controla destino, dificuldade e local de pouso. Escolha um tripulante livre abaixo.',
           crewSummary: '{{count}}/4 jogadores',
           tabs: {

@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.3] - 2026-11-24
+
+### Changed
+- Stacked the main menu actions with left-side icons, equal widths, and centered labels.
+- Moved the crew continue button inside the dossier on mobile and removed the difficulty shortcut from the crew screen.
+- Hid the duplicate multiplayer heading on mobile, made the lobby back button gold by default, and made the rocket wizard close button red by default.
+
 ## [1.7.2] - 2026-11-24
 
 ### Changed
