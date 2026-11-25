@@ -111,7 +111,7 @@
     .menu-footer span+span::before{content:"";display:inline-block;width:6px;height:8px;margin:0 .9rem;background:var(--mars-orange);clip-path:polygon(0 0,100% 50%,0 100%)}
     .menu-meta{position:absolute;right:clamp(24px,5vw,80px);bottom:24px;display:flex;align-items:center;gap:10px}
     .coordinates{font:500 .66rem var(--heading);letter-spacing:.16em;color:var(--muted)}
-    .contact-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;color:var(--starlight-cream);background:var(--f3);clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);font:700 .62rem/1 var(--heading);letter-spacing:.06em;text-decoration:none;text-transform:uppercase;white-space:nowrap}
+    .contact-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;border:0;color:var(--starlight-cream);background:var(--f3);clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);font:700 .62rem/1 var(--heading);letter-spacing:.06em;text-decoration:none;text-transform:uppercase;white-space:nowrap}
     .contact-chip svg{display:block;flex:none;width:17px;height:14px}
     .contact-chip:is(:hover,:focus-visible){outline:none;color:var(--bg-void);background:linear-gradient(155deg,var(--solar-amber) 0 48%,var(--mars-orange) 48%)}
     .menu-top-bar{position:absolute;top:24px;right:clamp(24px,5vw,80px);z-index:3;display:flex;align-items:center;gap:6px}

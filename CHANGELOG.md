@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.16] - 2026-11-25
+
+### Changed
+- Changed the menu "Contact us" chip from a `mailto:` link to a button that only copies `sabor.pinguim@proton.me` to the clipboard.
+- Kept Dr. Nancy Roman's Saturn V breakup notice unskippable for the first 2 seconds before allowing outside-click dismissal.
+
 ## [1.9.15] - 2026-11-25
 
 ### Added

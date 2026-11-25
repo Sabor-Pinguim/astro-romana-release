@@ -1681,7 +1681,7 @@
     };
     const bindTimer = setTimeout(() => {
       document.addEventListener('pointerdown', onOutside, true);
-    }, 0);
+    }, 2000);
     nancyOutsideOff = () => {
       clearTimeout(bindTimer);
       document.removeEventListener('pointerdown', onOutside, true);
