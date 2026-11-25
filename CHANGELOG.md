@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.17] - 2026-11-25
+
+### Changed
+- Added ornate faceted gold, silver, and bronze borders, left ribbons, and hexagonal rank medallions to the top 3 cards in both Top Missions and Top Astronauts leaderboards.
+
 ## [1.9.16] - 2026-11-25
 
 ### Changed

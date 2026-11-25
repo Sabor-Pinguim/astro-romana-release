@@ -1200,8 +1200,16 @@
     .lb-filters label{display:flex;flex-direction:column;gap:4px}
     .lb-filters select{min-width:130px;min-height:38px;padding:.4rem 1.8rem .4rem .65rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:600 .72rem var(--heading);letter-spacing:.06em;cursor:pointer}
     .lb-list{display:grid;gap:7px}
-    .lb-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:.65rem .9rem;background:var(--f1);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+    .lb-row{position:relative;display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:.65rem .9rem;background:var(--f1);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
     .lb-row.lb-me{box-shadow:inset 3px 0 0 var(--solar-amber);background:linear-gradient(112deg,color-mix(in srgb,var(--solar-amber) 14%,var(--f2)) 0 28%,var(--f1) 28%)}
+    .lb-row.lb-gold{--medal:#F5B82E;--medal-hi:#FFF2A6;--medal-lo:#B87308}
+    .lb-row.lb-silver{--medal:#C8D4E6;--medal-hi:#F4F8FF;--medal-lo:#7A8AA3}
+    .lb-row.lb-bronze{--medal:#D4844C;--medal-hi:#F6C191;--medal-lo:#8C471D}
+    .lb-row:is(.lb-gold,.lb-silver,.lb-bronze){padding-left:1.05rem;background:linear-gradient(112deg,color-mix(in srgb,var(--medal) 18%,var(--f2)) 0 26%,color-mix(in srgb,var(--medal) 7%,var(--f1)) 26% 76%,color-mix(in srgb,var(--medal) 14%,var(--f1)) 76%)}
+    .lb-row:is(.lb-gold,.lb-silver,.lb-bronze)::before{content:"";position:absolute;left:0;top:0;bottom:0;width:12px;pointer-events:none;background:linear-gradient(180deg,var(--medal-hi) 0%,var(--medal) 52%,var(--medal-lo) 100%);clip-path:polygon(8px 0,12px 0,4px 100%,0 100%)}
+    .lb-row:is(.lb-gold,.lb-silver,.lb-bronze)::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,var(--medal-hi) 0%,var(--medal) 38%,var(--medal-lo) 68%,var(--medal-hi) 100%);clip-path:polygon(evenodd,8px 0,100% 0,calc(100% - 8px) 100%,0 100%,8px 0,9.5px 2px,2.2px calc(100% - 2px),calc(100% - 9.5px) calc(100% - 2px),calc(100% - 2.2px) 2px,9.5px 2px)}
+    .lb-row:is(.lb-gold,.lb-silver,.lb-bronze) .leader-pos{display:grid;place-items:center;width:38px;height:33px;font-size:.76rem;color:var(--bg-void);background:linear-gradient(155deg,var(--medal-hi) 0 46%,var(--medal) 46% 84%,var(--medal-lo) 84%);clip-path:var(--hex)}
+    .lb-row:is(.lb-gold,.lb-silver,.lb-bronze) .lb-score{color:var(--medal-hi)}
     .lb-main-col{min-width:0;display:flex;flex-direction:column;gap:4px}
     .lb-main-col strong{font:700 .86rem/1.2 var(--heading);color:var(--starlight-cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .lb-tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
@@ -1493,6 +1501,8 @@
       .lb-filters{display:grid;grid-template-columns:1fr 1fr}
       .lb-filters select{min-width:0;width:100%}
       .lb-row{grid-template-columns:36px minmax(0,1fr) auto auto;gap:6px;padding:.5rem .65rem}
+      .lb-row:is(.lb-gold,.lb-silver,.lb-bronze){padding-left:.8rem}
+      .lb-row:is(.lb-gold,.lb-silver,.lb-bronze) .leader-pos{width:32px;height:28px;font-size:.66rem}
     }
     @media (max-width:760px) and (orientation:portrait){
       .mp-mobile-only,.mp-tabs.mp-mobile-only{display:flex}

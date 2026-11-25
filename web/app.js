@@ -3930,10 +3930,11 @@
     const myLower = (net.getPlayerName?.() || '').toLowerCase();
     return entries.map((entry, idx) => {
       const rank = `#${idx + 1}`;
+      const medalClass = idx === 0 ? ' lb-gold' : idx === 1 ? ' lb-silver' : idx === 2 ? ' lb-bronze' : '';
       if (tab === 'players') {
         const isMe = !!(myLower && String(entry.playerName || '').toLowerCase() === myLower);
         const seatName = crew.find(c => c.id === entry.lastSeat)?.name || capFirst(entry.lastSeat || '');
-        return `<div class="lb-row${isMe ? ' lb-me' : ''}">
+        return `<div class="lb-row${medalClass}${isMe ? ' lb-me' : ''}">
           <span class="leader-pos">${rank}</span>
           <div class="lb-main-col">
             <strong>${esc(shownPlayerName(entry.playerName))}</strong>
@@ -3952,7 +3953,7 @@
       const namesLine = players.map(p => shownPlayerName(p.playerName)).join(' · ') || '—';
       const siteLabel = SITES_INFO[entry.site]?.name || entry.site || '';
       const diffLabel = difficulty[entry.difficulty]?.label || entry.difficulty || '';
-      return `<div class="lb-row${isMe ? ' lb-me' : ''}">
+      return `<div class="lb-row${medalClass}${isMe ? ' lb-me' : ''}">
         <span class="leader-pos">${rank}</span>
         <div class="lb-main-col">
           <strong>${esc(namesLine)}</strong>
