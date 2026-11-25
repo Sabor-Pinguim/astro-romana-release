@@ -2779,6 +2779,11 @@
 
     function flightTick(now) {
       if (!flight.active || state.screen !== 'cockpit') return;
+      if (window.ASTRO_MINIGAME_GUIDE?.isOpen?.('cockpit')) {
+        flight.lastTime = now;
+        flight.raf = requestAnimationFrame(flightTick);
+        return;
+      }
       const dt = Math.min(0.05, (now - flight.lastTime) / 1000);
       flight.lastTime = now;
       const keys = inputOf().keys; // mine and the remote pilot's, when we fly this step

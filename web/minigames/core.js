@@ -271,6 +271,12 @@
           let raf = 0, last = 0, elapsed = 0, alive = true;
           const step = now => {
             if (!alive || !host.active) return;
+            if (root.ASTRO_MINIGAME_GUIDE?.isOpen?.('dialog')) {
+              last = now;
+              fn(0, elapsed);
+              if (alive && host.active) raf = requestAnimationFrame(step);
+              return;
+            }
             const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
             last = now; elapsed += dt;
             fn(dt, elapsed);
@@ -319,6 +325,7 @@
 
       function onKey(e) {
         if (!host.active || !keyHandlers.length) return;
+        if (root.ASTRO_MINIGAME_GUIDE?.isOpen?.('dialog')) return;
         if (e.target?.closest?.('input, textarea, select')) return;
         const down = e.type === 'keydown';
         for (const h of keyHandlers) if (h(e, down)) { e.preventDefault(); e.stopPropagation(); return; }

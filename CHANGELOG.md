@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.18] - 2026-11-25
+
+### Fixed
+- Paused experiment minigame and cockpit flight stage timers (and minigame keyboard actions) while the "How to solve" tutorial popup is open, resuming once the player closes it.
+
 ## [1.9.17] - 2026-11-25
 
 ### Changed

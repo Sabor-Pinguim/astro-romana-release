@@ -1,5 +1,5 @@
-// Non-blocking "How to solve" popup for all 21 science experiments and 4 cockpit flight stages.
-// Auto-opens once per minigame (persisted in localStorage) and toggles via "?" without pausing gameplay.
+// "How to solve" tutorial popup for all 21 science experiments and 4 cockpit flight stages.
+// Auto-opens once per minigame (persisted in localStorage), toggles via "?", and pauses task/mission timers while open.
 // Supports drop-in GIF/WebP clips in assets/minigames/<id>.{gif,webp} with an animated SVG/CSS fallback.
 (() => {
   'use strict';

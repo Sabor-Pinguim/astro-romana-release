@@ -45,7 +45,7 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.9.17',
+        version: 'v1.9.18',
         contact: 'Contáctanos',
         emailCopied: 'Correo copiado: {{email}}',
         quitEyebrow: 'Abandonar misión',
