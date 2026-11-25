@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.11] - 2026-11-25
+
+### Changed
+- Highlighted the H-O2 "Roll for the radar" side thruster buttons with faceted solar amber (Pulse) and amethyst/violet (Tap) fills for stronger contrast against the dark background.
+
 ## [1.9.10] - 2026-11-25
 
 ### Fixed

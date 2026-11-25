@@ -1,7 +1,9 @@
 /* H-O2 · Roll for the radar */
 .mg .ho2-pad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.mg .ho2-pad .button{min-width:0;min-height:46px;padding:.55rem .3rem;letter-spacing:.06em;white-space:nowrap}
-.mg .ho2-pad .ho2-tap{--a:var(--f3);--b:var(--f2);--fg:var(--starlight-cream)}
+.mg .ho2-pad .button{--a:#fbbf24;--b:var(--solar-amber);--fg:var(--bg-void);min-width:0;min-height:46px;padding:.55rem .3rem;letter-spacing:.06em;white-space:nowrap}
+.mg .ho2-pad .button:hover:not(:disabled){--a:var(--starlight-cream);--b:#fbbf24;filter:none}
+.mg .ho2-pad .ho2-tap{--a:var(--amethyst);--b:var(--violet-electric);--fg:var(--text-white);box-shadow:inset 0 0 0 1px #ffffff30}
+.mg .ho2-pad .ho2-tap:hover:not(:disabled){--a:#b784f5;--b:var(--amethyst);filter:none}
 .mg .ho2-pad .button:disabled{opacity:.45}
 @media (max-height:500px){.ho2-view{max-width:380px;margin-inline:auto}.mg .ho2-gauge{height:24px}}
 @media (max-height:500px) and (orientation:landscape){
@@ -9,7 +11,7 @@
   dialog[data-exp="H-O2"] .mg-readout{grid-column:1/-1;grid-row:1}
   dialog[data-exp="H-O2"] .ho2-view{grid-column:2;grid-row:2/4;max-width:100%;max-height:100%;height:100%!important;object-fit:contain;align-self:stretch}
   dialog[data-exp="H-O2"] .ho2-pad{display:contents}
-  dialog[data-exp="H-O2"] .ho2-pad .button{min-height:32px;padding:.3rem;font-size:.65rem}
+  dialog[data-exp="H-O2"] .ho2-pad .button{min-height:32px;padding:.3rem;font-size:.72rem}
   dialog[data-exp="H-O2"] .ho2-pad .button:nth-child(1){grid-column:1;grid-row:2}
   dialog[data-exp="H-O2"] .ho2-pad .button:nth-child(2){grid-column:1;grid-row:3}
   dialog[data-exp="H-O2"] .ho2-pad .button:nth-child(3){grid-column:3;grid-row:3}
