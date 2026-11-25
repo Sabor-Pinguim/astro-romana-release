@@ -38,6 +38,13 @@ const DEFAULTS = {
   API_RATE_PER_MIN: 30, // POSTs per IP per minute
   MAX_ROOM_NAME_LEN: 32,
   MAX_PASSWORD_LEN: 32,
+
+  // Secret for POST /api/admin/restart (Authorization: Bearer <token>; npm run server:restart). Empty, or shorter
+  // than ADMIN_TOKEN_MIN_LEN, turns the endpoint off. On the v2 VM it comes from /etc/astro-romana-v2/admin.env,
+  // which setup-v2.sh creates.
+  ADMIN_TOKEN: '',
+  ADMIN_TOKEN_MIN_LEN: 32,
+  ADMIN_FAILS_PER_MIN: 10, // wrong tokens allowed per minute (all callers together) before every attempt gets 429
 };
 
 export const PROTOCOL_VERSION = 1;

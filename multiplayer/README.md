@@ -172,6 +172,15 @@ browser ──https/wss──> Caddy (:443) ──/ws, /health──> node serve
 - **`deploy/` still needs a hand run:** the timer runs a copy of the script installed outside the repository, so code pulled from GitHub never runs as root. When `deploy/` changes, the log says so; run `sudo bash /srv/astro-romana-v2/multiplayer/deploy/setup-v2.sh`.
 - **Logs:** `journalctl -u astro-update-v2 -f`. **Pause:** `sudo systemctl disable --now astro-update-v2.timer`.
 
+### Restart from your machine (admin token)
+
+`POST /api/admin/restart` with `Authorization: Bearer <ADMIN_TOKEN>` closes every room (players see "the room server restarted") and exits; systemd (`Restart=always`) starts the server again in about 2 seconds, with the code the VM has pulled. A server version still waiting for rooms to close starts at once.
+- **The token on the VM:** `setup-v2.sh` creates it once in `/etc/astro-romana-v2/admin.env` (root only, 256 random bits) and prints it that one time. Later: `sudo cat /etc/astro-romana-v2/admin.env`. To change it, delete the file and run `setup-v2.sh` again.
+- **The token on your machine:** copy [.env.example](../.env.example) to `.env` at the root of the repository (git ignores it) and fill in `ASTRO_ADMIN_TOKEN`. Then, from the root:
+  - `npm run server:status`: the versions the VM runs (game and room server) next to your checkout's, uptime, rooms and players online;
+  - `npm run server:restart`: asks first when players are online (`-- --yes` skips the question) and waits for the server to come back.
+- **Safety:** without `ADMIN_TOKEN` (or with one under 32 characters) the endpoint does not exist. The token is compared in constant time and never logged; after 10 wrong tokens in a minute, every attempt gets 429 until the minute ends. Browsers cannot call it (CORS does not allow the `Authorization` header).
+
 ### Alternative: Cloud Run (no VM)
 
 Only the room server, with automatic HTTPS on `*.run.app`. The game is hosted somewhere else, such as Firebase Hosting. From [Cloud Shell](https://shell.cloud.google.com/) or a machine with `gcloud`, at the root of the repository:

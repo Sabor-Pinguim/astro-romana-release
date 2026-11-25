@@ -102,6 +102,43 @@ test('a guest that drops reconnects and keeps its seat', () => withServer({}, as
   assert.equal(guest.status, 'open');
 }));
 
+test('admin restart: off without a long enough token or a restart hook', async () => {
+  const restart = server => fetch(`${server.http}/api/admin/restart`, { method: 'POST', headers: { Authorization: 'Bearer anything' } });
+  for (const [overrides, onRestart] of [[{}, () => {}], [{ ADMIN_TOKEN: 'short-token' }, () => {}], [{ ADMIN_TOKEN: 'x'.repeat(40) }, null]]) {
+    const server = await startServer({ ...loadConfig({}), PORT: 0, DB_PATH: ':memory:', ...overrides }, { log: () => {}, onRestart });
+    try { assert.equal((await restart(server)).status, 404); } finally { await server.close(); }
+  }
+});
+
+test('admin restart: needs the token, limits wrong ones, then restarts', async () => {
+  const TOKEN = 'k'.repeat(43);
+  let restarts = 0;
+  const server = await startServer({ ...loadConfig({}), PORT: 0, DB_PATH: ':memory:', ADMIN_TOKEN: TOKEN, ADMIN_FAILS_PER_MIN: 4 },
+    { log: () => {}, onRestart: () => { restarts++; } });
+  try {
+    const post = (authorization, method = 'POST') => fetch(`${server.http}/api/admin/restart`, { method, headers: authorization ? { Authorization: authorization } : {} });
+    assert.equal((await post(`Bearer ${TOKEN}`, 'GET')).status, 405);
+    assert.equal((await post(null)).status, 401);
+    assert.equal((await post('Bearer wrong')).status, 401);
+    assert.equal((await post(`Bearer ${TOKEN}x`)).status, 401);
+    assert.equal((await post(TOKEN)).status, 401); // without "Bearer"
+    const ok = await post(`Bearer ${TOKEN}`);
+    assert.equal(ok.status, 429); // four wrong tokens this minute: even the right one waits
+    assert.equal(restarts, 0);
+  } finally { await server.close(); }
+
+  const fresh = await startServer({ ...loadConfig({}), PORT: 0, DB_PATH: ':memory:', ADMIN_TOKEN: TOKEN }, { log: () => {}, onRestart: () => { restarts++; } });
+  try {
+    const res = await fetch(`${fresh.http}/api/admin/restart`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}` } });
+    assert.equal(res.status, 202);
+    const body = await res.json();
+    assert.equal(body.restarting, true);
+    assert.equal(body.rooms, 0);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal(restarts, 1);
+  } finally { await fresh.close(); }
+});
+
 test('health and the test page are served', () => withServer({}, async server => {
   const health = await (await fetch(`${server.http}/health`)).json();
   assert.equal(health.ok, true);

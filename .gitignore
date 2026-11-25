@@ -9,3 +9,7 @@ multiplayer/data/
 *.sqlite*
 # Local multi-agent coordination
 SHARED_CONTEXT.md
+# Local secrets: the room server admin token (npm run server:restart; see .env.example)
+.env
+.env.*
+!.env.example

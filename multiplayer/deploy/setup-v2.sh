@@ -112,6 +112,15 @@ echo "at $(as_app git -C "$APP_DIR" log -1 --format='%h %s')"
 # ---------------------------------------------------------------- room server v2 (systemd, port 8788 + SQLite)
 step "room server v2"
 restart_rooms=0
+# Admin token for POST /api/admin/restart (npm run server:restart on your machine reads the same token from .env).
+# Made once, root-only; to change it: sudo rm /etc/astro-romana-v2/admin.env and run this script again.
+ADMIN_ENV=$CONF_DIR/admin.env
+new_token=''
+if [ ! -s "$ADMIN_ENV" ]; then
+  new_token=$(node -e 'console.log(require("node:crypto").randomBytes(32).toString("base64url"))')
+  (umask 077 && printf 'ADMIN_TOKEN=%s\n' "$new_token" > "$ADMIN_ENV")
+  restart_rooms=1
+fi
 if touched multiplayer/ || [ ! -d "$APP_DIR/multiplayer/node_modules" ]; then
   as_app bash -c 'cd "$1" && npm ci --omit=dev --no-audit --no-fund' _ "$APP_DIR/multiplayer"
   restart_rooms=1
@@ -139,6 +148,7 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR/multiplayer
 EnvironmentFile=$CONF_DIR/rooms.env
+EnvironmentFile=-$ADMIN_ENV
 StateDirectory=$SERVICE_NAME
 ExecStart=/usr/bin/node server.mjs
 KillSignal=SIGTERM
@@ -272,4 +282,14 @@ Done (v2 running alongside v1).
 Logs: journalctl -u $SERVICE_NAME -f   ·   journalctl -u caddy -f   ·   journalctl -u astro-update-v2 -f
 Updates are automatic (each push to $BRANCH, within a minute). Run this script again only when
 multiplayer/deploy/ changes: sudo bash $APP_DIR/multiplayer/deploy/setup-v2.sh
+Restart the room server from your machine: npm run server:restart (admin token: sudo cat $ADMIN_ENV)
 EOF
+if [ -n "$new_token" ]; then
+  cat <<EOF
+
+New admin token (shown only now; it stays in $ADMIN_ENV, readable by root only).
+Put this line in the .env at the root of the repository on your machine (git ignores .env):
+
+  ASTRO_ADMIN_TOKEN=$new_token
+EOF
+fi

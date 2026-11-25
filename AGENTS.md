@@ -182,6 +182,7 @@ npm run web:audit:mobile       # a página nos tamanhos da seção 4 (--lang pt|
 npm run i18n:check             # valida as traduções (i18n:audit: nas telas, com pseudo-localização)
 npm run version:bump -- patch  # sobe a versão em todos os lugares (version:check só confere)
 npm run version:bump:server -- patch   # mudou o servidor de salas: a VM o reinicia sozinha
+npm run server:status          # versões e salas na VM; server:restart reinicia já (token no .env, nunca no git)
 cd multiplayer && npm install && npm start   # servidor de salas + página de teste (localhost:8787); npm test valida
 ```
 

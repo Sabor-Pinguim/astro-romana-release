@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.14] - 2026-11-25
+
+### Added
+- Room server 1.0.2: `POST /api/admin/restart` closes every room and restarts the server (systemd brings it back with the code the VM has pulled). It needs `Authorization: Bearer <ADMIN_TOKEN>`; without a token of 32+ characters the endpoint does not exist, the token is compared in constant time and never logged, and 10 wrong tokens in a minute block every attempt until the minute ends.
+- `npm run server:status` (the VM's game and room server versions next to this checkout's, uptime, rooms and players online) and `npm run server:restart` (asks before closing rooms with players; `-- --yes` skips it), in `tools/server-admin.mjs`. They read `ASTRO_ADMIN_TOKEN` (and optionally `ASTRO_SERVER_URL`) from a local `.env`; `.env.example` shows the format and `.gitignore` keeps `.env` out of Git.
+
+### Changed
+- `multiplayer/deploy/setup-v2.sh` creates a random admin token once in `/etc/astro-romana-v2/admin.env` (root only), passes it to the room server and prints it on that run for the local `.env`. Run it once on the VM after this version: it restarts the room server. The auto-updater also restarts it for 1.0.2 once no room is open.
+- Documented the admin restart in `multiplayer/README.md` and the new commands in `AGENTS.md`.
+
 ## [1.9.13] - 2026-11-25
 
 ### Added

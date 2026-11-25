@@ -7,7 +7,11 @@
 //   GET  /api/leaderboard       ?tab=missions|players &difficulty=all|easy|normal|hard &site=all|jezero|gale &limit=1..50
 //   POST /api/leaderboard       a finished mission (the host sends it); deduplicated by its id. Optional fields:
 //                               experiments [{ id, stars, bot? }], runSeed, scoreMultiplier (0.75 | 1 | 1.5)
+//   POST /api/admin/restart     Authorization: Bearer <ADMIN_TOKEN>. Closes every room ("the room server
+//                               restarted") and exits; systemd (Restart=always) starts it again with the code on
+//                               disk. Off without ADMIN_TOKEN. From your machine: npm run server:restart
 
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -37,12 +41,22 @@ const EXPERIMENT_ID = /^[HLOM]-[OS][1-6]$/; // docs/minigames.md codes, e.g. H-S
 const SCORE_MULTIPLIERS = [0.75, 1, 1.5]; // game-balance: easy, normal, hard (docs/experiments-implementation.md §4.6)
 const MAX_SCORE = 100_000; // sanity cap on a submitted score (game scores are in the low thousands)
 
-export async function startServer(config = loadConfig(), { log = console.log } = {}) {
+// onRestart: what POST /api/admin/restart does once it has answered (the entry point closes and exits). Without
+// it, or without a long enough ADMIN_TOKEN, the endpoint does not exist.
+export async function startServer(config = loadConfig(), { log = console.log, onRestart = null } = {}) {
   const hub = new RoomHub(config, { log });
   const db = openDatabase(config.DB_PATH);
   const started = Date.now();
   const allowed = new Set(config.ALLOWED_ORIGINS);
   const posts = new Map(); // ip → { count, resetAt } for POST rate limiting
+
+  // The admin token, kept only as a hash and compared in constant time.
+  const sha = text => createHash('sha256').update(String(text)).digest();
+  const token = config.ADMIN_TOKEN || '';
+  if (token && token.length < config.ADMIN_TOKEN_MIN_LEN) log(`admin: ADMIN_TOKEN is shorter than ${config.ADMIN_TOKEN_MIN_LEN} characters, so /api/admin/restart stays off`);
+  const adminHash = token.length >= config.ADMIN_TOKEN_MIN_LEN && onRestart ? sha(token) : null;
+  const adminFails = { count: 0, resetAt: 0 };
+  const tokenMatches = header => { const m = /^Bearer\s+(\S+)$/.exec(header || ''); return !!m && timingSafeEqual(sha(m[1]), adminHash); };
 
   // CORS: any origin when ALLOWED_ORIGINS is empty (local development), otherwise only the listed ones.
   function corsHeaders(req) {
@@ -132,6 +146,22 @@ export async function startServer(config = loadConfig(), { log = console.log } =
       if (!mission) return json(req, res, 400, { error: 'invalid mission' });
       const result = db.recordMission(mission);
       return json(req, res, result.recorded ? 201 : 200, { ok: true, id: mission.id, duplicate: result.duplicate });
+    }
+    if (path === '/api/admin/restart' && adminHash) {
+      if (req.method !== 'POST') return json(req, res, 405, { error: 'method not allowed' });
+      const now = Date.now();
+      if (now >= adminFails.resetAt) Object.assign(adminFails, { count: 0, resetAt: now + 60_000 });
+      if (adminFails.count >= config.ADMIN_FAILS_PER_MIN) return json(req, res, 429, { error: 'rate limited' });
+      if (!tokenMatches(req.headers.authorization)) {
+        adminFails.count++;
+        log(`admin: restart refused (wrong or missing token)`);
+        return json(req, res, 401, { error: 'unauthorized' });
+      }
+      const stats = hub.stats();
+      log(`admin: restart requested with ${stats.rooms} room(s) and ${stats.online} player(s) online`);
+      json(req, res, 202, { ok: true, restarting: true, version: SERVER_VERSION, ...stats });
+      setTimeout(onRestart, 50); // the reply goes out first
+      return;
     }
     return json(req, res, 404, { error: 'not found' });
   }
@@ -249,7 +279,11 @@ function reply(res, status, type, body, extra = {}) {
 // Entry point (npm start).
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = loadConfig();
-  const server = await startServer(config);
+  // An admin restart closes every room (players see "the room server restarted") and exits; under systemd
+  // (Restart=always) the server is back in a couple of seconds, with whatever code the VM has pulled.
+  const server = await startServer(config, {
+    onRestart: async () => { await server.close('server'); console.log('admin restart: exiting'); process.exit(0); },
+  });
   console.log(`room server on ${config.HOST || '*'}:${server.port} · test page ${server.http}/ · db ${config.DB_PATH} · origins ${config.ALLOWED_ORIGINS.join(', ') || 'any'}`);
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, async () => { await server.close('server'); process.exit(0); }); // Cloud Run sends SIGTERM
