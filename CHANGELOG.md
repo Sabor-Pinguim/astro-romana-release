@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.19] - 2026-11-25
+
+### Added
+- Color-coded geometric SVG impact icons on each rocket part card (cyan bolt for Minigames, amber star for Score, green gear for Engineering/Flight; dual icons on parts affecting both Minigames and Score) with a compact legend above the parts list in EN/PT/ES.
+
+### Changed
+- Simplified Dr. Nancy Roman's rocket-building wizard by removing the formula bar, duplicate status pill, and redundant Skip button, and tightening step descriptions.
+- Kept Easy mode rocket building free of engineering warnings (only budget/cost remains as a constraint).
+- Rewrote rocket part role descriptions in EN/PT/ES to state each part's actual gameplay impact (liftoff gusts, 3★ experiment cap, solar storm shelter, cockpit control, landing stability, power reliability, and science score bonus).
+
 ## [1.9.18] - 2026-11-25
 
 ### Fixed

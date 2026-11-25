@@ -699,6 +699,15 @@
     .catalog-summary label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;color:var(--starlight-cream);font-weight:700;text-transform:uppercase}
     .catalog-summary select{min-width:120px;padding:.55rem 2rem .55rem .7rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:#281147;font:700 .72rem var(--heading);letter-spacing:.06em;cursor:pointer}
     .catalog-summary select:focus-visible{outline:2px solid var(--starlight-cream);outline-offset:2px}
+    .part-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:-2px 0 6px;padding:4px 0;font:600 .58rem var(--heading);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+    .part-legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+    .part-impact-ico{display:inline-block;width:13px;height:13px;flex:none;fill:currentColor}
+    .is-minigame{color:#1FA2FF}
+    .is-score{color:#F2A900}
+    .is-engineering{color:#2BB673}
+    .part-top-meta{display:inline-flex;align-items:center;gap:6px;flex:none}
+    .part-impacts{display:inline-flex;align-items:center;gap:4px}
+    .part-impacts .part-impact-ico{width:14px;height:14px}
     .parts-list{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}
     .part{flex:none;padding:14px 14px 14px 16px;background:var(--f1);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
     .part.equipped{background:linear-gradient(112deg,color-mix(in srgb,var(--safe) 16%,var(--f1)) 0 34%,color-mix(in srgb,var(--safe) 9%,var(--f1)) 34%);box-shadow:inset 3px 0 0 var(--safe)}

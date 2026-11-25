@@ -991,12 +991,13 @@
   function renderTelemetry(){
     if(!DATA)return null;
     const m=metrics();
+    const showAlerts=!!(LV().failures||LV().penalties);
     $('#cost-value').textContent=`${money(m.cost)} / ${money(m.budget)}`;setBar('#cost-fill',m.cost/m.budget,m.cost>m.budget?'danger':'');
-    $('#twr-value').textContent=m.ready?U.number(m.twr,{maximumFractionDigits:2}):'—';setBar('#twr-fill',m.ready?m.twr/2:0,m.ready&&m.twr<TWR_MIN()?'danger':'');
+    $('#twr-value').textContent=m.ready?U.number(m.twr,{maximumFractionDigits:2}):'—';setBar('#twr-fill',m.ready?m.twr/2:0,showAlerts&&m.ready&&m.twr<TWR_MIN()?'danger':'');
     $('#twr-hint').textContent=m.ready&&m.twr>=TWR_BARE()?t('planner.twrHintReady',{sec:ascentSeconds(m.twr),min:U.decimal(TWR_MIN(),1),bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.twrHintLow',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()});
-    $('#power-value').textContent=`${number(m.gen)} W / ${number(m.draw)} W`;setBar('#power-fill',m.draw?m.gen/(m.draw*1.5):0,m.gen<m.draw?'danger':'');
-    $('#dv-value').textContent=m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—';setBar('#dv-fill',m.dv/m.leo,m.ready&&!m.orbit?'short':'');
-    $('#mars-value').textContent=m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—';setBar('#mars-fill',m.marsDv/m.transfer,m.orbit&&!m.marsOk?'short':'');
+    $('#power-value').textContent=`${number(m.gen)} W / ${number(m.draw)} W`;setBar('#power-fill',m.draw?m.gen/(m.draw*1.5):0,showAlerts&&m.gen<m.draw?'danger':'');
+    $('#dv-value').textContent=m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—';setBar('#dv-fill',m.dv/m.leo,showAlerts&&m.ready&&!m.orbit?'short':'');
+    $('#mars-value').textContent=m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—';setBar('#mars-fill',m.marsDv/m.transfer,showAlerts&&m.orbit&&!m.marsOk?'short':'');
     $('#mars-hint').textContent=(!m.orbit?t('planner.marsHintWait')
       :!m.marsOk?t('planner.marsHintShort',{stage:stageName(m.refuelStage.key)})
       :m.refuelKg>0?t('planner.marsHintRefuel',{pct:Math.ceil(m.refuelPct),stage:stageName(m.refuelStage.key),mass:tonnes(m.refuelKg)}):t('planner.marsHintEnough'))+` ${tolNote(m.transfer,'marsTransferDeltaVMs')}`;
@@ -1006,23 +1007,23 @@
     const hasUpperBooster=state.rocket.stages.some(s=>s.type==='booster');
     const bayIdx=state.rocket.stages.findIndex(s=>s.type!=='booster');
     const bayKey=bayIdx>=0?`stage-${bayIdx}`:null;
-    setAlert('#booster-alert',!m.ready,
+    setAlert('#booster-alert',showAlerts&&!m.ready,
       !b.engine?t('planner.alerts.noEngine',{easy:easyNote()}):!b.tank?t('planner.alerts.noTank',{easy:easyNote()}):t('planner.alerts.propellantMismatch',{engineFuel:fuelOf(b.engine),tankFuel:fuelOf(b.tank),easy:easyNote()}),
       !b.engine?t('planner.hints.noEngine'):!b.tank?t('planner.hints.noTank',{fuel:fuelOf(b.engine)}):t('planner.hints.propellantMismatch',{engineFuel:fuelOf(b.engine)}),
       {key:'booster',tab:!b.engine?'engine':'tank',label:!b.engine?t('planner.hints.goStage1Engines'):t('planner.hints.goStage1Tanks')}
     );
-    setAlert('#stage-alert',!!dead,
+    setAlert('#stage-alert',showAlerts&&!!dead,
       !dead?'':dead.issue==='thrust'?t('planner.alerts.stageTooWeak',{stage:stageName(dead.key).toUpperCase(),twr:U.decimal(dead.twr,2),min:U.decimal(UPPER_TWR(),1),easy:easyNote()})
         :t('planner.alerts.stageDead',{stage:stageName(dead.key).toUpperCase(),reason:dead.issue==='propellant'?t('planner.alerts.reasonPropellant'):t('planner.alerts.reasonIncomplete')}),
       !dead?'':dead.issue==='thrust'?t('planner.hints.stageTooWeak',{stage:stageName(dead.key)}):dead.issue==='propellant'?t('planner.hints.stagePropellant',{stage:stageName(dead.key)}):t('planner.hints.stageIncomplete',{stage:stageName(dead.key)}),
       dead?{key:dead.key,tab:dead.issue==='propellant'?'tank':'engine',label:t('planner.hints.goStage',{stage:stageName(dead.key)})}:null
     );
-    setAlert('#twr-alert',m.ready&&m.twr<TWR_MIN(),
+    setAlert('#twr-alert',showAlerts&&m.ready&&m.twr<TWR_MIN(),
       m.twr<TWR_BARE()?t('planner.alerts.noLiftoff',{bare:U.decimal(TWR_BARE(),1),easy:easyNote()}):t('planner.alerts.lowTwr',{min:U.decimal(TWR_MIN(),1)}),
       t('planner.hints.lowTwr',{min:U.decimal(TWR_MIN(),1)}),
       {key:'booster',tab:'engine',label:t('planner.hints.goStage1Engines')}
     );
-    setAlert('#dv-alert',m.ready&&!m.marsOk,
+    setAlert('#dv-alert',showAlerts&&m.ready&&!m.marsOk,
       !m.orbit?t('planner.alerts.noOrbit',{easy:easyNote()}):t('planner.alerts.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer),easy:easyNote()}),
       !m.orbit?(hasUpperBooster?t('planner.hints.noOrbitTank'):t('planner.hints.noOrbitStage')):t('planner.hints.noMars',{stage:m.refuelStage?stageName(m.refuelStage.key):stageName('booster')}),
       {key:!m.orbit?'booster':(m.refuelStage?.key||'booster'),tab:'tank',label:t('planner.hints.goTanks')}
@@ -1032,7 +1033,7 @@
       t('planner.hints.overBudget',{over:money(m.cost-m.budget)}),
       {key:'booster',tab:'engine',label:t('planner.hints.goStage1Engines')}
     );
-    setAlert('#power-alert',m.gen<m.draw,
+    setAlert('#power-alert',showAlerts&&m.gen<m.draw,
       t('planner.alerts.powerDeficit'),
       t('planner.hints.powerDeficit',{watts:number(m.draw-m.gen)}),
       bayKey?{key:bayKey,tab:'power',label:t('planner.hints.goPower')}:null
@@ -1140,6 +1141,32 @@
     }
     return `<svg viewBox="0 0 64 64" aria-hidden="true">${polys}</svg>`;
   }
+  const PART_IMPACT_SVG = {
+    minigame: '<polygon points="9.2,1 3,9 7.8,9 6.8,15 13,7 8.2,7"/>',
+    score: '<polygon points="8,1.2 10.1,5.6 15,6.2 11.4,9.6 12.3,14.5 8,12.1 3.7,14.5 4.6,9.6 1,6.2 5.9,5.6"/>',
+    engineering: '<path d="M6.8,1 9.2,1 9.7,2.9 11,3.4 12.6,2.2 14.3,3.9 13.1,5.5 13.6,6.8 15.5,7.3 15.5,9.7 13.6,10.2 13.1,11.5 14.3,13.1 12.6,14.8 11,13.6 9.7,14.1 9.2,16 6.8,16 6.3,14.1 5,13.6 3.4,14.8 1.7,13.1 2.9,11.5 2.4,10.2 0.5,9.7 0.5,7.3 2.4,6.8 2.9,5.5 1.7,3.9 3.4,2.2 5,3.4 6.3,2.9Z M8,5.8 A2.7,2.7 0 1,0 8,11.2 A2.7,2.7 0 1,0 8,5.8Z" fill-rule="evenodd"/>',
+  };
+  function partImpactCategories(id) {
+    const cats = [];
+    const isComm = id.startsWith('comm-') || id === 'cabin-scan-console';
+    const isEdl = id.startsWith('edl-');
+    const isMinigame = id.startsWith('fins-') || id.startsWith('power-') || isComm || isEdl
+      || id === 'cabin-orion-cockpit' || id === 'cabin-autonav-conjunction'
+      || id === 'cabin-storm-shelter' || id === 'hab-veggie-rad-astrorad';
+    const isScore = isComm || isEdl || id.startsWith('sci-')
+      || id === 'truss-ingenuity' || id === 'drill-corer-cryo' || id === 'cabin-msg-minion';
+    if (isMinigame) cats.push('minigame');
+    if (isScore) cats.push('score');
+    if (!cats.length) cats.push('engineering');
+    return cats;
+  }
+  function partImpactIcons(id) {
+    const icons = partImpactCategories(id).map(cat => {
+      const label = t(`planner.impact.${cat}Title`);
+      return `<span class="is-${cat}" title="${esc(label)}" aria-label="${esc(label)}"><svg class="part-impact-ico" viewBox="0 0 16 16" aria-hidden="true">${PART_IMPACT_SVG[cat]}</svg></span>`;
+    }).join('');
+    return `<span class="part-impacts">${icons}</span>`;
+  }
   function renderCatalog(){
     if(!DATA){$('#parts-list').innerHTML=`<div class="empty-state">${t('planner.loadingParts')}</div>`;return;}
     const sel=state.sel,tabs=tabsFor(sel);if(!tabs.some(t=>t[0]===state.tab))state.tab=tabs[0][0];
@@ -1150,7 +1177,7 @@
     if(sel.kind==='stage'){const control=$('#stage-type');control.value=state.rocket.stages[sel.index].type||'bay';control.addEventListener('change',()=>{state.tab=control.value==='booster'?'engine':'power';plan('stageType',sel.index,control.value);});}
     const inst=installedIn(sel),current=isBooster(sel)?(sel.kind==='booster'?state.rocket.booster:state.rocket.stages[sel.index])[state.tab]:sel.kind==='stage'?inst[0]:null;
     $('#parts-list').innerHTML=partsFor(sel,state.tab).map(id=>{const p=part(id),on=inst.includes(id);
-      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${esc(partName(id))}</span><span class="part-slot">${t('planner.tier',{n:p.tier})}</span></div><p>${esc(partRole(id).replace(/`/g,''))}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?t('planner.btnRemove'):current?t('planner.btnSwap'):t('planner.btnInstall')}</button></article>`;}).join('');
+      return `<article class="part ${on?'equipped':''}"><div class="part-head"><div class="part-thumb" data-part-thumb="${id}">${partThumbFallback(id,p)}</div><div class="part-body"><div class="part-top"><span class="part-name">${esc(partName(id))}</span><span class="part-top-meta">${partImpactIcons(id)}<span class="part-slot">${t('planner.tier',{n:p.tier})}</span></span></div><p>${esc(partRole(id).replace(/`/g,''))}</p></div></div><div class="part-metrics">${partMetrics(id).map(x=>`<span>${x}</span>`).join('')}</div><button type="button" data-part="${id}">${on?t('planner.btnRemove'):current?t('planner.btnSwap'):t('planner.btnInstall')}</button></article>`;}).join('');
     $$('#parts-list [data-part]').forEach(b=>b.addEventListener('click',()=>togglePart(b.dataset.part)));
     window.dispatchEvent(new Event('astro:catalog'));
   }
@@ -1389,11 +1416,14 @@
     $('#wizard-step-kicker').textContent = t('planner.wizard.kicker', { current: String(idx + 1).padStart(2, '0'), total: String(WIZARD_STEPS.length).padStart(2, '0') });
     $('#wizard-step-title').textContent = t(`${baseKey}.title`);
     $('#wizard-step-body').textContent = t(`${baseKey}.body`, status.vars);
-    $('#wizard-formula').textContent = t(`${baseKey}.formula`, status.vars);
+    const formulaEl = $('#wizard-formula');
+    if (formulaEl) formulaEl.textContent = t(`${baseKey}.formula`, status.vars);
     const checkEl = $('#wizard-check');
-    const checkText = t(status.done ? `${baseKey}.checkReady` : `${baseKey}.checkPending`, status.vars);
-    checkEl.textContent = t(status.done ? 'planner.wizard.checkDone' : 'planner.wizard.checkPending', { text: checkText });
-    checkEl.classList.toggle('is-done', status.done);
+    if (checkEl) {
+      const checkText = t(status.done ? `${baseKey}.checkReady` : `${baseKey}.checkPending`, status.vars);
+      checkEl.textContent = t(status.done ? 'planner.wizard.checkDone' : 'planner.wizard.checkPending', { text: checkText });
+      checkEl.classList.toggle('is-done', status.done);
+    }
     const nav = $('#wizard-steps-nav');
     if (nav) {
       nav.innerHTML = WIZARD_STEPS.map((s, i) => {
@@ -1513,6 +1543,8 @@
       const tab = ['no-tank', 'propellant'].includes(lift.reason) ? 'tank' : 'engine';
       addWarning(lift.status, 'booster', tab);
     }
+    if (m.cost > m.budget) addWarning(t('launch.risks.overBudget'), 'booster', 'engine');
+    if (LV().failures || LV().penalties) {
     for (const stage of m.stack.slice(1)) {
       if (!stage.issue) continue;
       const name = capFirst(stageName(stage.key));
@@ -1527,7 +1559,6 @@
       const tab = state.rocket.booster.engine && (!state.rocket.booster.tank || m.issue === 'propellant') ? 'tank' : 'engine';
       addWarning(t('launch.risks.lowTwr', { min: U.decimal(TWR_MIN(), 1) }), 'booster', tab);
     }
-    if (m.cost > m.budget) addWarning(t('launch.risks.overBudget'), 'booster', 'engine');
     if (m.gen < m.draw) {
       const stages = state.rocket.stages;
       let bayIndex = stages.findIndex(stage => stage.type !== 'booster' && !stage.item);
@@ -1547,6 +1578,7 @@
     if (m.ready && !m.orbit) addWarning(t('launch.risks.noOrbit', { dv: U.velocityMs(m.dv), leo: U.velocityMs(m.leo) }), 'booster', 'tank');
     if (m.orbit && !m.marsOk) {
       addWarning(t('launch.risks.noMars', { marsDv: U.velocityMs(m.marsDv), transfer: U.velocityMs(m.transfer) }), m.refuelStage.key, 'tank');
+    }
     }
     $('#launch-title').textContent=!lift.ok?t('launch.titleNoPad'):abort?(abort.reason==='no-orbit'?t('launch.titleNoOrbit'):t('launch.titleNoMars')):warnings.length?t('launch.titleRisks'):t('launch.titleReady');
     $('#launch-message').textContent=!lift.ok?t('launch.msgNoPad',{detail:lift.detail}):abort?t('launch.msgAbort',{warn:abort.warn}):warnings.length&&!LV().failures?t('launch.msgEasy'):warnings.length?t('launch.msgRisks'):t('launch.msgReady');
