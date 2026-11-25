@@ -13,6 +13,9 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ## [1.9.17] - 2026-11-25
 
+### Changed
+- Added ornate faceted gold, silver, and bronze borders, left ribbons, and hexagonal rank medallions to the top 3 cards in both Top Missions and Top Astronauts leaderboards.
+
 ### Fixed
 - Stopped the Play Mode buttons ("Play solo" and "Play multiplayer") from stretching on mobile: the illustration now takes the flexible row and the buttons keep a fixed height (36 px in landscape, 40 px in portrait). Also raised the cockpit direction pad buttons and the lobby planet pins to the 32 px touch minimum in landscape (`web/styles.css`).
 - Fitted all 21 experiment minigames in `#minigame-dialog` and `#dev-exp-dialog` on phones without scrolling the dialog, in portrait and landscape (checked at 390×844, 667×375 and 844×390):
