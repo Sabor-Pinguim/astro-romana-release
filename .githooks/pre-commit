@@ -1,0 +1,8 @@
+#!/bin/sh
+# Every commit raises the project version and fills its CHANGELOG.md section (AGENTS.md §10).
+# Turned on by `npm install` (git config core.hooksPath .githooks). Skip it once: git commit --no-verify
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: Node not found, so the version check was skipped (AGENTS.md §10)." >&2
+  exit 0
+fi
+exec node tools/version.mjs --pre-commit

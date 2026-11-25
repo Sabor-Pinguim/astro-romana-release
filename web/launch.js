@@ -57,7 +57,7 @@ function addTechnologyPark(scene) {
   const signContext = signCanvas.getContext('2d');
   signContext.textAlign = 'center'; signContext.textBaseline = 'middle';
   signContext.font = '700 78px sans-serif';
-  signContext.fillStyle = '#34413f'; signContext.fillText('PARQUE TECNOLÓGICO DE SOROCABA', 1024, 64, 1990);
+  signContext.fillStyle = '#34413f'; signContext.fillText('PARQUE TECNOLÓGICO DE SOROCABA', 1024, 64, 1990); // i18n-ok: the name on the real sign
   const signTexture = new THREE.CanvasTexture(signCanvas); signTexture.colorSpace = THREE.SRGBColorSpace;
   const signPositions = [], signUVs = [], signIndices = [], signSegments = 12;
   // Centre the lettering on the junction of the two facade halves and the rocket's x=0 axis.

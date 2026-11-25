@@ -311,7 +311,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       ctx.fillStyle = '#8da9bd';
       for (let i = 0; i < 32; i++) ctx.fillRect((i * 137 + 23) % w, (i * 83 + 17) % h, 2, 2);
       ctx.fillStyle = '#b8d9e9'; ctx.font = 'bold 22px sans-serif';
-      ctx.fillText(f.docked ? 'HARD-DOCK' : 'DOCKING CAMERA', 18, 30);
+      ctx.fillText(window.ASTRO_I18N?.t(f.docked ? 'cockpit.screens.hardDock' : 'cockpit.screens.dockingCamera') ?? '', 18, 30);
       const g = f.docking, x = 256 + (g?.value[1] || 0) * 100, y = 177 - (g?.value[0] || 0) * 70;
       ctx.strokeStyle = '#8ac5d0'; ctx.lineWidth = 5; ctx.strokeRect(190, 105, 132, 144);
       ctx.beginPath(); ctx.moveTo(30, 177); ctx.lineTo(190, 177); ctx.moveTo(322, 177); ctx.lineTo(482, 177); ctx.stroke();

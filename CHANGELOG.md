@@ -7,9 +7,34 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
   - **Patch (`X.Y.Z`):** small changes, bug fixes, tweaks, docs, chores (`1.3.0` → `1.3.1`).
   - **Minor (`X.Y.0`):** major/significant features; resets the patch to `0` (`1.3.1` → `1.4.0`).
   - **Major (`X.0.0`):** only when explicitly requested by the user/team.
-- Keep `package.json`, `index.html`, `web/locales/en.js`, `web/locales/pt.js`, and this `CHANGELOG.md` synchronized on every commit.
+- `npm run version:bump -- patch` (or `minor`) sets the new version in `package.json`, `package-lock.json`, `index.html` and `web/locales/{en,pt,es}.js` and opens its section here; `npm run version:check` checks they all agree.
 
 ---
+
+## [1.9.1] - 2026-11-25
+
+### Changed
+- Integrated the advanced multiplayer server controls with the updated fullscreen settings.
+
+## [1.9.0] - 2026-11-25
+
+### Added
+- Added a host-only "remove player" action to the room panel: an × on each other player's chip that asks for a second tap within 4 s. The room server gains a `kick` message: the removed player gets a localized notice, their seat goes back to the AI and their old session can no longer be resumed (`npm test` covers it). The server changed, so the VM needs `setup-v2.sh` again, which restarts the room server.
+- Added a web app manifest, home-screen icons and Apple web-app metas, so the game installed on the home screen opens fullscreen (also on iPhone). The fullscreen setting now stays visible where the browser cannot go fullscreen and explains "Add to Home Screen" instead.
+- Added translation QA: `npm run i18n:check` now also catches keys used in code or HTML that no language defines, experiment keys, text identical to English and hard-coded HTML, canvas and toast text. The new `npm run i18n:audit` opens 19 screens in en, pt, es and pseudo-localization (`index.html?pseudo`) and reports raw keys, missing keys and silent English fallbacks. `npm run web:audit:mobile` accepts `--lang pt|es` and `--pseudo`.
+- Added `npm run version:bump -- patch|minor` and `npm run version:check` (`tools/version.mjs`), which keep the version in step in all 7 places (now including `package-lock.json`) and open the new section here. A pre-commit hook (`.githooks/pre-commit`, turned on by `npm install`) blocks commits that keep the last version, disagree between files or leave this section empty.
+
+### Changed
+- Caddy now serves the game with `Cache-Control: no-cache`, so a phone no longer mixes a new `index.html` with an old `styles.css` and locale files (the cause of the unstyled chat showing raw keys on mobile). It takes effect after the next `setup-v2.sh`.
+- Trimmed `AGENTS.md` from 24 KB to 16 KB: the 3D model and viewer rules moved to `tools/modeling/AGENTS.md` and the audio rules to `tools/audio/AGENTS.md`, with the same section numbers, and the version rule now uses the script.
+
+### Fixed
+- Translated nine hard-coded screen-reader labels and the cockpit's docking camera titles.
+- The launch review no longer cuts the ascent time out of a translated sentence, which would show "undefined" in a translation without the " · " separator.
+- The leaderboard shows the stored default solo name ("Commander") in the current language.
+- The HiRISE caption follows the unit setting; Portuguese "Timing" became "Sincronia"; long text wraps inside the landing-site card; language buttons carry their `lang`; the Nancy Grace Roman name is marked `translate="no"`.
+- Pseudo-localization keeps placeholder values (an e-mail, a player's name) as they are.
+- Fixed the broken link to the characters document in `AGENTS.md`.
 
 ## [1.8.3] - 2026-11-25
 

@@ -21,6 +21,9 @@ handle /api/* {
 # /multiplayer/demo/ and finds the server at wss://<this host>/ws on its own.
 handle {
 	root * {$SITE_ROOT:/srv/astro-romana}
+	# Browsers check every file again on each load (a cheap 304 when it did not change). Without it they keep a
+	# stale styles.css or locale next to a fresh index.html after a deploy (raw i18n keys, unstyled chat).
+	header Cache-Control "no-cache"
 	file_server {
 		# Dotfiles and folders (.git!) and installed packages never leave the server.
 		hide .* node_modules

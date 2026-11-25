@@ -57,7 +57,33 @@
     });
   }
 
-  function t(key, opts) {
+  // Translation checks (tools/web/i18n-audit.mjs reads them): keys found nowhere (they show raw on screen) and
+  // keys the current language lacks, which i18next quietly fills in from English.
+  const report = { missing: new Set(), fallback: new Set() };
+  function track(key) {
+    if (typeof key !== 'string' || !key || lookup(locales[currentLang]?.translation, key) !== undefined) return;
+    if (lookup(locales[fallbackLng]?.translation, key) !== undefined) report.fallback.add(`${currentLang}:${key}`);
+    else report.missing.add(key);
+  }
+
+  // Pseudo-localization (?pseudo): every translated string comes out accented, about a third longer and inside
+  // ⟦ ⟧, so text still plain on screen was never translated and a cut ⟧ shows text that does not fit. HTML tags,
+  // entities and the values put into placeholders stay as they are.
+  const pseudo = /[?&]pseudo\b/.test(location.search);
+  const ACCENT = { a: 'à', e: 'ë', i: 'ï', o: 'ö', u: 'ü', c: 'ç', n: 'ñ', y: 'ÿ', A: 'Å', E: 'Ë', I: 'Ï', O: 'Ö', U: 'Ü', C: 'Ç', N: 'Ñ' };
+  const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // The string values put into placeholders (an e-mail, a player's name), longest first, as a regex alternative.
+  const keptValues = opts => Object.entries(opts || {})
+    .filter(([k, v]) => typeof v === 'string' && v.trim() && !['defaultValue', 'lng', 'context'].includes(k))
+    .map(([, v]) => v).sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+  const pseudoize = (text, keep) => {
+    const split = new RegExp(`(<[^>]+>|&[#a-z0-9]+;${keep ? `|${keep}` : ''})`);
+    const body = text.split(split).map((part, i) => (i % 2 ? part : part.replace(/[a-zA-Z]/g, ch => ACCENT[ch] || ch))).join('');
+    return `⟦${body}${'~'.repeat(Math.ceil(text.replace(/<[^>]+>/g, '').length * 0.35))}⟧`;
+  };
+  const deepPseudo = (value, keep) => (typeof value === 'string' ? pseudoize(value, keep) : Array.isArray(value) ? value.map(v => deepPseudo(v, keep)) : value);
+
+  function resolve(key, opts) {
     if (hasI18next) {
       const res = window.i18next.t(key, opts);
       if (res !== undefined && res !== key) return res;
@@ -66,6 +92,11 @@
     const fb = primary !== undefined ? primary : lookup(locales[fallbackLng]?.translation, key);
     if (fb === undefined) return opts?.defaultValue ?? key;
     return typeof fb === 'string' ? interpolate(fb, opts) : fb;
+  }
+  function t(key, opts) {
+    track(key);
+    const out = resolve(key, opts);
+    return pseudo && out !== key ? deepPseudo(out, keptValues(opts)) : out;
   }
 
   function syncDocumentAttributes() {
@@ -111,6 +142,8 @@
     languages,
     get language() { return currentLang; },
     get locale() { return locales[currentLang]?._meta?.locale || 'en-US'; },
+    pseudo,
+    report: () => ({ missing: [...report.missing].sort(), fallback: [...report.fallback].sort() }),
   };
 
   syncDocumentAttributes();

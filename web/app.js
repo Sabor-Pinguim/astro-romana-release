@@ -290,7 +290,7 @@
           <span class="site-card-media">
             <img class="site-photo" src="assets/sites/${id}.png" alt="${esc(t('lobby.sitePhotoAlt', { name: s.name }))}">
             <span class="site-card-badges">
-              <span class="tag">HiRISE · 1.5 KM</span>
+              <span class="tag">HiRISE · ${esc(U.distanceKm(1.5))}</span>
               <span class="tag">${s.coords}</span>
             </span>
             <span class="site-walk" aria-hidden="true"><small>${esc(t('lobby.walkArea', { dist: U.distanceM(512, 0) }))}</small></span>
@@ -765,8 +765,13 @@
     const displayPlayer=pName||(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'));
     return {player:true,playerName:displayPlayer,roleText,text:pName?`${pName} · ${roleText}`:roleText};
   }
+  // A solo player with no name is saved as the default name of that day's language ("Comandante"); show it in
+  // today's language instead.
+  const shownPlayerName = name => (Object.values(window.ASTRO_LOCALES || {}).some(p => p.translation?.leaderboard?.soloDefaultName === name) ? t('leaderboard.soloDefaultName') : name);
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
   // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus one-time name entry if joined via invite link).
+  const KICK_ARM_MS = 4000; // the time a second tap has to confirm removing a player
+  let kickTimer = 0;
   function renderRoom(){
     const panel=$('#room-panel');if(!panel)return;
     if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';return;}
@@ -778,11 +783,19 @@
     const playersHtml=onlinePeers.map(p=>{
       const pName=net.sanitizePlayerName?.(p.meta?.name)||(p.host?t('lobby.seatHost'):t('lobby.seatPlayer'));
       const isYou=p.id===net.you?.id;
-      return `<span class="tag room-player${isYou?' is-you':''}">${esc(pName)}</span>`;
+      // The host can remove any other player: one tap arms the button, a second one within KICK_ARM_MS confirms.
+      const kick=net.isHost&&!isYou?`<button class="room-kick" type="button" data-kick="${esc(p.id)}" data-name="${esc(pName)}" aria-label="${esc(t('lobby.room.kick',{name:pName}))}" title="${esc(t('lobby.room.kick',{name:pName}))}">×</button>`:'';
+      return `<span class="tag room-player${isYou?' is-you':''}">${esc(pName)}${kick}</span>`;
     }).join('');
     panel.innerHTML=`<div class="room-head"><span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>${!nameLocked?`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`:''}<div class="room-players"><span class="micro">${t('lobby.room.playersLabel')}</span><div class="room-player-list">${playersHtml}</div></div><button class="button primary room-leave-btn" type="button" id="room-leave">${t('lobby.room.leave')}</button>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{leaveRoomToMenu();});
+    panel.querySelectorAll('[data-kick]').forEach(btn=>btn.addEventListener('click',()=>{
+      if(btn.classList.contains('is-armed')){clearTimeout(kickTimer);net.kick(btn.dataset.kick);toast(t('lobby.room.kickDone',{name:btn.dataset.name}));return;}
+      panel.querySelectorAll('[data-kick].is-armed').forEach(b=>{b.classList.remove('is-armed');b.textContent='×';});
+      btn.classList.add('is-armed');btn.textContent=t('lobby.room.kickConfirm');
+      clearTimeout(kickTimer);kickTimer=setTimeout(()=>{btn.classList.remove('is-armed');btn.textContent='×';},KICK_ARM_MS);
+    }));
     if(!nameLocked){
       const saveOnce=()=>{
         const input=$('#room-player-name');
@@ -1395,7 +1408,7 @@
       [t('launch.summary.stages'),`${state.rocket.stages.length+2}`],
       [t('launch.summary.budgetRemaining'),money(m.budget-m.cost)],
       [t('launch.summary.liftoffMass'),tonnes(m.mass)],
-      [t('launch.summary.twr'),m.ready?`${U.number(m.twr,{maximumFractionDigits:2})} · ${lift.ok?t('launch.summary.twrAscent',{twr:U.number(m.twr,{maximumFractionDigits:2}),sec:lift.seconds}).split(' · ')[1]:t('launch.summary.twrNoLiftoff')}`:t('launch.summary.twrNoIgnition')],
+      [t('launch.summary.twr'),m.ready?`${U.number(m.twr,{maximumFractionDigits:2})} · ${lift.ok?t('launch.summary.ascentTime',{sec:lift.seconds}):t('launch.summary.twrNoLiftoff')}`:t('launch.summary.twrNoIgnition')],
       [t('launch.summary.dvOrbit'),m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—'],
       [t('launch.summary.marsTransfer'),m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—'],
       [t('launch.summary.orbitalRefuel'),m.marsOk?(m.refuelKg>0?`${Math.ceil(m.refuelPct)}% · ${tonnes(m.refuelKg)}`:t('launch.summary.notNeeded')):'—'],
@@ -3648,7 +3661,7 @@
         return `<div class="lb-row${isMe ? ' lb-me' : ''}">
           <span class="leader-pos">${rank}</span>
           <div class="lb-main-col">
-            <strong>${esc(entry.playerName)}</strong>
+            <strong>${esc(shownPlayerName(entry.playerName))}</strong>
             <div class="lb-tags">
               ${isMe ? `<span class="tag is-you">${t('leaderboard.youTag')}</span>` : ''}
               <span class="tag">${esc(t('leaderboard.missionsCount', { count: entry.missions }))}</span>
@@ -3661,7 +3674,7 @@
       }
       const players = Array.isArray(entry.players) ? entry.players : [];
       const isMe = !!(highlightId && entry.id === highlightId) || !!(myLower && players.some(p => String(p.playerName || '').toLowerCase() === myLower));
-      const namesLine = players.map(p => p.playerName).join(' · ') || '—';
+      const namesLine = players.map(p => shownPlayerName(p.playerName)).join(' · ') || '—';
       const siteLabel = SITES_INFO[entry.site]?.name || entry.site || '';
       const diffLabel = difficulty[entry.difficulty]?.label || entry.difficulty || '';
       return `<div class="lb-row${isMe ? ' lb-me' : ''}">

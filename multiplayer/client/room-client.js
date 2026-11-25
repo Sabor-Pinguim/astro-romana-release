@@ -7,7 +7,8 @@
  *   room.on('act', (data, from) => …);      // host: intents from guests, `from` stamped by the server
  *   room.setState('planner', snapshot);     // host → guests, cached for whoever joins later
  *
- * Events: welcome, peers, phase, state, event, act, pose, msg, status, closed, error.
+ * Events: welcome, peers, phase, state, event, act, pose, msg, status, closed, error. A kicked player gets
+ * closed with the reason 'kicked'.
  * A dropped connection reconnects and resumes the same seat on its own; the session also survives a page
  * reload (sessionStorage), see rejoin().
  */
@@ -154,6 +155,7 @@
     pose(data) { return this.raw({ t: 'pose', data }); } // anyone → the others
     send(data, to = 'all') { return this.raw({ t: 'send', to, data }); } // 'host' | 'all' (with you) | 'others' | id
     setSeat(seat) { return this.raw({ t: 'seat', seat }); } // host or guest, joinable phases only
+    kick(id) { return this.raw({ t: 'kick', id }); } // host only: removes that player from the room
     setMeta(meta) { this.meta = meta; return this.raw({ t: 'meta', meta }); }
 
     // ---- connection -----------------------------------------------------------------------------------------

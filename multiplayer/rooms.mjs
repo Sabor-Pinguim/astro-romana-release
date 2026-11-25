@@ -248,6 +248,19 @@ const IN_ROOM = {
     conn.send({ t: 'left' });
   },
 
+  // Host only: removes another player. Their seat frees (the host's game gives it to the AI), their session can no
+  // longer resume, and their connection hears { t: 'closed', reason: 'kicked' }. They may join again with the code.
+  kick(room, peer, msg, conn) {
+    if (peer.id !== room.hostId) return fail(conn, 'not-host', 'kick');
+    const target = typeof msg.id === 'string' ? room.peers.get(msg.id) : null;
+    if (!target) return fail(conn, 'peer-not-found', 'kick');
+    if (target === peer) return fail(conn, 'bad-message', 'kick');
+    const targetConn = target.conn;
+    this.removePeer(room, target);
+    targetConn?.send({ t: 'closed', reason: 'kicked' });
+    this.log(`room ${room.code}: ${target.id} kicked`);
+  },
+
   seat(room, peer, msg, conn) {
     if (!room.joinable.includes(room.phase)) return fail(conn, 'in-progress', 'seat');
     if (!room.seats.includes(msg.seat)) return fail(conn, 'bad-seat', 'seat');
