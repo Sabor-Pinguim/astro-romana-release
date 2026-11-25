@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.8.2] - 2026-11-25
+
+### Added
+- Added a desktop-only, localized Nancy Grace Roman biography popover to the difficulty screen, linked to NASA's official biography.
+
+### Changed
+- Moved the multiplayer "Take seat" action from crew cards into the selected character preview and compacted the room layout for short landscape screens.
+- Prevented mobile controls from selecting their text during taps and long presses.
+
 ## [1.8.1] - 2026-11-25
 
 ### Added

@@ -742,16 +742,15 @@
     $('#planner-title').textContent=t('common.missionPrefix',{name:site.mission});
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
-    $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.mode!=='solo'&&net.joinable&&!seat.player;
+    $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id;
       const statusHtml=seat.roleText?`<span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.roleText)}</span>`:'';
-      const actionHtml=seat.player&&seat.playerName?`<div class="crew-actions"><span class="crew-player-tag">${esc(seat.playerName)}</span></div>`:take?`<div class="crew-actions"><button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button></div>`:'';
+      const actionHtml=seat.player&&seat.playerName?`<div class="crew-actions"><span class="crew-player-tag">${esc(seat.playerName)}</span></div>`:'';
       return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span>${statusHtml}</div>${actionHtml}</article>`;}).join('');
     $$('#crew-grid [data-pick]').forEach(card=>{
       const select=()=>{state.detail={kind:'crew',id:card.dataset.pick};renderLobby();$(`#crew-grid [data-pick="${card.dataset.pick}"]`)?.focus();};
       card.addEventListener('click',e=>{if(!e.target.closest('button'))select();});
       card.addEventListener('keydown',e=>{if(e.target===card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();select();}});
     });
-    $$('#crew-grid [data-take]').forEach(b=>b.addEventListener('click',()=>net.setSeat(b.dataset.take)));
     renderModeStep();renderDifficultyStep();renderSiteStep();renderRoom();renderLobbyStepper();renderDetail();syncSetup();
   }
   // Who plays each crew member: in multiplayer, the room's peers (or NPC for free seats); in solo, all 4 crew members are controlled by the player so no player/NPC assignment is shown on cards.
@@ -811,19 +810,22 @@
     renderLobby();
   }
   function renderDetail(){
-    const d=state.detail,view=$('#detail-view');
+    const d=state.detail,view=$('#detail-view'),seatAction=$('#detail-seat-action');
     if(d.kind==='crew'){
       const p=crew.find(c=>c.id===d.id);
       $('#detail-kind').textContent=t('lobby.kindCrew');$('#detail-name').textContent=p.name;$('#detail-role').textContent=p.role;$('#detail-desc').textContent='“'+p.quote+'”';
       $('#detail-status').textContent=seatStatus(p.id).text;
       $('#detail-specialties').innerHTML=p.tags.map((label,i)=>specialtyIcon(p,label,i)).join('');
       $('#detail-extra').innerHTML=`<div class="perk"><strong>${p.perk}</strong><p>${p.perkText}</p></div>`;
+      const canTake=net.mode!=='solo'&&net.joinable&&!seatStatus(p.id).player;
+      seatAction.innerHTML=canTake?`<button class="invite" type="button" aria-label="${t('lobby.takeSeatBtn')}: ${esc(p.name)}">${t('lobby.takeSeatBtn')}</button>`:'';
+      seatAction.querySelector('button')?.addEventListener('click',()=>net.setSeat(p.id));
       view.classList.remove('site');view.style.setProperty('--crew',p.color);$('#crew-details').style.setProperty('--crew',p.color);
     }else{
       const s=SITES_INFO[d.id];
       $('#detail-kind').textContent=t('lobby.kindSite');$('#detail-name').textContent=s.name;$('#detail-role').textContent=s.tag;$('#detail-desc').textContent=s.desc;
       $('#detail-status').textContent=state.site===d.id?t('lobby.siteSelected'):t('lobby.siteAvailable');
-      $('#detail-extra').innerHTML='';$('#detail-specialties').innerHTML='';$('#detail-site').innerHTML=sitePhoto(d.id,true);view.classList.add('site');
+      $('#detail-extra').innerHTML='';$('#detail-specialties').innerHTML='';$('#detail-site').innerHTML=sitePhoto(d.id,true);seatAction.innerHTML='';view.classList.add('site');
     }
     window.dispatchEvent(new CustomEvent('astro:detail',{detail:d}));
   }

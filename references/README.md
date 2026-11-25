@@ -85,6 +85,7 @@ The main documents behind the game's numbers. Every other citation is in the fil
 | Link Text | Link URL | Used for |
 |---|---|---|
 | Mars 2020 Perseverance Science Instruments | https://science.nasa.gov/mission/mars-2020-perseverance/science-instruments/ | Real Fact cards and minigames (PIXL, SHERLOC, MOXIE…) |
+| Dr. Nancy Grace Roman (1925–2018) | https://science.nasa.gov/people/nancy-roman/ | Difficulty-screen biography: NASA's first chief of astronomy and her role in realizing Hubble |
 | Ingenuity Mars Helicopter | https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/ | Helicopter flight minigame (H-S1) |
 | MOXIE Completes Mars Mission (JPL) | https://www.jpl.nasa.gov/news/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/ | Oxygen oven minigame (L-S1) |
 | Mars Relay Network | https://science.nasa.gov/mars/mars-relay-network/ | Orbiter pass minigame (O-S1); data relay facts |
