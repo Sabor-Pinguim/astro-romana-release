@@ -76,9 +76,12 @@ test('a mission flow: create, link, join, seats, phase, state, act, pose, result
   host.emit({ k: 'results', grade: 'A' });
   assert.deepEqual(await results, [{ k: 'results', grade: 'A' }]);
 
-  const closed = next(guest, 'closed');
+  const promoted = next(guest, 'peers');
   host.leave();
-  assert.deepEqual(await closed, ['host-left']);
+  await promoted;
+  assert.equal(guest.inRoom, true);
+  assert.equal(guest.isHost, true);
+  guest.leave();
   assert.equal(guest.inRoom, false);
 }));
 

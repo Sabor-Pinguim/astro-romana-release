@@ -4,7 +4,7 @@ Online cooperative play for 1 to 4 players. The **room server** is ready in [mul
 
 ## Principles
 
-- **The host decides.** Whoever creates the room is the host and takes Helena's seat. The host's browser runs the rules that already exist: `flightTick`, `surfaceTick`, `completeSurfaceTask` and `showResults`.
+- **The host decides.** Whoever creates the room is the host and starts on Helena's seat by default (and can freely switch to any free seat in the lobby). The host's browser runs the rules that already exist: `flightTick`, `surfaceTick`, `completeSurfaceTask` and `showResults`.
 - **Guests send intentions** (`act`) and draw the state they receive (`state`). They do not run the rule loops.
 - **Each player moves their own astronaut** on the surface and sends its pose (`pose`).
 - **A minigame runs in the browser of the seat's owner**, and only the result goes to the host, as an `act`. This rule applies to today's minigames and to future ones.
@@ -57,7 +57,7 @@ Players can only **join** the room up to the `planner`. After the launch, only s
   - solo: "Create room", or a code and "Join";
   - in a room: the code, "Copy invite link" and "Leave".
 - The status of each card comes from `peers` (`seatStatus`): `HOST`, `PLAYER`, `(OFFLINE)` and `· YOU`, or `AI (NPC)` on a free seat. `#crew-count` counts who is online.
-- **Guest:** each free seat gets a "Take seat" button (`room.setSeat`) while the room is in a joinable phase.
+- **Host and guests:** each free seat gets a "Take seat" button (`room.setSeat`) while the room is in a joinable phase. In solo play, no player/NPC seat status is shown on the crew cards because the single player controls all 4 astronauts.
 - **Destination, landing site and difficulty are host controls.** The screen already said "Host control". The guest sees the buttons disabled and can open the details of each site.
 - The launch summary ("Crew: N players · M AI") uses `peers`.
 
@@ -161,7 +161,7 @@ The `surf.control` map (character → peer id, or `null` for the AI) comes from 
 
 ### 9. Drops and errors
 - **A guest drops:** the `RoomClient` reconnects and takes the seat back on its own. If it does not return within 30 s, the seat becomes free, and on the host the character returns to the AI.
-- **The host drops:** if it does not return within 30 s, the room closes for everyone (`closed host-left`). The guest sees a toast and returns to the menu.
+- **The host drops or leaves:** if the host leaves or does not return within 30 s, host ownership transfers to the next player in join order (`peers` with the new `host` id); the room only closes when no players remain.
 - **Join errors** become toasts in English:
 
   | Code | Toast |

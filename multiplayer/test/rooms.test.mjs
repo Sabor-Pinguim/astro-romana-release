@@ -82,8 +82,26 @@ test('channels: only the host sends phase, state and event; only guests send act
   }
   env.hub.handle(h, { t: 'act', data: 1 });
   assert.equal(h.last().code, 'not-guest');
-  env.hub.handle(h, { t: 'seat', seat: 'oscar' });
-  assert.equal(h.last().code, 'not-guest');
+});
+
+test('both host and guests can change seat to a free one in joinable phases', () => {
+  const env = setup();
+  const { c: h, room } = host(env);
+  const g1 = guest(env, room.code), g2 = guest(env, room.code);
+  env.hub.handle(g1, { t: 'seat', seat: g2.last('joined').you.seat });
+  assert.equal(g1.last().code, 'seat-taken');
+  env.hub.handle(g1, { t: 'seat', seat: 'maya' });
+  assert.equal(h.last('peers').peers.find(p => p.id === g1.last('joined').you.id).seat, 'maya');
+  // Host switches from helena to free seat lucas; then g1 can take helena
+  env.hub.handle(h, { t: 'seat', seat: 'lucas' });
+  assert.equal(h.last('peers').peers.find(p => p.id === room.you.id).seat, 'lucas');
+  env.hub.handle(g1, { t: 'seat', seat: 'helena' });
+  assert.equal(h.last('peers').peers.find(p => p.id === g1.last('joined').you.id).seat, 'helena');
+  env.hub.handle(h, { t: 'phase', phase: 'surface' });
+  env.hub.handle(g1, { t: 'seat', seat: 'maya' });
+  assert.equal(g1.last().code, 'in-progress');
+  env.hub.handle(h, { t: 'seat', seat: 'maya' });
+  assert.equal(h.last().code, 'in-progress');
 });
 
 test('act reaches the host stamped with the sender seat', () => {
@@ -143,19 +161,6 @@ test('send relays to host, all, others or one peer', () => {
   assert.equal(g1.last().code, 'peer-not-found');
 });
 
-test('a guest changes seat only to a free one, and only in joinable phases', () => {
-  const env = setup();
-  const { c: h, room } = host(env);
-  const g1 = guest(env, room.code), g2 = guest(env, room.code);
-  env.hub.handle(g1, { t: 'seat', seat: g2.last('joined').you.seat });
-  assert.equal(g1.last().code, 'seat-taken');
-  env.hub.handle(g1, { t: 'seat', seat: 'maya' });
-  assert.equal(h.last('peers').peers.find(p => p.id === g1.last('joined').you.id).seat, 'maya');
-  env.hub.handle(h, { t: 'phase', phase: 'surface' });
-  env.hub.handle(g1, { t: 'seat', seat: 'lucas' });
-  assert.equal(g1.last().code, 'in-progress');
-});
-
 test('a dropped guest is offline for the grace period, then its seat is free', () => {
   const env = setup();
   const { c: h, room } = host(env);
@@ -186,23 +191,33 @@ test('resume from a second connection takes the seat from the first', () => {
   assert.equal(g.last().code, 'not-in-room');
 });
 
-test('the room closes when the host leaves, when its grace ends, or when it expires', () => {
+test('host title transfers to the next player in join order when the host leaves or times out; room closes when empty or expired', () => {
   const env = setup();
   let { c: h, room } = host(env);
-  let g = guest(env, room.code);
+  const g1 = guest(env, room.code);
+  const g2 = guest(env, room.code);
+  const id1 = g1.last('joined').you.id;
+  const id2 = g2.last('joined').you.id;
+
   env.hub.handle(h, { t: 'leave' });
-  assert.deepEqual(g.last(), { t: 'closed', reason: 'host-left' });
   assert.deepEqual(h.last(), { t: 'left' });
+  assert.equal(env.hub.rooms.size, 1);
+  assert.equal(g1.last('peers').host, id1);
+  assert.equal(g2.last('peers').host, id1);
+
+  // New host (g1) drops and grace period expires -> host transfers to g2
+  env.hub.disconnect(g1);
+  env.tick(30_000);
+  assert.equal(env.hub.rooms.size, 1);
+  assert.equal(g2.last('peers').host, id2);
+
+  // Last remaining player (g2) leaves -> room closes
+  env.hub.handle(g2, { t: 'leave' });
+  assert.deepEqual(g2.last(), { t: 'left' });
   assert.equal(env.hub.rooms.size, 0);
 
-  ({ c: h, room } = host(env));
-  g = guest(env, room.code);
-  env.hub.disconnect(h);
-  env.tick(30_000);
-  assert.deepEqual(g.last(), { t: 'closed', reason: 'host-left' });
-
   ({ room } = host(env));
-  g = guest(env, room.code);
+  const g = guest(env, room.code);
   env.tick(4 * 60 * 60 * 1000);
   assert.deepEqual(g.last(), { t: 'closed', reason: 'expired' });
   assert.deepEqual(env.hub.stats(), { rooms: 0, peers: 0, online: 0 });

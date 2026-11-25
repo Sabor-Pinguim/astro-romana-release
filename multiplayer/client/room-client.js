@@ -153,7 +153,7 @@
     act(data) { return this.raw({ t: 'act', data }); } // guest → host
     pose(data) { return this.raw({ t: 'pose', data }); } // anyone → the others
     send(data, to = 'all') { return this.raw({ t: 'send', to, data }); } // 'host' | 'all' (with you) | 'others' | id
-    setSeat(seat) { return this.raw({ t: 'seat', seat }); } // guest, joinable phases only
+    setSeat(seat) { return this.raw({ t: 'seat', seat }); } // host or guest, joinable phases only
     setMeta(meta) { this.meta = meta; return this.raw({ t: 'meta', meta }); }
 
     // ---- connection -----------------------------------------------------------------------------------------

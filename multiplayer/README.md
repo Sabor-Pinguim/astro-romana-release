@@ -47,7 +47,7 @@ JSON messages. `create`, `join` and `resume` carry `v: 1`. Every error comes bac
 | `create {seat?, seats?, joinable?, phase?, meta?}` | Anyone | Creates the room; the creator becomes the host. Without lists, it uses the current game's (`config.mjs`) |
 | `join {code, seat?, meta?}` | Anyone, only in a joinable phase | Takes the requested seat or the first free one |
 | `resume {code, id, token}` | Someone who dropped, in any phase | Returns to the same seat |
-| `seat {seat}` | Guest, only in a joinable phase | Switches to a free seat |
+| `seat {seat}` | Host or guest, only in a joinable phase | Switches to a free seat |
 | `meta {meta}` | Anyone | Updates one's own `meta` (a free-form object, up to 512 B) |
 | `phase {phase}` | Host | Changes the room's phase (the game's current screen) |
 | `state {key, data}` | Host | State for the guests. **Stored** by `key`; `data: null` deletes it |
@@ -55,7 +55,7 @@ JSON messages. `create`, `join` and `resume` carry `v: 1`. Every error comes bac
 | `act {data}` | Guest | Intention for the host, with the sender stamped |
 | `pose {data}` | Anyone | For the others. **The last one is stored** per participant |
 | `send {to, data}` | Anyone | Free relay: `to` = `host`, `all` (includes you), `others` or an id |
-| `leave` | Anyone | Leaves the room. If it is the host, the room closes |
+| `leave` | Anyone | Leaves the room. If it is the host, the next player in join order becomes the host (the room closes when the last player leaves) |
 
 ### Server → client
 

@@ -158,8 +158,15 @@ export class RoomHub {
     if (peer.conn) this.links.delete(peer.conn);
     room.peers.delete(peer.id);
     room.poses.delete(peer.id);
-    if (peer.id === room.hostId) this.closeRoom(room, 'host-left');
-    else this.broadcastPeers(room);
+    if (room.peers.size === 0) {
+      this.closeRoom(room, 'host-left');
+      return;
+    }
+    if (peer.id === room.hostId) {
+      const nextHost = [...room.peers.values()].find(p => p.conn) ?? room.peers.values().next().value;
+      room.hostId = nextHost.id;
+    }
+    this.broadcastPeers(room);
   }
 
   closeRoom(room, reason) {
@@ -242,7 +249,6 @@ const IN_ROOM = {
   },
 
   seat(room, peer, msg, conn) {
-    if (peer.id === room.hostId) return fail(conn, 'not-guest', 'seat');
     if (!room.joinable.includes(room.phase)) return fail(conn, 'in-progress', 'seat');
     if (!room.seats.includes(msg.seat)) return fail(conn, 'bad-seat', 'seat');
     if (msg.seat !== peer.seat && [...room.peers.values()].some(p => p.seat === msg.seat)) return fail(conn, 'seat-taken', 'seat');

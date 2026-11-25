@@ -708,9 +708,10 @@
     $('#planner-title').textContent=t('common.missionPrefix',{name:site.mission});
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
-    $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.isGuest&&net.joinable&&!seat.player;
+    $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.mode!=='solo'&&net.joinable&&!seat.player;
+      const statusHtml=seat.roleText?`<span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.roleText)}</span>`:'';
       const actionHtml=seat.player&&seat.playerName?`<div class="crew-actions"><span class="crew-player-tag">${esc(seat.playerName)}</span></div>`:take?`<div class="crew-actions"><button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button></div>`:'';
-      return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.roleText)}</span></div>${actionHtml}</article>`;}).join('');
+      return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span>${statusHtml}</div>${actionHtml}</article>`;}).join('');
     $$('#crew-grid [data-pick]').forEach(card=>{
       const select=()=>{state.detail={kind:'crew',id:card.dataset.pick};renderLobby();$(`#crew-grid [data-pick="${card.dataset.pick}"]`)?.focus();};
       card.addEventListener('click',e=>{if(!e.target.closest('button'))select();});
@@ -719,12 +720,10 @@
     $$('#crew-grid [data-take]').forEach(b=>b.addEventListener('click',()=>net.setSeat(b.dataset.take)));
     renderModeStep();renderDifficultyStep();renderSiteStep();renderRoom();renderLobbyStepper();renderDetail();syncSetup();
   }
-  // Who plays each crew member: the room's peers, or (solo) the player as Helena and the AI for the rest.
+  // Who plays each crew member: in multiplayer, the room's peers (or NPC for free seats); in solo, all 4 crew members are controlled by the player so no player/NPC assignment is shown on cards.
   function seatStatus(id){
     if(net.mode==='solo'){
-      const host=id===crew[0].id,pName=net.sanitizePlayerName?.(net.getPlayerName?.())||'';
-      const roleText=host?t('lobby.hostPlayer'):t('lobby.aiNpc');
-      return {player:host,playerName:host?pName:'',roleText,text:host&&pName?`${pName} · ${roleText}`:roleText};
+      return {player:false,playerName:'',roleText:'',text:''};
     }
     const peer=net.peerOf(id);
     if(!peer){const npc=t('lobby.aiNpc');return {player:false,playerName:'',roleText:npc,text:npc};}
@@ -2808,8 +2807,8 @@
       surf.departing = false;
       surf.rushWarned = false;
       surf.timerSec = difficulty[state.difficulty].surfaceS;
-      // Solo: the crew member open in the lobby. In a room, each player starts on their own seat (the host on its own).
-      surf.activeCrew = net.mode !== 'solo' ? net.seat : state.detail.kind === 'crew' ? state.detail.id : 'maya';
+      // Solo: starts on Helena (commander) and the player can switch freely among all 4 crew members (1–4). In a room, each player starts on their chosen seat.
+      surf.activeCrew = net.mode !== 'solo' ? (net.seat || crew[0].id) : crew[0].id;
       surf.completed = new Set();
       surf.stranded = [];
       surf.strandedIds = [];
@@ -3316,9 +3315,30 @@
       else if (data.name === 'board') board(from.id);
       else if (data.name === 'loaded' && surf.active) surf.loaded.add(from.id);
     }
-    // Host: a player who left for good gives their astronaut back to the AI.
+    // Host: a player who left for good gives their astronaut back to the AI. If this client was promoted from guest to host, take over the active simulation loop.
     function onPeers() {
-      if (!net.isHost || !surf.active || !surf.control) return;
+      if (!net.isHost) return;
+      if (guestFlight) {
+        guestFlight = false;
+        flight.active = true;
+        flight.design ||= captureDesign();
+        flight.ascent ||= ascentPlan(flight.design);
+        cancelAnimationFrame(flight.raf);
+        flight.lastTime = performance.now();
+        flight.raf = requestAnimationFrame(flightTick);
+        renderFlightUI();
+      }
+      if (guestSurface) {
+        guestSurface = false;
+        surf.active = true;
+        surf.loaded ||= new Set();
+        surf.startedAt ||= performance.now();
+        if (!surf.bots && RUN() && state.run) surf.bots = RUN().bots(state.run, onSurfaceBotDone);
+        cancelAnimationFrame(surf.raf);
+        surf.lastTick = performance.now();
+        surf.raf = requestAnimationFrame(surfaceTick);
+      }
+      if (!surf.active || !surf.control) return;
       const here = new Set(net.peers.map(p => p.id));
       let changed = false;
       for (const k of Object.keys(surf.control)) if (surf.control[k] && !here.has(surf.control[k])) { surf.control[k] = null; changed = true; }
@@ -3433,7 +3453,18 @@
     else{net.setPhase(state.screen);syncSetup();}
     lockGuest();renderLobby();
   });
-  net.on('peers',()=>{renderLobby();if(state.detail.kind==='crew')renderDetail();SIM.onPeers();});
+  net.on('peers',()=>{
+    const becameHost=role==='guest'&&net.isHost;
+    role=net.mode;
+    if(becameHost){
+      lockGuest();
+      syncSetup();
+      toast(t('lobby.room.promotedHost'));
+    }
+    renderLobby();
+    if(state.detail.kind==='crew')renderDetail();
+    SIM.onPeers();
+  });
   net.on('phase',guestScreen);
   net.on('state',(key,data)=>{
     if(key==='setup')applySetup(data);

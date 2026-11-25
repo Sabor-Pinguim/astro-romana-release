@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.5] - 2026-11-24
+
+### Changed
+- Transferred host ownership to the next player in join order when the host leaves or times out (closing the room only when empty), and allowed the host to take over any active flight or surface simulation loop on promotion.
+- Allowed the multiplayer host to freely switch to any unoccupied crew seat in the lobby (defaulting to Helena on room creation), while hiding player/NPC status badges on crew cards in solo mode where the player controls all four astronauts.
+- Redistributed the mobile crew screen layout: overlaid the character name inside the full-height 3D preview above a full-width Continue button, compacted the multiplayer room panel into a single horizontal strip, and matched the "Take seat" button proportions to player name tags.
+
 ## [1.7.4] - 2026-11-24
 
 ### Changed
