@@ -17,9 +17,26 @@
   const SCORE_MULTIPLIER = { easy: 0.75, normal: 1, hard: 1.5 };
 
   // A new run: decided by the host (or solo) when the mission starts; guests receive it as plain data.
-  function create({ seed = EXP.random.newSeed(), difficulty = 'normal' } = {}) {
-    return { seed, level: EXP.levelOf(difficulty), experiments: EXP.draw(seed), results: {}, attempts: {} };
+  // Consequences of the rocket design (docs/rocket-consequences.md), kept in the run so a room shares them:
+  // maxStars caps every result (no antenna: the data comes home in part); cut drops that many ground experiments,
+  // picked by the seed (over budget: the program review). The solar storm adds irradiated later (web/app.js).
+  function create({ seed = EXP.random.newSeed(), difficulty = 'normal', maxStars = 3, cut = 0 } = {}) {
+    let experiments = EXP.draw(seed);
+    const dropped = [];
+    if (cut > 0) {
+      const rng = EXP.random.rngFor(seed, 'budget-cut');
+      for (let i = 0; i < cut; i++) {
+        const ground = experiments.filter(id => EXP.byId(id)?.place !== 'orbit');
+        if (!ground.length) break;
+        const id = ground[Math.floor(rng() * ground.length)];
+        dropped.push(id);
+        experiments = experiments.filter(x => x !== id);
+      }
+    }
+    return { seed, level: EXP.levelOf(difficulty), experiments, results: {}, attempts: {},
+      consequences: { maxStars: Math.max(1, Math.min(3, maxStars)), dropped, irradiated: null } };
   }
+  const maxStarsOf = run => run?.consequences?.maxStars ?? 3;
   const ofPlace = (run, place) => (run?.experiments || []).map(EXP.byId).filter(e => e && (place === 'ground' ? e.place !== 'orbit' : e.place === place));
   const ownedBy = (run, crew, place) => ofPlace(run, place).find(e => e.crew === crew) || null;
 
@@ -40,7 +57,7 @@
 
   function record(run, id, result) {
     if (!run || run.results[id]) return false;
-    run.results[id] = { stars: Math.max(0, Math.min(3, result.stars | 0)), by: result.by ?? null, bot: !!result.bot };
+    run.results[id] = { stars: Math.max(0, Math.min(maxStarsOf(run), result.stars | 0)), by: result.by ?? null, bot: !!result.bot };
     return true;
   }
 
@@ -100,13 +117,15 @@
     const controller = MG.open(id, {
       root: els.stage, seed: run.seed, level: run.level, attempt: run.attempts[id],
       onRestart: attempt => { run.attempts[id] = attempt; },
-      onFinish(result) {
+      onFinish(raw) {
         current = { ...current, finished: true };
+        // No antenna on board: the result keeps at most maxStars (the rest of the data never reaches home).
+        const cap = maxStarsOf(run), result = raw.stars > cap ? { ...raw, stars: cap } : raw;
         if (done) {
           const set = (sel, text) => { const node = done.querySelector(sel); if (node) node.textContent = text; };
           const starsNode = done.querySelector('[data-stars]');
           if (starsNode) starsNode.innerHTML = starsHtml(result.stars);
-          set('[data-line]', result.summary);
+          set('[data-line]', raw.stars > cap ? `${raw.summary} · ${t('experiments.common.partialData', { from: stars(raw.stars), to: stars(cap) })}` : raw.summary);
           set('[data-fact]', info.fact);
         }
         els.dialog.classList.add('is-complete');
@@ -169,7 +188,7 @@
   }
 
   window.ASTRO_RUN = Object.freeze({
-    STAR_POINTS, SCORE_MULTIPLIER, create, ofPlace, ownedBy, task, tasks, record, bots, crewPoints, multiplier, summary,
+    STAR_POINTS, SCORE_MULTIPLIER, create, maxStarsOf, ofPlace, ownedBy, task, tasks, record, bots, crewPoints, multiplier, summary,
     play, playInDialog, close, completionCard, stars, starsHtml,
     get playing() { return current?.id ?? null; },
   });

@@ -204,10 +204,14 @@ window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async re
   $id('launchpad-fade').classList.remove('on'); $id('launchpad-count').style.opacity = ''; $id('launchpad-count').classList.remove('fail');
   $id('launchpad-eyebrow').textContent = t('launch.pad.eyebrow');
   let done = false;
-  const finish = () => { if (done) return; done = true; $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
+  const onKey = e => {
+    if (e.code !== 'Escape') return;
+    if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+    finish();
+  };
+  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
-  const onKey = e => { if (e.code === 'Escape') finish(); };
-  addEventListener('keydown', onKey, { once: true });
+  addEventListener('keydown', onKey);
 
   let stackGroup = null;
   if (ensureRenderer() && window.ASTRO_BUILD_ROCKET) {
@@ -380,10 +384,14 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
   $id('launchpad-status').textContent = info.status ?? t('launch.pad.abort');
   $id('launchpad-fade').classList.remove('on'); count.style.opacity = ''; count.classList.add('fail'); count.textContent = t('launch.pad.abort');
   let done = false;
-  const finish = () => { if (done) return; done = true; $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
+  const onKey = e => {
+    if (e.code !== 'Escape') return;
+    if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+    finish();
+  };
+  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
-  const onKey = e => { if (e.code === 'Escape') finish(); };
-  addEventListener('keydown', onKey, { once: true });
+  addEventListener('keydown', onKey);
   const end = SPLASH.fall + SPLASH.hold;
   let stackGroup;
   if (ensureRenderer() && window.ASTRO_BUILD_ROCKET) {

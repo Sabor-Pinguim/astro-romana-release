@@ -68,6 +68,6 @@ The press figures ("8,100 micrograys") do not match the data. Check the ⚠ mark
 
 ## What is missing
 
-- **Game integration:** `index.html` plays the ambience and the clicks on the surface (`radAudio`); the storm is not in yet.
+- **Game integration:** `index.html` plays the ambience and the clicks on the surface (`radAudio`), and the storm once at the solar storm event on the way to Mars (`radAudio.storm`, [rocket-consequences.md](rocket-consequences.md)). The dose meter is not synced to `stems[1].envelope` yet.
 - **Trip to Mars:** CDAWeb has no RAD data from the cruise (2011–2012). If the game wants a cruise sound, the data has to come from the PDS archive.
 - **Listen and tune:** validation checks format, volume and the loop seam, not whether it sounds good. The volumes and the key are `game-balance` and can change freely.

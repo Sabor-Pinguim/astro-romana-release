@@ -1095,6 +1095,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   const MARS_G = 3.71; // m/s², Mars surface gravity (same value as tools/modeling/lib/fx-presets.mjs)
   // game-balance: walk/run speed (m/s), jump speed, reach to a block or the lander, and where the blocks
   // land (close enough to visit all four within the launch window).
+  // Radiation dose from the solar storm (web/app.js, docs/rocket-consequences.md): that crew member moves slower.
+  const DOSE_SPEED = 0.7; // game-balance: share of the normal walking and running speed
+  const doseOf = id => (window.ASTRO?.state.run?.consequences?.irradiated === id ? DOSE_SPEED : 1);
   const WALK = 2.2, RUN = 4.6, JUMP = 2.6, REACH = 3.2, BOARD_REACH = 5, BOARD_SAFE_R = 6.5, SPOT_MIN = 20, SPOT_MAX = 75, SPOT_GAP = 28;
   // Where each crew member stands after touchdown (m, south of the lander) and where NPCs rush to board in the final 10 s.
   const CREW_START = { helena: [-5.4, 6.6], lucas: [-1.8, 7.5], oscar: [2.1, 7.5], maya: [5.7, 6.3] };
@@ -1669,7 +1672,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function bindInput(canvas) {
     const live = () => isActive('surface') && s.ready && !dlg.open;
     addEventListener('keydown', e => {
-      if (!live()) return;
+      if (!live() || e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
       if (e.code === 'KeyQ') { if (!e.repeat) { if (!wheel.open) openWheel(true); else if (!wheel.hold) closeWheel(false); } return; }
       if (wheel.open) return wheelKey(e);
       s.keys.add(e.code);
@@ -1815,7 +1818,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     let iy = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     if (s.stick && input) { ix += s.stick.x; iy += s.stick.y; }
     const len = Math.min(1, Math.hypot(ix, iy)), run = k.has('ShiftLeft') || k.has('ShiftRight') || (s.stick && len > .92);
-    const speed = len > .08 ? len * (run ? RUN : WALK) : 0, sin = Math.sin(s.yaw), cos = Math.cos(s.yaw);
+    const speed = len > .08 ? len * (run ? RUN : WALK) * doseOf(s.crew) : 0, sin = Math.sin(s.yaw), cos = Math.cos(s.yaw);
     let mx = 0, mz = 0;
     if (speed) { const n = Math.hypot(ix, iy); mx = (-sin * iy + cos * ix) / n * speed; mz = (-cos * iy - sin * ix) / n * speed; }
     const lim = hf.half - 8;
@@ -1899,7 +1902,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
             }
           }
         } else if (o.ai.state === 'walk') {
-          const spd = rushing ? WALK : WALK * 0.68, dx = o.ai.tx - o.pos.x, dz = o.ai.tz - o.pos.z, dist = Math.hypot(dx, dz);
+          const spd = (rushing ? WALK : WALK * 0.68) * doseOf(o.id), dx = o.ai.tx - o.pos.x, dz = o.ai.tz - o.pos.z, dist = Math.hypot(dx, dz);
           const stepDist = Math.min(dist, spd * dt);
           let nx = clamp(o.pos.x + (dist > 1e-4 ? dx / dist : 0) * stepDist, -lim, lim);
           let nz = clamp(o.pos.z + (dist > 1e-4 ? dz / dist : 0) * stepDist, -lim, lim);
@@ -1934,7 +1937,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         o.walk.setEffectiveWeight(o.walkW * (1 - o.actW));
         o.idle.setEffectiveWeight((1 - o.walkW) * (1 - o.actW));
         o.action.setEffectiveWeight(o.actW);
-        o.walk.timeScale = (rushing ? WALK : WALK * 0.68) / STRIDE;
+        o.walk.timeScale = (rushing ? WALK : WALK * 0.68) * doseOf(o.id) / STRIDE;
       }
       poseAvatar(o, dt);
     }

@@ -523,6 +523,20 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       }
     }
     let lowerDrawnAt = -1;
+
+    // Brownout (power deficit, web/app.js): while a breaker is out, the displays dim and flicker (steady dim with
+    // reduced motion). The model's lit screens share the Display material; the drawn ones are basic materials.
+    const BROWNOUT_LEVEL = { dim: 0.5, off: 0.08, steady: 0.35 }; // game: share of the normal brightness
+    const displayMats = [];
+    root.traverse(o => { if (o.isMesh && o.material?.name === 'Display' && !displayMats.includes(o.material)) displayMats.push(o.material); });
+    const displayGlow = displayMats.map(m => m.emissiveIntensity);
+    let screenLevel = 1;
+    function setScreenLevel(level) {
+      if (level === screenLevel) return;
+      screenLevel = level;
+      displayMats.forEach((m, i) => { m.emissiveIntensity = displayGlow[i] * level; });
+      for (const m of [centreScreen.material, rightScreen.mesh.material, ...lowerScreens.map(s => s.mesh.material)]) m.color.setScalar(level);
+    }
     function drawLowerScreens(now, f) {
       const T = window.ASTRO_I18N?.t || (k => k), crewInfo = window.ASTRO?.crew || [];
       const tm = reducedMotion ? 0 : now / 1000, prog = Math.max(0, Math.min(1, (f?.progress || 0) / 100));
@@ -880,6 +894,9 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
           if (hl.visible) hl.userData.mat.opacity = pulse;
         });
         updateLowerTasks(f, pulse);
+        const brownout = Array.isArray(f.breakers) && f.breakers.some(Boolean);
+        setScreenLevel(!brownout ? 1 : reducedMotion ? BROWNOUT_LEVEL.steady
+          : Math.sin(now * 0.031) + Math.sin(now * 0.017 + 1.3) > 0.9 ? BROWNOUT_LEVEL.off : BROWNOUT_LEVEL.dim);
         if (f.step === 0 || (f.step === 1 && f.portDock)) {
           const d = f.step === 1 ? f.portDock : { x: 0.45, y: -0.3, z: 5 };
           dockingCamera.position.set(d.x, d.y, d.z); dockingCamera.lookAt(d.x, d.y, 0);
@@ -969,6 +986,8 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
           sx = (Math.random() - 0.5) * amp;
           sy = (Math.random() - 0.5) * amp;
         }
+        // Pogo (low TWR, web/app.js): the heavy stack shakes along its axis in the second half of the climb.
+        if (!reducedMotion && f.design?.overweight && f.step === 0 && f.liftoff && (f.progress || 0) > 50) sy += Math.sin(now * 0.035) * 0.01;
       }
       const k = reducedMotion ? 1 : 1 - Math.pow(1 - LOOK.ease, dt * 60);
       look.yaw += (look.goalYaw - look.yaw) * k;

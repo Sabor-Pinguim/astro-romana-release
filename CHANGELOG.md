@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.8.0] - 2026-11-25
+
+### Added
+- **Multiplayer room text chat (`web/chat.js`, `index.html`, `web/styles.css`, `web/locales/{en,pt,es}.js`):** live text chat available across all screens while connected to a multiplayer room over `window.ASTRO_NET`, featuring host-synced history (`setState('chat', ...)` for up to 30 recent messages), unread badge and 3.5 s peek preview when collapsed, localized system notices (connect, peer join/leave, host promotion), `T`/`Esc` shortcuts, `200`-char cap, `500 ms` send cooldown, `textContent`-only escaping, and responsive desktop/mobile layouts.
+- **Rocket build consequences (`web/app.js`, `web/experiment-run.js`, `web/flight.js`, `web/views.js`, `web/locales/experiments/_common.js`, `docs/rocket-consequences.md`, `docs/audio.md`):** recoverable Normal/Hard mission complications when a rocket lacks power (periodic cockpit brownouts and screen dimming until Lucas resets a breaker), has low TWR (second-half ascent pogo oscillation and +15% orbital refueling penalty), lacks an antenna (2-star experiment cap), lacks storm shielding (solar storm event with Curiosity RAD storm audio and 70% surface movement speed for one dosed crew member), or exceeds budget (cancels one seeded surface experiment), surfaced across the launch review, flight alerts, landing toast, and final report.
+
+### Fixed
+- **Keyboard focus isolation (`web/app.js`, `web/views.js`, `web/launch.js`):** prevented Cockpit, Mars Surface, and launchpad/splashdown `Escape` listeners from capturing keystrokes while typing in form inputs, textareas, selects, or editable controls.
+
 ## [1.7.6] - 2026-11-25
 
 ### Added

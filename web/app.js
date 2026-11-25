@@ -57,6 +57,18 @@
       get about(){return t('difficulty.hard.about');}},
   };
   const LV = () => difficulty[state.difficulty];
+  // Consequences of a badly built rocket (docs/rocket-consequences.md): the mission goes on, harder. All game-balance;
+  // on Easy (no penalties) they stay warnings.
+  const CONSEQUENCE = {
+    noDishMaxStars: 2, // no antenna: experiment results keep at most this many stars (the data comes home in part)
+    budgetCut: 1, // over budget: surface experiments the program review cancels
+    lowTwrRefuelExtra: 15, // low TWR: extra share (%) of the tank to refuel in orbit (gravity losses of the slow climb)
+    pogo: { amp: 1.6, rate: 5.2, from: 0.5 }, // low TWR: pogo in the liftoff (degrees, rad/s, share of the climb it starts at)
+    brownoutS: { normal: [30, 48], hard: [20, 32] }, // power deficit: seconds between brownouts (a breaker trips)
+  };
+  const DISH_PARTS = ['comm-dsoc-laser', 'comm-electra-marco', 'comm-rise-xband', 'cabin-scan-console']; // a way to send the data home
+  const SHELTER_PARTS = ['cabin-storm-shelter', 'hab-veggie-rad-astrorad']; // shelter from a solar storm
+  const installedParts = () => { const r = state.rocket; return new Set([r.booster.engine, r.booster.tank, ...r.stages.map(s => s.item), ...r.cabin].filter(Boolean)); };
   const easyNote = () => LV().failures ? '' : t('planner.easyNote');
   // Δv target text: the real target (⚠) and, on Normal, the one the game accepts.
   const tolNote = (target,key) => LV().dvTolerance
@@ -1344,6 +1356,9 @@
     if(lift.ok&&m.twr<TWR_MIN())warnings.push(t('launch.risks.lowTwr',{min:U.decimal(TWR_MIN(),1)}));
     if(m.cost>m.budget)warnings.push(t('launch.risks.overBudget'));
     if(m.gen<m.draw)warnings.push(t('launch.risks.powerDeficit'));
+    const inst=installedParts();
+    if(LV().penalties&&!DISH_PARTS.some(id=>inst.has(id)))warnings.push(t('launch.risks.noDish',{max:CONSEQUENCE.noDishMaxStars}));
+    if(LV().penalties&&!SHELTER_PARTS.some(id=>inst.has(id)))warnings.push(t('launch.risks.noShelter'));
     if(m.ready&&!m.orbit)warnings.push(t('launch.risks.noOrbit',{dv:U.velocityMs(m.dv),leo:U.velocityMs(m.leo)}));
     if(m.orbit&&!m.marsOk)warnings.push(t('launch.risks.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer)}));
     $('#launch-title').textContent=!lift.ok?t('launch.titleNoPad'):abort?(abort.reason==='no-orbit'?t('launch.titleNoOrbit'):t('launch.titleNoMars')):warnings.length?t('launch.titleRisks'):t('launch.titleReady');
@@ -1759,8 +1774,18 @@
           }
         }, 420);
       },
+      storm() {
+        if (this.muted) return;
+        try {
+          this.stormClip ||= new Audio('assets/audio/rad_storm_2024_05_20.wav');
+          this.stormClip.volume = 0.5;
+          this.stormClip.currentTime = 0;
+          this.stormClip.play().catch(() => {});
+        } catch { /* file:// or autoplay policy */ }
+      },
       stopAll() {
         if (this.bed) { this.bed.pause(); this.bed.currentTime = 0; }
+        if (this.stormClip) this.stormClip.pause();
         clearInterval(this.geigerTimer);
       },
       toggleMute() {
@@ -1861,31 +1886,37 @@
       box.replaceChildren(...lines.map(text => { const line = document.createElement('div'); line.textContent = text; return line; }));
     }
 
+    const IRRADIATED_TOAST_DELAY_MS = 4200; // after the landing hint toast (3.5 s)
+    const runConsequences = d => ({ maxStars: d.dataCapped ? CONSEQUENCE.noDishMaxStars : 3, cut: d.budgetPenalty ? CONSEQUENCE.budgetCut : 0 });
     function captureDesign() {
       const r = state.rocket;
       const installed = new Set([r.booster.engine, r.booster.tank, ...r.stages.map(s => s.item), ...r.cabin].filter(Boolean));
       const m = DATA ? metrics() : { cost: 0, mass: 0, draw: 0, gen: 0, dv: 0, budget: budgetOf(state.difficulty), leo: 9400, twr: 0, ready: false, orbit: false, marsOk: false, refuelPct: 0 };
+      const overweight = LV().penalties && (!m.ready || m.twr < TWR_MIN());
+      const hasDish = DISH_PARTS.some(id => installed.has(id));
       return {
         ...m,
-        // Share of the refuelling stage's tank to pump in orbit (metrics); a full tank when Mars is out of reach.
-        refuelTarget: m.marsOk ? Math.ceil(m.refuelPct) : 100,
+        // Share of the refuelling stage's tank to pump in orbit (metrics); a full tank when Mars is out of reach. A low
+        // TWR adds the gravity losses of the slow climb.
+        refuelTarget: m.marsOk ? Math.min(100, Math.ceil(m.refuelPct + (overweight ? CONSEQUENCE.lowTwrRefuelExtra : 0))) : 100,
         refuelTank: m.marsOk && m.refuelStage ? stageName(m.refuelStage.key) : null,
         lowTwr: !m.ready || m.twr < TWR_MIN(), // facts for the debrief; the flags below are the in-flight trouble
-        overweight: LV().penalties && (!m.ready || m.twr < TWR_MIN()),
+        overweight,
+        dataCapped: LV().penalties && !hasDish,
         budgetPenalty: LV().penalties && m.cost > m.budget,
         finsDrift: r.booster.fins ? (spec(r.booster.fins).aeroDriftFactor ?? 1) : 1, // aerodynamic minigames: gust scale
         overBudget: m.cost > m.budget,
         powerDeficit: LV().penalties && m.gen < m.draw,
         lowDv: !m.orbit,
         hasHera: installed.has('cabin-hera-dosimetry'),
-        hasShelter: installed.has('cabin-storm-shelter') || installed.has('hab-veggie-rad-astrorad'),
+        hasShelter: SHELTER_PARTS.some(id => installed.has(id)),
         hasCockpitUpgrade: installed.has('cabin-orion-cockpit') || installed.has('cabin-autonav-conjunction'),
         hasLoftid: installed.has('edl-aspire-loftid'),
         hasTrn: installed.has('edl-trn-medli2'),
         hasDrill: installed.has('drill-corer-cryo') || installed.has('sci-seis-caching'),
         hasSpec: installed.has('sci-pixl-sherloc-supercam') || installed.has('sci-hirise-sharad') || installed.has('truss-ingenuity'),
         hasDna: installed.has('cabin-msg-minion'),
-        hasDish: installed.has('comm-dsoc-laser') || installed.has('comm-electra-marco') || installed.has('comm-rise-xband') || installed.has('cabin-scan-console'),
+        hasDish,
       };
     }
 
@@ -1932,13 +1963,17 @@
       flight.descentHold = false;
       // The experiments of this run (docs/experiments-implementation.md §3): 8 drawn now, 1 orbit + 1 ground per
       // crew member, each revealed only when it comes into play (Mars orbit, descent, surface).
-      state.run = window.ASTRO_RUN ? window.ASTRO_RUN.create({ difficulty: state.difficulty }) : null;
+      state.run = window.ASTRO_RUN ? window.ASTRO_RUN.create({ difficulty: state.difficulty, ...runConsequences(flight.design) }) : null;
+      flight.brownoutIn = null; flight.brownouts = 0; flight.pogoLogged = false;
 
       logFlight(t('cockpit.logs.deckOnline'));
       if (flight.design.ready) logFlight(t('cockpit.logs.twrClimb', { twr: U.decimal(flight.design.twr, 2), sec: phaseDuration(0) }));
       if (flight.design.overweight) logFlight(t('cockpit.logs.lowTwrAlert', { min: U.decimal(TWR_MIN(), 1) }));
       if (flight.design.powerDeficit) logFlight(t('cockpit.logs.powerAlert'));
       if (flight.design.budgetPenalty) logFlight(t('cockpit.logs.budgetAlert'));
+      if (flight.design.overweight && flight.design.marsOk) logFlight(t('cockpit.logs.refuelExtra', { extra: CONSEQUENCE.lowTwrRefuelExtra }));
+      if (flight.design.dataCapped) logFlight(t('cockpit.logs.noDishAlert', { max: starsText(CONSEQUENCE.noDishMaxStars) }));
+      if (state.run?.consequences?.dropped.length) logFlight(t('cockpit.logs.budgetCut'));
       showScreen('cockpit');
       renderFlightUI();
       cancelAnimationFrame(flight.raf);
@@ -1986,7 +2021,8 @@
         authority: LIFTOFF.authority * (d.hasCockpitUpgrade ? 1.25 : 1),
         drift: t => {
           const u = t / duration, k = gust * (u > LIFTOFF.maxQ[0] && u < LIFTOFF.maxQ[1] ? 2.4 : 1); // gusts peak around Max-Q
-          return [k * (3.2 * Math.sin(t * 0.9 + s1) + 2.6 * Math.sin(t * 2.3 + s1 * 1.7) + 1),
+          const pogo = d.overweight && u > CONSEQUENCE.pogo.from ? CONSEQUENCE.pogo.amp * Math.sin(t * CONSEQUENCE.pogo.rate) : 0;
+          return [k * (3.2 * Math.sin(t * 0.9 + s1) + 2.6 * Math.sin(t * 2.3 + s1 * 1.7) + 1) + pogo,
             k * (2.8 * Math.sin(t * 1.1 + s2) + 2.2 * Math.sin(t * 1.9 + s2 * 1.3))];
         },
       });
@@ -2006,7 +2042,24 @@
     // After the orbital refuel: the transfer burn either reaches Mars or the crew comes home (abortOf).
     function toMars() {
       const abort = abortOf(flight.design);
-      if (abort) abortMission(abort); else if (orbitExperiments().length) startMarsOrbit(); else enterDescent();
+      if (abort) { abortMission(abort); return; }
+      solarStorm();
+      if (orbitExperiments().length) startMarsOrbit(); else enterDescent();
+    }
+    // Solar storm on the cruise (game event; the sound is the real storm the Curiosity RAD measured on 2024-05-20). With
+    // a storm shelter the crew rides it out; without one, one crew member (picked by the seed) takes a dose and moves
+    // slower on the surface (web/views.js). Easy: a warning only.
+    function solarStorm() {
+      const c = state.run?.consequences;
+      if (!c || c.storm) return;
+      c.storm = true;
+      radAudio.storm();
+      if (flight.design.hasShelter) { logFlight(t('cockpit.logs.stormSheltered')); return; }
+      if (!LV().penalties) { logFlight(t('cockpit.logs.stormEasy')); return; }
+      const ids = crew.map(x => x.id);
+      c.irradiated = ids[Math.floor(window.ASTRO_EXPERIMENTS.random.rngFor(state.run.seed, 'storm')() * ids.length)];
+      logFlight(t('cockpit.logs.stormDose', { name: crewNameOf(c.irradiated) }));
+      crewToast(t('cockpit.toasts.stormDose', { name: crewNameOf(c.irradiated) }));
     }
 
     // -------------------------------------------------------------------------
@@ -2423,11 +2476,30 @@
       }
     }
 
+    // Power deficit: every so often the bus browns out and trips a breaker; the displays flicker (web/flight.js) and the
+    // stage cannot separate until Lucas resets it. Not while a breaker is already out, nor in the Mars orbit stage.
+    function brownoutTick(dt) {
+      const span = CONSEQUENCE.brownoutS[state.difficulty];
+      if (!flight.design?.powerDeficit || !span || flight.orbit?.active || flight.breakers.some(Boolean)) return;
+      flight.brownoutIn ??= span[0] + Math.random() * (span[1] - span[0]);
+      flight.brownoutIn -= dt;
+      if (flight.brownoutIn > 0) return;
+      flight.brownoutIn = null;
+      flight.breakers[Math.floor(Math.random() * flight.breakers.length)] = true;
+      flight.brownouts = (flight.brownouts || 0) + 1;
+      flight.sparksUntil = performance.now() + 1600;
+      const msg = t('cockpit.logs.brownout');
+      logFlight(msg); crewToast(msg); // the log panel is not on screen: the toast is what the crew sees
+      radAudio.tone(180, 0.3, 'sawtooth', 0.05);
+      renderFlightUI();
+    }
+
     function flightTick(now) {
       if (!flight.active || state.screen !== 'cockpit') return;
       const dt = Math.min(0.05, (now - flight.lastTime) / 1000);
       flight.lastTime = now;
       const keys = inputOf().keys; // mine and the remote pilot's, when we fly this step
+      if (!net.isGuest) brownoutTick(dt);
 
       // Keyboard steering (disabled during step 1 3D camera translation)
       if (flight.step !== 1) {
@@ -2456,6 +2528,7 @@
           flight.pitchX = g.value[1] / g.limit; // the RHC leans with the error
           flight.pitchY = -g.value[0] / g.limit;
           if (g.error > g.limit * 0.75) flight.hull = Math.max(50, flight.hull - dt * 3); // off-program loads
+          if (flight.design.overweight && !flight.pogoLogged && g.t / g.duration > CONSEQUENCE.pogo.from) { flight.pogoLogged = true; const msg = t('cockpit.logs.pogo'); logFlight(msg); crewToast(msg); }
           if (g.done) { finishLiftoff(g); }
         }
       } else if (flight.step === 1) {
@@ -2813,7 +2886,7 @@
       surf.stranded = [];
       surf.strandedIds = [];
       // The surface experiments of this run (a jump straight to the surface still gets a draw of its own).
-      if (RUN() && !state.run) state.run = RUN().create({ difficulty: state.difficulty });
+      if (RUN() && !state.run) state.run = RUN().create({ difficulty: state.difficulty, ...runConsequences(flight.design) });
       surf.run = state.run;
       surf.tasks = RUN() && state.run ? RUN().tasks(state.run, 'surface') : SURFACE_TASKS;
       for (const task of surf.tasks) if (state.run?.results[task.id]) surf.completed.add(task.id);
@@ -2824,6 +2897,9 @@
       surf.loaded = new Set(); surf.startedAt = performance.now();
       showScreen('surface');
       radAudio.startSurfaceBed();
+      // After the controls hint the surface shows on landing (web/views.js), so it is not replaced by it.
+      const dosed = state.run?.consequences?.irradiated;
+      if (dosed) setTimeout(() => { if (surf.active) toast(t('surface.irradiatedToast', { name: crewNameOf(dosed) })); }, IRRADIATED_TOAST_DELAY_MS);
       window.dispatchEvent(new CustomEvent('astro:land', { detail: { site: state.site, crew: surf.activeCrew, seed: surf.seed } }));
       updateSurfaceTimer();
       syncSurface(true);
@@ -2926,6 +3002,7 @@
     }
 
     document.addEventListener('keydown', e => {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
       if (state.screen === 'cockpit') {
         flight.keys.add(e.code);
         if (e.code.startsWith('Arrow')) e.preventDefault(); // steer, do not scroll the page
@@ -3018,7 +3095,15 @@
           <span class="leader-grade">${r.grade}</span>
         </div>`).join('');
 
+      const cons = [
+        d.dataCapped && t('results.breakdown.consNoDish', { max: starsText(RUN()?.maxStarsOf(run) ?? 2) }),
+        run?.consequences?.dropped?.length && t('results.breakdown.consBudgetCut', { title: run.consequences.dropped.map(expTitle).join(', ') }),
+        run?.consequences?.irradiated && t('results.breakdown.consIrradiated', { name: crewNameOf(run.consequences.irradiated) }),
+        flight.brownouts > 0 && t('results.breakdown.consBrownouts', { count: flight.brownouts }),
+        d.overweight && t('results.breakdown.consLowTwr', { extra: CONSEQUENCE.lowTwrRefuelExtra }),
+      ].filter(Boolean);
       $('#results-breakdown').innerHTML = [
+        [t('results.breakdown.consequences'), cons.length ? cons.join(' · ') : t('results.breakdown.noConsequences')],
         [t('results.breakdown.budgetTwr'), `${d.overBudget ? (d.budgetPenalty ? t('results.breakdown.exceeded') : t('results.breakdown.exceededWarn')) : t('results.breakdown.onBudget')} · ${d.lowTwr ? (d.overweight ? t('results.breakdown.lowTwrBuffet') : t('results.breakdown.lowTwrWarn')) : t('results.breakdown.twrNominal')}`],
         [t('results.breakdown.edlLanding'), t('results.breakdown.edlValue', { pct: flight.landingShare ?? 0, suite: hasEdlLabel(d) })],
         [t('results.breakdown.surfaceWindow'), forcedTimeout ? (strandedCount ? t('results.breakdown.timeoutStranded', { names: surf.stranded.join(', '), pts: lostFromStranded }) : t('results.breakdown.timeoutOk')) : t('results.breakdown.clearedMargin', { sec: Math.floor(surf.timerSec) })],
@@ -3175,7 +3260,7 @@
     // travel as plain numbers and get their share()/stars() back on the guest.
     const FLIGHT_FIELDS = ['active', 'step', 'progress', 'altKm', 'velMs', 'hull', 'propellant', 'throttle', 'pitchX', 'pitchY', 'stability', 'breakers',
       'stageSeparated', 'separationAdvancing', 'refuelDone', 'stormShielded', 'edlChuteDeployed', 'score', 'phaseElapsed', 'phaseTimedOut', 'docked',
-      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold'];
+      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold', 'brownouts'];
     const FLIGHT_SYNC_MS = 100; // game-balance: snapshot interval
     const kirOut = g => g && { t: g.t, value: g.value, rate: g.rate, inBand: g.inBand, duration: g.duration, band: g.band, limit: g.limit, error: g.error, done: g.done, axes: g.axes };
     const kirIn = o => o && { ...o, share() { return this.t ? this.inBand / this.t : 1; }, stars() { const k = this.share(); return k >= 0.85 ? 3 : k >= 0.65 ? 2 : k >= 0.4 ? 1 : 0; }, tick() { return this; } };
@@ -3398,7 +3483,7 @@
       },
       jumpCockpit: step => { startFlight(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); },
       // Dev Mode: straight to the Mars orbit experiments (after the refuelling step), with a fresh draw.
-      jumpMarsOrbit: seed => { startFlight(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
+      jumpMarsOrbit: seed => { startFlight(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty, ...runConsequences(flight.design) }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
       jumpResults: () => { flight.active = false; cancelAnimationFrame(flight.raf); if (!flight.design) flight.design = captureDesign(); surf.tasks = surf.tasks?.length ? surf.tasks : SURFACE_TASKS(); showResults(false); },
       refreshUI: () => { if (flight.active) renderFlightUI(); },
       get isMuted() { return radAudio.muted; },
