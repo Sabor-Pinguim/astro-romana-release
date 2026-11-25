@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.4] - 2026-11-24
+
+### Changed
+- Highlighted the multiplayer "Leave room" button in orange across the crew room panel (full-width below the list of connected players) and the mode selection strip (right-aligned), with a confirmation dialog that returns the player to the main menu.
+- Added the assigned player's name badge to the bottom-right corner of their crew card and made the astronaut name edit control more prominent on a single row.
+- Refined the hexagonal header settings shortcut (even 1.15:1 hexagon proportion, borderless orange fill at rest, and full starlight-cream fill on hover, focus, and active states) and compact mobile multiplayer header.
+
 ## [1.7.3] - 2026-11-24
 
 ### Changed

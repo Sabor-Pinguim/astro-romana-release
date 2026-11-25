@@ -146,7 +146,22 @@
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
   const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,isPlayerNameLocked:()=>false,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
-  const showScreen = id => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='lobby'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();net.setPhase(id);lockGuest();};
+  const showScreen = (id, { localOnly = false } = {}) => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='lobby'&&id!=='settings'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();if(!localOnly)net.setPhase(id);lockGuest();};
+  let settingsReturnScreen = 'menu';
+  const openSettings = () => { settingsReturnScreen = state.screen; window.ASTRO_SETTINGS?.syncUI(); showScreen('settings', { localOnly: true }); };
+  const settingsGear = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M10 1h4l.5 2.3 1.8.8 2-1.3 2.8 2.8-1.3 2 .8 1.8L23 10v4l-2.4.5-.8 1.8 1.3 2-2.8 2.8-2-1.3-1.8.8L14 23h-4l-.5-2.4-1.8-.8-2 1.3-2.8-2.8 1.3-2-.8-1.8L1 14v-4l2.4-.5.8-1.8-1.3-2 2.8-2.8 2 1.3 1.8-.8L10 1Zm2 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>';
+  $$('.screen:not(#settings) .app-header').forEach(header => {
+    const button = document.createElement('button');
+    button.className = 'header-settings-shortcut';
+    button.type = 'button';
+    button.dataset.i18nAria = 'menu.settings';
+    button.dataset.i18nTitle = 'menu.settings';
+    button.setAttribute('aria-label', t('menu.settings'));
+    button.title = t('menu.settings');
+    button.innerHTML = settingsGear;
+    (header.querySelector('.header-side,.lobby-header-controls') || header).append(button);
+    button.addEventListener('click', openSettings);
+  });
   let toastTimer;
   const toast = message => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);};
 
@@ -370,6 +385,51 @@
     });
   }
 
+  function promptLeaveRoom() {
+    const dlg = $('#room-leave-dialog'), cancel = $('#room-leave-cancel'), confirm = $('#room-leave-confirm'), desc = $('#room-leave-desc');
+    if (!dlg || !confirm) return Promise.resolve(true);
+    const code = String(net.code || '').toUpperCase();
+    if (desc) desc.textContent = t(net.isHost ? 'lobby.room.leaveHostDesc' : 'lobby.room.leaveGuestDesc', { code });
+    return new Promise(resolve => {
+      let settled = false;
+      const done = ok => {
+        if (settled) return;
+        settled = true;
+        confirm.removeEventListener('click', onConfirm);
+        cancel?.removeEventListener('click', onCancel);
+        dlg.removeEventListener('cancel', onCancel);
+        dlg.removeEventListener('click', onBackdrop);
+        if (dlg.open) dlg.close();
+        resolve(ok);
+      };
+      const onConfirm = () => done(true);
+      const onCancel = e => { e.preventDefault(); done(false); };
+      const onBackdrop = e => { if (e.target === dlg) done(false); };
+      confirm.addEventListener('click', onConfirm);
+      cancel?.addEventListener('click', onCancel);
+      dlg.addEventListener('cancel', onCancel);
+      dlg.addEventListener('click', onBackdrop);
+      if (!dlg.open) dlg.showModal();
+      confirm.focus();
+    });
+  }
+
+  async function leaveRoomToMenu() {
+    if (!net.enabled || net.mode === 'solo') { showScreen('menu'); return; }
+    if (!(await promptLeaveRoom())) return;
+    SIM?.leaveMission?.();
+    net.leave();
+    state.lobbyStep = 'mode';
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.has('room')) {
+        u.searchParams.delete('room');
+        history.replaceState(null, '', u.pathname + u.search + u.hash);
+      }
+    } catch {}
+    showScreen('menu');
+  }
+
   async function joinRoomWithPrompt(rawCode, needsPassword = false, skipNameCheck = false) {
     const code = String(rawCode || '').trim().toUpperCase();
     if (!code) return;
@@ -506,10 +566,11 @@
         const savedName = nameLocked ? net.getPlayerName() : draftPlayerName;
         mpVis.innerHTML = `
           <div class="mp-expanded-top">
+            <span class="mp-compact-heading"><strong>${esc(t('lobby.setup.mpTag'))}</strong><span>${esc(t('lobby.setup.mpEyebrow'))}</span></span>
             <div class="mp-name-bar">
               ${nameLocked && !editingPlayerName
-                ? `<span class="micro">${esc(t('lobby.roomBrowser.playerNameLabel'))}</span><strong class="mp-name-locked">${esc(savedName)}</strong><button class="button quiet mp-name-edit-btn" type="button" id="mp-name-edit" aria-label="${esc(t('lobby.roomBrowser.editName'))}" title="${esc(t('lobby.roomBrowser.editName'))}">${PENCIL_ICON}</button>`
-                : `<label for="mp-player-name">${esc(t('lobby.roomBrowser.playerNameLabel'))}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(editingPlayerName ? draftPlayerName : savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">${editingPlayerName ? `<button class="button secondary mp-name-save-btn" type="button" id="mp-name-save">${esc(t('lobby.roomBrowser.confirmNameBtn'))}</button>` : ''}`}
+                ? `<span class="micro">${esc(t('lobby.roomBrowser.playerNameLabel'))}</span><strong class="mp-name-locked" id="mp-name-locked-display" title="${esc(t('lobby.roomBrowser.editName'))}">${esc(savedName)}</strong><button class="button mp-name-edit-btn" type="button" id="mp-name-edit" aria-label="${esc(t('lobby.roomBrowser.editName'))}" title="${esc(t('lobby.roomBrowser.editName'))}">${PENCIL_ICON}<span class="mp-name-edit-label">${esc(t('lobby.roomBrowser.editNameBtn'))}</span></button>`
+                : `<label for="mp-player-name">${esc(t('lobby.roomBrowser.playerNameLabel'))}</label><input class="mp-input" id="mp-player-name" maxlength="20" autocomplete="nickname" value="${esc(editingPlayerName ? draftPlayerName : savedName)}" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}">${editingPlayerName ? `<button class="button amber mp-name-save-btn" type="button" id="mp-name-save">${esc(t('lobby.roomBrowser.confirmNameBtn'))}</button>` : ''}`}
             </div>
           </div>
           <div class="segmented mp-tabs mp-mobile-only" role="group" aria-label="${esc(t('lobby.roomBrowser.tabsAria'))}">
@@ -519,7 +580,7 @@
           <div class="mp-expanded-grid">
             <section class="mp-col mp-col-browse" aria-label="${esc(t('lobby.roomBrowser.tabBrowse'))}">
               <div class="mp-col-head mp-browser-head">
-                <span class="micro">${esc(t('lobby.roomBrowser.openRooms'))}</span>
+                <span class="micro mp-col-title"><svg class="mp-section-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#367DB7"/><path d="M4 9 7 5l3 1 1 3-3 2-1 4-3-1Zm9-7 4 2 1 3-3 2-3-2Zm5 9 4 1-1 5-4 4-3-2 1-4-2-2Z" fill="#7EDAC2"/><path d="M3 12h18M12 2c-3 3-4 7-4 10s1 7 4 10m0-20c3 3 4 7 4 10s-1 7-4 10" fill="none" stroke="#D7ECF7" stroke-width=".8" opacity=".65"/><circle cx="12" cy="12" r="10" fill="none" stroke="#FCE8A6" stroke-width="1.3"/></svg><span>${esc(t('lobby.roomBrowser.openRooms'))}</span></span>
                 <button class="button quiet" type="button" id="room-browser-refresh"><span aria-hidden="true">↻</span> ${esc(t('lobby.roomBrowser.refresh'))}</button>
               </div>
               <div class="room-browser-list" id="room-browser-list" aria-live="polite"></div>
@@ -533,7 +594,7 @@
             </section>
             <section class="mp-col mp-col-create" aria-label="${esc(t('lobby.roomBrowser.createSection'))}">
               <div class="mp-col-head">
-                <span class="micro">${esc(t('lobby.roomBrowser.createSection'))}</span>
+                <span class="micro mp-col-title"><svg class="mp-section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 22 6.5v11L12 23 2 17.5v-11Z" fill="#F59E0B"/><path d="M12 1 22 6.5 12 12 2 6.5Z" fill="#FCE8A6"/><path d="M12 6v12M6 12h12" fill="none" stroke="#11071F" stroke-width="3" stroke-linecap="square"/></svg><span>${esc(t('lobby.roomBrowser.createSection'))}</span></span>
               </div>
               <div class="mp-create-panel">
                 <input class="mp-input" id="mp-room-name" maxlength="32" autocomplete="off" value="${esc(draftRoomName)}" aria-label="${esc(t('lobby.roomBrowser.roomNameAria'))}" placeholder="${esc(t('lobby.roomBrowser.roomNamePlaceholder'))}">
@@ -548,14 +609,16 @@
         mpFoot.innerHTML = '';
 
         if (nameLocked && !editingPlayerName) {
-          $('#mp-name-edit').addEventListener('click', () => {
+          const startEditName = () => {
             editingPlayerName = true;
             draftPlayerName = net.getPlayerName();
             renderModeStep();
             const inp = $('#mp-player-name');
             inp?.focus();
             inp?.select();
-          });
+          };
+          $('#mp-name-edit').addEventListener('click', startEditName);
+          $('#mp-name-locked-display')?.addEventListener('click', startEditName);
         } else {
           const nameInput = $('#mp-player-name');
           nameInput.addEventListener('input', e => { draftPlayerName = e.target.value; });
@@ -611,11 +674,11 @@
         ${net.hasPassword ? `<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>` : ''}
         ${net.isPrivate ? `<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>` : ''}
         <button class="button quiet" type="button" id="mode-copy-btn">${t('lobby.roomBrowser.copyLinkShort')}</button>
-        <button class="button quiet" type="button" id="mode-leave-btn">${t('lobby.room.leave')}</button>
+        <button class="button primary mode-leave-btn" type="button" id="mode-leave-btn">${t('lobby.room.leave')}</button>
       </div>`;
       $('#mode-copy-btn').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(net.link); toast(t('lobby.room.linkCopied')); } catch { prompt(t('lobby.room.copyPrompt'), net.link); } });
       $('#mode-continue-room').addEventListener('click', () => setLobbyStep('difficulty'));
-      $('#mode-leave-btn').addEventListener('click', () => { net.leave(); });
+      $('#mode-leave-btn').addEventListener('click', () => { leaveRoomToMenu(); });
     }
   }
   function renderDifficultyStep(){
@@ -646,7 +709,8 @@
     $$('[data-site]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.site===state.site)));
     $('#crew-count').textContent=t('lobby.crewCount',{count:playerCount()});
     $('#crew-grid').innerHTML=crew.map(p=>{const seat=seatStatus(p.id),picked=state.detail.kind==='crew'&&state.detail.id===p.id,take=net.isGuest&&net.joinable&&!seat.player;
-      return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.text)}</span></div>${take?`<div class="crew-actions"><button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button></div>`:''}</article>`;}).join('');
+      const actionHtml=seat.player&&seat.playerName?`<div class="crew-actions"><span class="crew-player-tag">${esc(seat.playerName)}</span></div>`:take?`<div class="crew-actions"><button class="invite" type="button" data-take="${p.id}" aria-label="${t('lobby.takeSeatBtn')}: ${p.name}">${t('lobby.takeSeatBtn')}</button></div>`:'';
+      return `<article class="crew-card ${picked?'selected':''}" data-pick="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)}" aria-pressed="${picked}" style="--crew:${p.color}"><div class="crew-stage">${astronaut(p)}</div><div class="crew-info"><h4 class="crew-name">${p.name}</h4><span class="crew-role">${p.role}</span><span class="status ${seat.player?'player':''}"><span class="dot"></span>${esc(seat.roleText)}</span></div>${actionHtml}</article>`;}).join('');
     $$('#crew-grid [data-pick]').forEach(card=>{
       const select=()=>{state.detail={kind:'crew',id:card.dataset.pick};renderLobby();$(`#crew-grid [data-pick="${card.dataset.pick}"]`)?.focus();};
       card.addEventListener('click',e=>{if(!e.target.closest('button'))select();});
@@ -657,12 +721,17 @@
   }
   // Who plays each crew member: the room's peers, or (solo) the player as Helena and the AI for the rest.
   function seatStatus(id){
-    if(net.mode==='solo'){const host=id===crew[0].id,pName=net.getPlayerName?.();return {player:host,text:host?(pName?`${pName} · ${t('lobby.hostPlayer')}`:t('lobby.hostPlayer')):t('lobby.aiNpc')};}
+    if(net.mode==='solo'){
+      const host=id===crew[0].id,pName=net.sanitizePlayerName?.(net.getPlayerName?.())||'';
+      const roleText=host?t('lobby.hostPlayer'):t('lobby.aiNpc');
+      return {player:host,playerName:host?pName:'',roleText,text:host&&pName?`${pName} · ${roleText}`:roleText};
+    }
     const peer=net.peerOf(id);
-    if(!peer)return {player:false,text:t('lobby.aiNpc')};
+    if(!peer){const npc=t('lobby.aiNpc');return {player:false,playerName:'',roleText:npc,text:npc};}
     const pName=net.sanitizePlayerName?.(peer.meta?.name)||'';
     const roleText=(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'))+(peer.online?'':t('lobby.seatOffline'))+(peer.id===net.you.id?t('lobby.seatYou'):'');
-    return {player:true,text:pName?`${pName} · ${roleText}`:roleText};
+    const displayPlayer=pName||(peer.host?t('lobby.seatHost'):t('lobby.seatPlayer'));
+    return {player:true,playerName:displayPlayer,roleText,text:pName?`${pName} · ${roleText}`:roleText};
   }
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
   // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus one-time name entry if joined via invite link).
@@ -673,10 +742,15 @@
     panel.hidden=false;
     const lost=net.status!=='open';
     const nameLocked=!!net.isPlayerNameLocked?.();
-    const curName=nameLocked?net.getPlayerName():'';
-    panel.innerHTML=`<span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button><button class="button quiet" type="button" id="room-leave">${t('lobby.room.leave')}</button>${nameLocked?`<span class="tag">${esc(curName)}</span>`:`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`}<span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>`;
+    const onlinePeers=(net.peers||[]).filter(p=>p.online);
+    const playersHtml=onlinePeers.map(p=>{
+      const pName=net.sanitizePlayerName?.(p.meta?.name)||(p.host?t('lobby.seatHost'):t('lobby.seatPlayer'));
+      const isYou=p.id===net.you?.id;
+      return `<span class="tag room-player${isYou?' is-you':''}">${esc(pName)}</span>`;
+    }).join('');
+    panel.innerHTML=`<div class="room-head"><span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>${!nameLocked?`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`:''}<div class="room-players"><span class="micro">${t('lobby.room.playersLabel')}</span><div class="room-player-list">${playersHtml}</div></div><button class="button primary room-leave-btn" type="button" id="room-leave">${t('lobby.room.leave')}</button>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
-    $('#room-leave').addEventListener('click',()=>{net.leave();});
+    $('#room-leave').addEventListener('click',()=>{leaveRoomToMenu();});
     if(!nameLocked){
       const saveOnce=()=>{
         const input=$('#room-player-name');
@@ -1346,8 +1420,8 @@
   $('#leaderboard-back')?.addEventListener('click',()=>showScreen('menu'));
   $('#leaderboard-refresh')?.addEventListener('click',()=>loadLeaderboardScreen());
   $('#results-open-lb')?.addEventListener('click',()=>openLeaderboard(net.mode==='solo'?'solo':'server'));
-  $('#settings-button')?.addEventListener('click',()=>{window.ASTRO_SETTINGS?.syncUI();showScreen('settings');});
-  $('#settings-back')?.addEventListener('click',()=>showScreen('menu'));
+  $('#settings-button')?.addEventListener('click',openSettings);
+  $('#settings-back')?.addEventListener('click',()=>showScreen(settingsReturnScreen, { localOnly: true }));
   $('#lobby-back').addEventListener('click',()=>{
     if(net.isGuest)return;
     if(state.lobbyStep==='mode'&&mpExpanded){setMpExpanded(false,{focus:true});return;}

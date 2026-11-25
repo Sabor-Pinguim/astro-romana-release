@@ -82,8 +82,11 @@ All of them are CSS `clip-path`.
 - **Icons:** draw them with the shapes in the table above. No emoji or icon fonts.
 - **Menu actions:** stack the main actions at equal width. Each action places its icon on the left and centers its label.
 - **Lobby back button:** use the gold button fill at rest and the orange fill on hover, keyboard focus and press.
-- **Expanded multiplayer setup:** on mobile, the card heading identifies the view and the duplicate dossier heading is hidden to save height.
-- **Crew preview:** on desktop, the selected character's name appears in an accent-coloured label inside the 3D viewport. Filled geometric pictograms in crew-coloured hexagons sit below it, each beside its full localized name.
+- **Settings shortcut:** place a borderless orange hexagonal gear at the right of each game screen header; hover, focus, and press switch its fill to starlight cream (`--starlight-cream`).
+- **Symbol hexagons:** keep width about 1.15 times height so the six sides look even, including crew specialty icons and the settings shortcut.
+- **Expanded multiplayer setup:** on mobile, use one compact line for Online, player count, and the editable astronaut name. Hide the duplicate dossier and card headings to save height. Keep the name input, confirm button, and amber-bordered change-name button on a single row.
+- **Multiplayer room sections & leave action:** place a colored Earth icon before the open rooms title and an amber plus icon before the new room title. Highlight the "Leave room" button in orange (`.button.primary`), right-aligned in the mode strip and full-width below the connected players list in the crew room panel, opening a confirmation modal before returning to the main menu.
+- **Crew cards & preview:** show the assigned player's name in a crew-tinted chamfered badge at the bottom-right corner of their crew card. On desktop, the selected character's name appears in an accent-coloured label inside the 3D viewport. Filled geometric pictograms in crew-coloured hexagons sit below it, each beside its full localized name.
 
 ## 5. Surfaces
 
