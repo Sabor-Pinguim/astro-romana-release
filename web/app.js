@@ -451,6 +451,11 @@
     SIM?.leaveMission?.();
     net.leave();
     state.lobbyStep = 'mode';
+    forgetRoomLink();
+    showScreen('menu');
+  }
+  // Drops ?room= from the address, so a reload does not join that room again.
+  function forgetRoomLink() {
     try {
       const u = new URL(location.href);
       if (u.searchParams.has('room')) {
@@ -458,7 +463,6 @@
         history.replaceState(null, '', u.pathname + u.search + u.hash);
       }
     } catch {}
-    showScreen('menu');
   }
 
   async function joinRoomWithPrompt(rawCode, needsPassword = false, skipNameCheck = false) {
@@ -771,11 +775,13 @@
   const playerCount = () => net.mode==='solo'?1:net.peers.filter(p=>p.online).length;
   // Room panel in Step 5: only shown in Multiplayer (code, room name/privacy tags, invite link, leave, plus one-time name entry if joined via invite link).
   const KICK_ARM_MS = 4000; // the time a second tap has to confirm removing a player
-  let kickTimer = 0;
+  let kickTimer = 0, kickArmed = null; // kickArmed: the id of the player whose × waits for the confirming tap
   function renderRoom(){
     const panel=$('#room-panel');if(!panel)return;
-    if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';return;}
-    if(panel.contains(document.activeElement)) return;
+    if(!net.enabled||net.mode==='solo'){panel.hidden=true;panel.innerHTML='';kickArmed=null;return;}
+    // Someone typing their name keeps the panel as it is. A focused button does not: after the × the list must
+    // still drop the removed player.
+    if(document.activeElement?.matches?.('input,textarea')&&panel.contains(document.activeElement)) return;
     panel.hidden=false;
     const lost=net.status!=='open';
     const nameLocked=!!net.isPlayerNameLocked?.();
@@ -784,17 +790,21 @@
       const pName=net.sanitizePlayerName?.(p.meta?.name)||(p.host?t('lobby.seatHost'):t('lobby.seatPlayer'));
       const isYou=p.id===net.you?.id;
       // The host can remove any other player: one tap arms the button, a second one within KICK_ARM_MS confirms.
-      const kick=net.isHost&&!isYou?`<button class="room-kick" type="button" data-kick="${esc(p.id)}" data-name="${esc(pName)}" aria-label="${esc(t('lobby.room.kick',{name:pName}))}" title="${esc(t('lobby.room.kick',{name:pName}))}">×</button>`:'';
+      const armed=kickArmed===p.id;
+      const kick=net.isHost&&!isYou?`<button class="room-kick${armed?' is-armed':''}" type="button" data-kick="${esc(p.id)}" data-name="${esc(pName)}" aria-label="${esc(t('lobby.room.kick',{name:pName}))}" title="${esc(t('lobby.room.kick',{name:pName}))}">${armed?esc(t('lobby.room.kickConfirm')):'×'}</button>`:'';
       return `<span class="tag room-player${isYou?' is-you':''}">${esc(pName)}${kick}</span>`;
     }).join('');
     panel.innerHTML=`<div class="room-head"><span class="micro">${t('lobby.room.label')}</span><strong class="room-code">${esc(net.code)}</strong>${net.roomName?`<span class="tag">${esc(net.roomName)}</span>`:''}${net.hasPassword?`<span class="tag">${t('lobby.roomBrowser.lockedBadge')}</span>`:''}${net.isPrivate?`<span class="tag">${t('lobby.roomBrowser.privateBadge')}</span>`:''}<button class="button" type="button" id="room-copy">${t('lobby.room.copyLink')}</button></div><span class="room-note">${lost?t('lobby.room.reconnecting'):net.isHost?t('lobby.room.hostNote'):t('lobby.room.guestNote')}</span>${!nameLocked?`<div class="room-name-edit"><span class="micro">${t('lobby.roomBrowser.playerNameLabel')}</span><input class="mp-input" id="room-player-name" maxlength="20" autocomplete="nickname" placeholder="${esc(t('lobby.roomBrowser.playerNamePlaceholder'))}"><button class="button secondary" type="button" id="room-name-confirm">${t('lobby.roomBrowser.confirmNameBtn')}</button></div>`:''}<div class="room-players"><span class="micro">${t('lobby.room.playersLabel')}</span><div class="room-player-list">${playersHtml}</div></div><button class="button primary room-leave-btn" type="button" id="room-leave">${t('lobby.room.leave')}</button>`;
     $('#room-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(net.link);toast(t('lobby.room.linkCopied'));}catch{prompt(t('lobby.room.copyPrompt'),net.link);}});
     $('#room-leave').addEventListener('click',()=>{leaveRoomToMenu();});
+    // The armed player lives in kickArmed, so a redraw in between (a peers update) keeps the confirmation.
     panel.querySelectorAll('[data-kick]').forEach(btn=>btn.addEventListener('click',()=>{
-      if(btn.classList.contains('is-armed')){clearTimeout(kickTimer);net.kick(btn.dataset.kick);toast(t('lobby.room.kickDone',{name:btn.dataset.name}));return;}
-      panel.querySelectorAll('[data-kick].is-armed').forEach(b=>{b.classList.remove('is-armed');b.textContent='×';});
-      btn.classList.add('is-armed');btn.textContent=t('lobby.room.kickConfirm');
-      clearTimeout(kickTimer);kickTimer=setTimeout(()=>{btn.classList.remove('is-armed');btn.textContent='×';},KICK_ARM_MS);
+      const id=btn.dataset.kick;
+      clearTimeout(kickTimer);
+      if(kickArmed===id){kickArmed=null;net.kick(id);toast(t('lobby.room.kickDone',{name:btn.dataset.name}));renderRoom();return;}
+      kickArmed=id;renderRoom();
+      panel.querySelector(`[data-kick="${CSS.escape(id)}"]`)?.focus(); // the redraw replaced the button: keep the keyboard on it
+      kickTimer=setTimeout(()=>{kickArmed=null;renderRoom();},KICK_ARM_MS);
     }));
     if(!nameLocked){
       const saveOnce=()=>{
@@ -3602,7 +3612,14 @@
   net.on('status',()=>renderRoom());
   net.on('closed',reason=>{
     lastSetup='';
-    if(role==='guest'&&!GUEST_SCREENS.includes(state.screen)&&state.screen!=='results'){SIM.leaveMission();showScreen('menu');} // a guest mid-mission has nothing left to draw
+    // A guest mid-mission has nothing left to draw. One the host removed leaves the mission wherever they are, as
+    // if they had left the room: the host's crew and rocket are not theirs to go on with.
+    const kicked=reason==='kicked';
+    if(role==='guest'&&(kicked||(!GUEST_SCREENS.includes(state.screen)&&state.screen!=='results'))){
+      SIM.leaveMission();
+      if(kicked){state.lobbyStep='mode';forgetRoomLink();}
+      showScreen('menu');
+    }
     role='solo';
     browserState.status='idle';
     lockGuest();renderLobby();if(reason!=='left')toast(net.message(reason));

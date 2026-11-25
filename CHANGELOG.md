@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.3] - 2026-11-25
+
+### Fixed
+- Removing a player now works on both screens. The host's room panel used to keep the removed player listed, because it skipped redraws while the just-tapped × still had the focus; it now skips them only while a text field is being typed in. The removed player used to stay on the crew screen as a solo player with the host's mission; they now leave the mission for the menu, as when leaving the room, and `?room=` is dropped from the address so a reload does not join again.
+- The "Remove?" confirmation stays armed when the room panel redraws between the two taps (another player joining, for example).
+
 ## [1.9.2] - 2026-11-25
 
 ### Changed
