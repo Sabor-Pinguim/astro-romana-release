@@ -2959,6 +2959,10 @@
       }
     }
 
+    $('#cockpit-minigame').addEventListener('contextmenu', event => {
+      if (event.target.closest('button, .kir-2d')) event.preventDefault();
+    });
+
     function renderFlightUI() {
       updateFlightStepper();
       const titles = t('cockpit.phaseTitles'), orbitOn = !!flight.orbit?.active;

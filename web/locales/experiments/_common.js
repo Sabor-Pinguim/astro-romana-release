@@ -1,4 +1,4 @@
-// Shared texts of the experiment minigames (English, Portuguese and Spanish). Loads after en.js, pt.js and es.js
+// Shared experiment screen texts (English, Portuguese and Spanish). Loads after en.js, pt.js and es.js
 // and before i18n.js; each experiment has its own file next to this one (<id>.js), merged into translation.experiments.
 (() => {
   'use strict';
@@ -6,19 +6,6 @@
   const put = (code, value) => { const pack = L[code]; if (pack) Object.assign(pack.translation.experiments ||= {}, value); };
 
   put('en', {
-    common: {
-      level: { easy: 'Easy level', normal: 'Normal level', hard: 'Hard level' },
-      cap: 'Best result {{stars}}',
-      restart: 'Restart · max {{stars}}',
-      giveUp: 'End with 0 stars',
-      failTitle: 'Attempt failed',
-      stars: '{{stars}}',
-      botWorking: '{{name}} (BOT) is working on it…',
-      botDone: '{{name}} (BOT) finished {{title}}: {{stars}}',
-      partialData: 'partial data (no antenna): {{from}} → {{to}}',
-      takeOver: 'Take over from the BOT',
-      done: '{{name}} finished {{title}}: {{stars}}',
-    },
     mechanics: {
       keep: 'Keep in range', timing: 'Timing', aim: 'Aim', choice: 'Choice under a limit',
       pattern: 'Pattern search', route: 'Route planning', piloting: 'Piloting',
@@ -58,19 +45,6 @@
   });
 
   put('pt', {
-    common: {
-      level: { easy: 'Nível fácil', normal: 'Nível normal', hard: 'Nível difícil' },
-      cap: 'Melhor resultado {{stars}}',
-      restart: 'Recomeçar · máx. {{stars}}',
-      giveUp: 'Encerrar com 0 estrela',
-      failTitle: 'Tentativa falhou',
-      stars: '{{stars}}',
-      botWorking: '{{name}} (BOT) está trabalhando nisso…',
-      botDone: '{{name}} (BOT) terminou {{title}}: {{stars}}',
-      partialData: 'dados parciais (sem antena): {{from}} → {{to}}',
-      takeOver: 'Assumir no lugar do BOT',
-      done: '{{name}} terminou {{title}}: {{stars}}',
-    },
     mechanics: {
       keep: 'Manter na faixa', timing: 'Sincronia', aim: 'Mira', choice: 'Escolha sob limite',
       pattern: 'Busca de padrão', route: 'Planejar rota', piloting: 'Pilotagem',
@@ -110,19 +84,6 @@
   });
 
   put('es', {
-    common: {
-      level: { easy: 'Nivel fácil', normal: 'Nivel normal', hard: 'Nivel difícil' },
-      cap: 'Mejor resultado {{stars}}',
-      restart: 'Reiniciar · máx. {{stars}}',
-      giveUp: 'Terminar con 0 estrellas',
-      failTitle: 'Intento fallido',
-      stars: '{{stars}}',
-      botWorking: '{{name}} (BOT) está trabajando en ello…',
-      botDone: '{{name}} (BOT) terminó {{title}}: {{stars}}',
-      partialData: 'datos parciales (sin antena): {{from}} → {{to}}',
-      takeOver: 'Tomar el lugar del BOT',
-      done: '{{name}} terminó {{title}}: {{stars}}',
-    },
     mechanics: {
       keep: 'Mantener en rango', timing: 'Sincronización', aim: 'Puntería', choice: 'Elección con límite',
       pattern: 'Búsqueda de patrones', route: 'Planificación de ruta', piloting: 'Pilotaje',

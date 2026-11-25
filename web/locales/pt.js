@@ -4,6 +4,21 @@
   window.ASTRO_LOCALES.pt = {
     _meta: { code: 'pt', name: 'Português (BR)', locale: 'pt-BR' },
     translation: {
+      experiments: {
+        common: {
+          level: { easy: 'Nível fácil', normal: 'Nível normal', hard: 'Nível difícil' },
+          cap: 'Melhor resultado {{stars}}',
+          restart: 'Recomeçar · máx. {{stars}}',
+          giveUp: 'Encerrar com 0 estrela',
+          failTitle: 'Tentativa falhou',
+          stars: '{{stars}}',
+          botWorking: '{{name}} (BOT) está trabalhando nisso…',
+          botDone: '{{name}} (BOT) terminou {{title}}: {{stars}}',
+          partialData: 'dados parciais (sem antena): {{from}} → {{to}}',
+          takeOver: 'Assumir no lugar do BOT',
+          done: '{{name}} terminou {{title}}: {{stars}}',
+        },
+      },
       common: {
         nf: 'n/d',
         allClear: 'Tudo certo',
@@ -29,7 +44,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.9.9',
+        version: 'v1.9.10',
         contact: 'Fale conosco',
         emailCopied: 'E-mail copiado: {{email}}',
         quitEyebrow: 'Encerrar missão',

@@ -781,6 +781,7 @@
     .kir-ctrl{display:flex;flex-direction:column;gap:6px;width:150px}
     .kir-ctrl .button{flex:1;flex-direction:column;gap:.35rem;min-height:0;padding:.55rem .5rem;line-height:1.15;touch-action:none;user-select:none;-webkit-user-select:none}
     .kir-ctrl .button.on{--a:var(--solar-amber);--b:#d98a06;--fg:var(--bg-void)}
+    #cockpit-minigame [data-hold],#cockpit-minigame .kir-2d{touch-action:none;-webkit-touch-callout:none}
     .kir-ctrl kbd{padding:.12rem .4rem;font:600 .6rem var(--heading);letter-spacing:.08em;color:var(--starlight-cream);background:#11071f99}
     .kir.kir-2d{aspect-ratio:1;height:auto;max-height:180px;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none}
     .kir-2d .kir-band{left:50%;top:50%;width:var(--band);height:auto;aspect-ratio:1;translate:-50% -50%;border:0;background:#7edac24d;clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);pointer-events:none}

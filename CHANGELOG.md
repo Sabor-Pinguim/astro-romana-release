@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.10] - 2026-11-25
+
+### Fixed
+- Block browser context menus on cockpit minigame controls during touch input.
+- Load shared minigame labels from the main locale packs so restart and failure messages remain translated.
+
 ## [1.9.9] - 2026-11-25
 
 ### Changed

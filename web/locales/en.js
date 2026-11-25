@@ -4,6 +4,21 @@
   window.ASTRO_LOCALES.en = {
     _meta: { code: 'en', name: 'English', locale: 'en-US' },
     translation: {
+      experiments: {
+        common: {
+          level: { easy: 'Easy level', normal: 'Normal level', hard: 'Hard level' },
+          cap: 'Best result {{stars}}',
+          restart: 'Restart · max {{stars}}',
+          giveUp: 'End with 0 stars',
+          failTitle: 'Attempt failed',
+          stars: '{{stars}}',
+          botWorking: '{{name}} (BOT) is working on it…',
+          botDone: '{{name}} (BOT) finished {{title}}: {{stars}}',
+          partialData: 'partial data (no antenna): {{from}} → {{to}}',
+          takeOver: 'Take over from the BOT',
+          done: '{{name}} finished {{title}}: {{stars}}',
+        },
+      },
       common: {
         nf: 'n/f',
         allClear: 'All clear',
@@ -29,7 +44,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.9.9',
+        version: 'v1.9.10',
         contact: 'Contact us',
         emailCopied: 'Email copied: {{email}}',
         quitEyebrow: 'Quit mission',
