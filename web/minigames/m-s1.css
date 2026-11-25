@@ -20,3 +20,13 @@
 .ms1-swatch.is-decoy{background:#66391b;box-shadow:inset 0 0 0 1px var(--mars-orange)}
 .ms1-swatch.is-near{background:#5c3a6e;box-shadow:inset 0 0 0 1px var(--starlight-cream)}
 @media (max-width:640px){.ms1-tools{grid-template-columns:1fr}}
+@media (max-height:500px) and (orientation:landscape){
+  dialog[data-exp="M-S1"] .mg-body{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);grid-template-rows:auto auto auto 1fr;align-items:start;gap:4px 10px}
+  dialog[data-exp="M-S1"] .mg-readout{grid-column:1/-1;grid-row:1}
+  dialog[data-exp="M-S1"] .ms1-board{grid-column:1;grid-row:2/5;width:min(100%,88dvh,calc(var(--cols) * 32px));align-self:center}
+  dialog[data-exp="M-S1"] .ms1-tools{grid-column:2;grid-row:2;grid-template-columns:1fr;gap:4px}
+  dialog[data-exp="M-S1"] .ms1-tool{min-height:34px;padding:.32rem .55rem;gap:1px}
+  dialog[data-exp="M-S1"] .ms1-tool strong{font-size:.68rem}
+  dialog[data-exp="M-S1"] .ms1-tool span{font-size:.62rem}
+  dialog[data-exp="M-S1"] .mg-legend{grid-column:2;grid-row:3}
+}

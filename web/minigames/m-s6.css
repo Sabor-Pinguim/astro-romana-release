@@ -9,3 +9,10 @@
 .ms6-controls{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px}
 .ms6-controls .button{min-height:50px;padding-inline:.7rem;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 @media (max-width:640px){.ms6-gauges{grid-template-columns:1fr}}
+@media (max-height:500px) and (orientation:landscape){
+  .ms6-gauges{grid-template-columns:1fr 1fr;gap:6px}
+  .ms6-gauge{gap:2px}
+  .ms6-growth{padding:4px 7px;gap:2px}
+  .ms6-controls{gap:6px}
+  .ms6-controls .button{min-height:34px;font-size:.66rem}
+}

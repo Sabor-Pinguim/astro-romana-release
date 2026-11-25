@@ -18,9 +18,11 @@
 .mg-fail-reason{font-size:.82rem;color:var(--starlight-cream)}
 .mg-fail-actions{display:flex;flex-wrap:wrap;gap:8px}
 .mg.is-failed > .mg-body,.mg.is-failed > .mg-status,.mg.is-failed > .mg-foot{display:none}
+.minigame-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:none}
+.minigame-heading{display:grid;gap:2px;min-width:0}
 .minigame-info{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .minigame-info-toggle{margin:0}
-.minigame-info-content{width:100%;display:grid;gap:8px;padding:10px 12px;background:var(--f1);border-left:2px solid var(--solar-amber)}
+.minigame-info-content{width:100%;display:grid;gap:8px;max-height:40dvh;overflow-y:auto;padding:10px 12px;background:var(--f1);border-left:2px solid var(--solar-amber);flex:none}
 .minigame-info-content[hidden]{display:none}
 .minigame-info-hints{display:grid;gap:6px}
 
@@ -103,16 +105,39 @@
   dialog.is-complete .minigame-complete>.button{grid-column:2;justify-self:end;min-height:32px;padding:.5rem 1rem}
 }
 
+@media (max-width:640px),(max-height:500px) and (orientation:landscape){
+  :is(#minigame-dialog,#dev-exp-dialog)[open]:not(.is-complete):not(.is-failed){display:flex;flex-direction:column;overflow:hidden}
+  :is(#minigame-dialog,#dev-exp-dialog):not(.is-complete):not(.is-failed) .dialog-inner{flex:1;min-height:0;height:100%;overflow:hidden;padding:8px 12px;gap:4px}
+  :is(#minigame-dialog,#dev-exp-dialog) #minigame-stage,:is(#minigame-dialog,#dev-exp-dialog) #dev-exp-stage{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .mg{flex:1;min-height:0;height:100%;display:flex;flex-direction:column;gap:4px}
+  .mg-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+  .mg-head .tag{padding:.22rem .5rem .22rem .6rem;font-size:.54rem}
+  .mg-readout{gap:4px 8px;font-size:.64rem}
+  .mg-meters{gap:4px}
+  .mg-meter{padding:4px 7px;gap:2px}
+  .mg-meter-label{font-size:.56rem}
+  .mg-track{height:7px}
+  .mg-controls{gap:5px}
+  .mg-controls .button,.mg-foot .button,#minigame-dialog .dialog-actions .button,#dev-exp-dialog .dialog-actions .button{min-height:32px;padding:.34rem .7rem;font-size:.68rem}
+  .mg-foot{flex:none;gap:5px}
+  #minigame-dialog .dialog-actions,#dev-exp-dialog .dialog-actions{flex:none;margin-top:0;gap:6px}
+  .mg-list{flex:1 1 0;min-height:60px;max-height:100%;overflow-y:auto}
+}
 @media (max-width:640px){
   .mg-meters{grid-template-columns:1fr}
-  .mg-list{max-height:38vh}
+  .mg-grid{width:min(100%,44dvh,calc(var(--cols) * 44px))}
 }
 @media (max-height:500px) and (orientation:landscape){
-  .mg-canvas{max-height:42dvh;object-fit:contain}
-  .mg-grid{width:min(100%,46dvh,calc(var(--cols) * 40px))}
-  .mg-list{max-height:38dvh}
-  .mg-gauge{height:26px}
-  .mg-pad button{width:46px;height:36px}
+  #minigame-dialog .minigame-topbar h3,#dev-exp-dialog .minigame-topbar h3{font-size:1rem;line-height:1.05}
+  .mg-canvas{max-height:36dvh;object-fit:contain}
+  .mg-grid{width:min(100%,38dvh,calc(var(--cols) * 32px))}
+  .mg-meters{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .mg-gauge{height:22px}
+  .mg-pad{gap:2px}
+  .mg-pad div{gap:2px}
+  .mg-pad button{width:40px;height:32px;font-size:.95rem}
+  .mg-legend{gap:4px 8px;font-size:.56rem}
+  .mg-badge{padding:.28rem .55rem;font-size:.64rem}
 }
 @media (prefers-reduced-motion:reduce){.mg *{animation:none!important;transition:none!important}}
 

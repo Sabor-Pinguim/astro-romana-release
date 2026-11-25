@@ -1301,6 +1301,11 @@
       #lobby .app-foot,#planner .app-foot{position:sticky;bottom:0;z-index:6;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px))}
       #lobby .app-foot .hint{display:none}
       #lobby .app-foot:has(#lobby-next[hidden]){display:none}
+      .setup-card{padding:10px 12px;gap:6px;grid-template-rows:auto minmax(0,1fr) auto auto}
+      .setup-card:has(> .mode-card-foot:empty){grid-template-rows:auto minmax(0,1fr) auto}
+      .mode-cta-row{align-items:center}
+      .mode-cta-row .button{min-height:40px;max-height:44px;padding:.46rem 1rem;font-size:.74rem}
+      .mode-card-foot:empty{display:none}
       .mode-join-row{flex-direction:column}
       .site-card-media{min-height:0;aspect-ratio:16/9}
       .mars-globe-stage{min-height:260px;height:260px}
@@ -1541,7 +1546,11 @@
       .mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .mode-grid.mp-expanded{grid-template-columns:0fr minmax(0,1fr);gap:0}
       .mode-grid.mp-expanded [data-mode-card="multiplayer"]{grid-template-rows:minmax(0,1fr)}
-      .setup-card{padding:6px 10px;gap:4px;grid-template-rows:auto auto auto auto}
+      .setup-card{padding:6px 10px;gap:4px;grid-template-rows:auto minmax(0,1fr) auto auto}
+      .setup-card:has(> .mode-card-foot:empty){grid-template-rows:auto minmax(0,1fr) auto}
+      .mode-cta-row{align-items:center;align-self:end}
+      .mode-cta-row .button{min-height:36px;max-height:40px;padding:.35rem .85rem;font-size:.7rem}
+      .mode-card-foot:empty{display:none}
       .setup-card h4{font-size:1rem}
       .setup-card p{font-size:.7rem;line-height:1.25}
       .mode-visual{padding:4px 8px;overflow:visible}
@@ -1716,6 +1725,7 @@
       .kir.kir-2d{max-height:82px}
       .kir-pad .button{font-size:.82rem}
       .kir-ctrl{width:116px}
+      .kir-ctrl .button{min-height:32px;padding:.3rem .45rem}
       .dock-kir{min-width:96px}
       .dock-depth-ctrl{min-width:92px}
       .dock-depth-grid .button{min-height:34px;padding:.24rem .38rem;font-size:.62rem}
@@ -1788,6 +1798,7 @@
       .chat-send,#chat-input{min-height:34px}
       .chalk-step-pip,.chalk-close{min-width:32px;min-height:32px}
       .invite,.pick{min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+      .orbit-world{min-width:32px;min-height:32px}
       .orbit-system.is-3d .orbit-world{min-width:44px;min-height:44px}
       .mars-pin{min-height:40px;padding:.45rem .8rem}
       .mars-globe-hud-bottom{display:none}

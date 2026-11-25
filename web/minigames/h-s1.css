@@ -14,3 +14,11 @@
 .hs1-chip.is-next{color:var(--bg-void);background:var(--solar-amber)}
 .hs1-arrow{font:700 .7rem var(--heading);color:var(--muted)}
 @media (max-width:360px){.hs1-order-label{display:none}}
+@media (max-height:500px) and (orientation:landscape){
+  dialog[data-exp="H-S1"] .mg-body{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto 1fr;align-items:center;gap:4px 12px}
+  dialog[data-exp="H-S1"] .mg-readout{grid-column:1/-1;grid-row:1}
+  dialog[data-exp="H-S1"] .hs1-board{grid-column:1;grid-row:2/4;width:min(61dvh,calc(var(--cols) * 38px));justify-self:center}
+  dialog[data-exp="H-S1"] .hs1-order{grid-column:2;grid-row:2;padding:4px 8px;gap:4px}
+  dialog[data-exp="H-S1"] .hs1-chip{min-width:28px;padding:.18rem .42rem;font-size:.68rem}
+  dialog[data-exp="H-S1"] .mg-pad{grid-column:2;grid-row:3;align-self:center}
+}

@@ -11,3 +11,10 @@
 .os2-dial::before{content:"";position:absolute;inset:16%;clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);background:linear-gradient(135deg,var(--f4) 0 50%,var(--f2) 50%)}
 .os2-dial-mark{position:absolute;left:50%;top:50%;width:34px;height:6px;margin:-3px 0 0 0;transform-origin:0 50%;background:var(--solar-amber);clip-path:polygon(0 0,100% 50%,0 100%)}
 .os2-dial-label{font:600 .58rem/1 var(--heading);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@media (max-height:500px) and (orientation:landscape){
+  .os2-tune{gap:8px}
+  .os2-step{min-height:36px;font-size:.92rem}
+  .os2-dial{width:52px;height:52px}
+  .os2-dial-mark{width:21px;height:5px;margin:-2.5px 0 0 0}
+  .os2-dial-label{display:none}
+}

@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.17] - 2026-11-25
+
+### Fixed
+- Stopped the Play Mode buttons ("Play solo" and "Play multiplayer") from stretching on mobile: the illustration now takes the flexible row and the buttons keep a fixed height (36 px in landscape, 40 px in portrait). Also raised the cockpit direction pad buttons and the lobby planet pins to the 32 px touch minimum in landscape (`web/styles.css`).
+- Fitted all 21 experiment minigames in `#minigame-dialog` and `#dev-exp-dialog` on phones without scrolling the dialog, in portrait and landscape (checked at 390×844, 667×375 and 844×390):
+  - a compact header with the title on the left and the "i" and "?" buttons on the right (`index.html`);
+  - canvases that cap their height to the screen (`web/minigames/core.js`);
+  - a dialog locked to the screen height where only the choice lists scroll (`web/minigames.css`, `m-s4.css`, `o-s1.css`);
+  - side-by-side or compact landscape layouts for H-S1, M-S1, O-O2, O-S2, M-S6, M-O3 and M-S5, keeping the H-O2 grid.
+
 ## [1.9.16] - 2026-11-25
 
 ### Changed

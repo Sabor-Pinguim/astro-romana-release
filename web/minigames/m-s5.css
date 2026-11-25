@@ -7,3 +7,7 @@
 .ms5-task.is-done{background:#1e6357;color:var(--starlight-cream)}
 .ms5-task.is-done b{color:var(--safe)}
 .ms5-meters .mg-meter-label{text-transform:none;letter-spacing:.05em}
+@media (max-height:500px) and (orientation:landscape){
+  .ms5-tasks{gap:3px}
+  .ms5-task{padding:.18rem .48rem;font-size:.58rem}
+}

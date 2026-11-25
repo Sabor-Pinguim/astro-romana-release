@@ -196,8 +196,11 @@
       const state = { w: 0, h: 0, dpr: 1 };
       const fit = () => {
         const w = Math.max(1, node.clientWidth || node.parentElement?.clientWidth || 300);
-        const k = typeof aspect === 'function' ? aspect(w, { w: root.innerWidth || w, h: root.innerHeight || w }) : aspect;
-        const h = Math.max(1, Math.round(w * k));
+        const vw = root.innerWidth || w, vh = root.innerHeight || w;
+        const k = typeof aspect === 'function' ? aspect(w, { w: vw, h: vh }) : aspect;
+        let h = Math.max(1, Math.round(w * k));
+        if (vh <= 500 && vw > vh) h = Math.min(h, Math.max(88, Math.round(vh * 0.29)));
+        else if (vw <= 640 && vh > vw) h = Math.min(h, Math.max(120, Math.round(vh * 0.32)));
         const dpr = Math.min(2, root.devicePixelRatio || 1);
         if (w === state.w && h === state.h && dpr === state.dpr) return;
         Object.assign(state, { w, h, dpr });

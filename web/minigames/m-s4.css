@@ -1,7 +1,7 @@
 /* M-S4 · Choosing samples */
 .ms4-notes{margin:0;font-size:.74rem;line-height:1.35}
-.mg-list.ms4-list{display:flex;flex-wrap:wrap;align-content:flex-start;max-height:min(48vh,380px);min-height:150px}
-@media (max-height:500px){.mg-list.ms4-list{max-height:none}}
+.mg-list.ms4-list{display:flex;flex-wrap:wrap;align-content:flex-start;flex:1 1 0;min-height:80px;max-height:min(48vh,380px)}
+@media (max-width:640px),(max-height:500px){.mg-list.ms4-list{min-height:60px;max-height:100%}}
 .mg-item.ms4-card{display:flex;align-items:center;gap:8px;flex:1 1 240px;min-width:0;min-height:52px;padding:.4rem .7rem}
 .ms4-swatch{--rock:#6b5a62;flex:none;width:34px;height:34px;background:var(--rock);clip-path:var(--hex)}
 .ms4-swatch.is-laminated{background:repeating-linear-gradient(168deg,var(--rock) 0 5px,#1a1022 5px 7px)}

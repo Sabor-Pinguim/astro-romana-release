@@ -1,6 +1,6 @@
 /* O-S1 · Orbiter pass */
-.os1-list{max-height:min(46vh,360px);min-height:150px}
-@media (max-height:500px){.os1-list{max-height:none}}
+.os1-list{flex:1 1 0;min-height:80px;max-height:min(46vh,360px)}
+@media (max-width:640px),(max-height:500px){.os1-list{min-height:60px;max-height:100%}}
 .os1-packet.is-locked{opacity:1;background:linear-gradient(112deg,#1e6357 0 30%,var(--f1) 30%);box-shadow:inset 3px 0 0 var(--safe)}
 .os1-packet.is-new{animation:blink .5s steps(2,end) 3}
 .mg .mg-controls .button.is-ready{--a:#9be7d3;--b:var(--safe);--fg:var(--bg-void)}

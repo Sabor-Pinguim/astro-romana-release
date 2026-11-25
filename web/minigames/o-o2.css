@@ -20,3 +20,16 @@
 .oo2-chip.is-cut b{color:var(--coral-hover)}
 .mg .mg-controls .button.is-ready{--a:#9be7d3;--b:var(--safe);--fg:var(--bg-void)}
 @media (max-width:420px){.oo2-tool span{font-size:.64rem}}
+@media (max-height:500px) and (orientation:landscape){
+  dialog[data-exp="O-O2"] .mg-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);grid-template-rows:auto auto minmax(0,1fr) auto auto;align-items:start;gap:4px 10px}
+  dialog[data-exp="O-O2"] .mg-readout{grid-column:1/-1;grid-row:1}
+  dialog[data-exp="O-O2"] .oo2-canvas{grid-column:1;grid-row:2/6;max-height:58dvh;align-self:center}
+  dialog[data-exp="O-O2"] .oo2-tools{grid-column:2;grid-row:2;gap:4px}
+  dialog[data-exp="O-O2"] .oo2-tool{min-height:32px;padding:.28rem .5rem}
+  dialog[data-exp="O-O2"] .oo2-tool strong{font-size:.66rem}
+  dialog[data-exp="O-O2"] .oo2-tool span{font-size:.6rem}
+  dialog[data-exp="O-O2"] .oo2-list{grid-column:2;grid-row:3;max-height:86px;overflow-y:auto;gap:3px}
+  dialog[data-exp="O-O2"] .oo2-chip{padding:.18rem .42rem;font-size:.58rem}
+  dialog[data-exp="O-O2"] .mg-meter{grid-column:2;grid-row:4}
+  dialog[data-exp="O-O2"] .mg-controls{grid-column:2;grid-row:5}
+}

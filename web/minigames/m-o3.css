@@ -21,3 +21,10 @@
 .mo3-print{position:relative;display:block;height:12px;background:var(--f0)}
 .mo3-print i{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--starlight-cream)}
 @media (max-width:520px){.mo3-gases{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-height:500px) and (orientation:landscape){
+  .mo3-gases{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .mo3-gas{min-height:42px;padding:.26rem .42rem .26rem 1.3rem;gap:2px}
+  .mo3-key{left:.38rem;top:.32rem;font-size:.64rem}
+  .mo3-gas-head strong{font-size:.82rem}
+  .mo3-gas-head small,.mo3-state{font-size:.54rem}
+}
