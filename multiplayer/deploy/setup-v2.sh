@@ -79,6 +79,11 @@ fi
 export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
 # ---------------------------------------------------------------- v2 repository checkout
+# One update at a time: the every-minute auto-update (astro-update-v2, installed below) waits while this runs.
+UPDATE_STATE=/var/lib/astro-update-v2
+install -d -m 0755 "$UPDATE_STATE"
+exec 9>"$UPDATE_STATE/lock"
+flock 9
 step repository
 if [ ! -d "$APP_DIR/.git" ]; then
   install -d -o "$APP_USER" -g "$APP_USER" -m 0755 "$APP_DIR"
@@ -225,6 +230,38 @@ else
   echo "unchanged"
 fi
 
+# ---------------------------------------------------------------- auto-update (pull main every minute)
+# A copy outside the repository runs as root, so code pulled from GitHub never does: it changes only here.
+step auto-update
+update_changed=0
+put /usr/local/sbin/astro-update-v2 0755 < "$APP_DIR/multiplayer/deploy/auto-update.sh" && update_changed=1
+put /etc/systemd/system/astro-update-v2.service <<EOF && update_changed=1
+[Unit]
+Description=Astro Romana v2: pull $BRANCH and restart the room server for a new version
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=APP_DIR=$APP_DIR APP_USER=$APP_USER BRANCH=$BRANCH SERVICE_NAME=$SERVICE_NAME ROOMS_PORT=$ROOMS_PORT STATE_DIR=$UPDATE_STATE
+ExecStart=/usr/local/sbin/astro-update-v2
+EOF
+put /etc/systemd/system/astro-update-v2.timer <<EOF && update_changed=1
+[Unit]
+Description=Astro Romana v2: look for updates every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
+EOF
+[ "$update_changed" = 1 ] && systemctl daemon-reload
+systemctl enable --now --quiet astro-update-v2.timer
+echo "every minute: pull $BRANCH; a new room server version restarts it once no room is open (at most 60 min)"
+
 cat <<EOF
 
 Done (v2 running alongside v1).
@@ -232,6 +269,7 @@ Done (v2 running alongside v1).
   WebSocket v2    wss://$DOMAIN/ws
   Health v2       https://$DOMAIN/health
   API v2          https://$DOMAIN/api/rooms   ·   https://$DOMAIN/api/leaderboard
-Logs: journalctl -u $SERVICE_NAME -f   ·   journalctl -u caddy -f
-Update v2 later: sudo bash $APP_DIR/multiplayer/deploy/setup-v2.sh
+Logs: journalctl -u $SERVICE_NAME -f   ·   journalctl -u caddy -f   ·   journalctl -u astro-update-v2 -f
+Updates are automatic (each push to $BRANCH, within a minute). Run this script again only when
+multiplayer/deploy/ changes: sudo bash $APP_DIR/multiplayer/deploy/setup-v2.sh
 EOF

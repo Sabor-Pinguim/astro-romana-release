@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.4] - 2026-11-25
+
+### Added
+- The v2 VM updates itself: `setup-v2.sh` installs `astro-update-v2.timer`, which runs `multiplayer/deploy/auto-update.sh` every minute. It pulls `main` (the game's files are live at once) and restarts the room server when its version changes, once no room is open (60 minutes at most). A version that fails to start is logged and left alone until a newer one arrives. The timer runs a copy installed outside the repository, so pulled code never runs as root; changes to `multiplayer/deploy/` still need `setup-v2.sh` by hand. Run `setup-v2.sh` once to install it.
+- The room server has its own version (room server 1.0.0, in `multiplayer/package.json`), shown at `/health`. `npm run version:bump:server -- patch` raises it, and the pre-commit hook blocks a change to the server's `.mjs` files or dependencies that does not.
+
 ## [1.9.3] - 2026-11-25
 
 ### Fixed

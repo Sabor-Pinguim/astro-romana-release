@@ -16,6 +16,10 @@ import { loadConfig } from './config.mjs';
 import { openDatabase } from './db.mjs';
 import { RoomHub, sanitizeText } from './rooms.mjs';
 
+// The server's own version (multiplayer/package.json), shown at /health. The VM's auto-update
+// (deploy/auto-update.sh) restarts the server when the pulled version differs from the running one.
+const SERVER_VERSION = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8')).version;
+
 // Files served over HTTP. The test page loads ../client/room-client.js, which resolves to /client/… here and
 // to multiplayer/client/… when the page is opened from disk.
 const STATIC = {
@@ -93,7 +97,7 @@ export async function startServer(config = loadConfig(), { log = console.log } =
     const get = req.method === 'GET' || req.method === 'HEAD';
     if (path === '/health') {
       if (!get) return json(req, res, 405, { error: 'method not allowed' });
-      return json(req, res, 200, { ok: true, protocol: config.PROTOCOL_VERSION, uptimeSec: Math.round((Date.now() - started) / 1000), ...hub.stats(), dbOk: true, ...db.stats() });
+      return json(req, res, 200, { ok: true, version: SERVER_VERSION, protocol: config.PROTOCOL_VERSION, uptimeSec: Math.round((Date.now() - started) / 1000), ...hub.stats(), dbOk: true, ...db.stats() });
     }
     if (path === '/api/rooms') {
       if (!get) return json(req, res, 405, { error: 'method not allowed' });

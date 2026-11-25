@@ -1,5 +1,6 @@
 // Integration: a real server on a random port, RoomClient over Node's global WebSocket, and raw ws clients for
 // the transport limits (origin, size, rate).
+import fs from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import WebSocket from 'ws';
@@ -105,6 +106,8 @@ test('health and the test page are served', () => withServer({}, async server =>
   const health = await (await fetch(`${server.http}/health`)).json();
   assert.equal(health.ok, true);
   assert.equal(health.rooms, 0);
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(health.version, pkg.version); // what the VM's auto-update compares with the pulled package.json
   const page = await fetch(`${server.http}/`);
   assert.match(await page.text(), /RoomClient/);
   assert.equal((await fetch(`${server.http}/client/room-client.js`)).status, 200);

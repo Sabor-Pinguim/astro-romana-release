@@ -149,7 +149,8 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
   - `-- major`: só quando o time pedir explicitamente.
 
   O script grava a versão em `package.json`, `package-lock.json`, `index.html` e `web/locales/{en,pt,es}.js`; `npm run version:check` confere se todos batem.
-- **Gancho de pré-commit (`.githooks/pre-commit`, ligado pelo `npm install`):** barra o commit cujos arquivos mantêm a versão do último commit, discordam entre si ou não têm a seção da nova versão preenchida no CHANGELOG. Não confere merge, rebase nem cherry-pick. `--no-verify` só para o `--amend` do commit que já subiu a versão.
+- **Versão do servidor de salas:** própria, em `multiplayer/package.json` (aparece no `/health`). Mudou um `.mjs` de `multiplayer/` ou as dependências dele: `npm run version:bump:server -- patch`. A VM puxa o `main` a cada minuto e reinicia o servidor quando essa versão muda, assim que não houver sala aberta (no máximo 60 min); o jogo atualiza na hora. Mudança em `multiplayer/deploy/` ainda pede `setup-v2.sh` à mão ([multiplayer/README.md](multiplayer/README.md#the-v2-vm-automatic-updates)).
+- **Gancho de pré-commit (`.githooks/pre-commit`, ligado pelo `npm install`):** barra o commit cujos arquivos mantêm a versão do último commit, discordam entre si, não têm a seção da nova versão preenchida no CHANGELOG ou mudam o servidor de salas sem subir a versão dele. Não confere merge, rebase nem cherry-pick. `--no-verify` só para o `--amend` do commit que já subiu a versão.
 - **Changelog obrigatório:** o `version:bump` abre no topo do [CHANGELOG.md](CHANGELOG.md) a seção `## [X.Y.Z] - YYYY-MM-DD`; liste nela, de forma clara, o que foi adicionado, alterado ou corrigido.
 - **Commits:** no padrão já usado pelo time (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`), em inglês.
 - **Fazer commit de:** assets gerados e pacotes da página (`index.models.js`, `index.terrain.*.js`), assim quem não tem Node consegue abrir o jogo.
@@ -180,6 +181,7 @@ npm run web:sites              # fotos HiRISE dos locais de pouso (assets/sites;
 npm run web:audit:mobile       # a página nos tamanhos da seção 4 (--lang pt|es, --pseudo)
 npm run i18n:check             # valida as traduções (i18n:audit: nas telas, com pseudo-localização)
 npm run version:bump -- patch  # sobe a versão em todos os lugares (version:check só confere)
+npm run version:bump:server -- patch   # mudou o servidor de salas: a VM o reinicia sozinha
 cd multiplayer && npm install && npm start   # servidor de salas + página de teste (localhost:8787); npm test valida
 ```
 

@@ -161,6 +161,17 @@ browser ──https/wss──> Caddy (:443) ──/ws, /health──> node serve
 - **Cost:** the VM stays on all the time. The default is `e2-small`, and `MACHINE=e2-micro bash gcp-create-vm.sh` uses a smaller one. Stop the VM when you do not need it; the static IP stays reserved.
 - **If the certificate fails with sslip.io** (Let's Encrypt issuance limit), use your own domain.
 
+### The v2 VM: automatic updates
+
+`setup-v2.sh` (the v2 site, side by side with v1 on port 8788) also installs `astro-update-v2.timer`, which runs [deploy/auto-update.sh](deploy/auto-update.sh) every minute:
+- **It pulls `main`** (fast-forward only). The game's files are live at once: Caddy serves them straight from the checkout.
+- **The room server has its own version**, `version` in this folder's `package.json`, shown at `/health`. When the pulled version is not the one running, the script reinstalls the dependencies and restarts the server.
+  - It waits until no room is open, for 60 minutes at most, so an update does not end a match.
+  - A version that fails to start is logged and left alone until a newer one arrives.
+- **Raise the server version** whenever a `.mjs` here or the dependencies change: `npm run version:bump:server -- patch` at the root of the repository. The pre-commit hook blocks a server change without it.
+- **`deploy/` still needs a hand run:** the timer runs a copy of the script installed outside the repository, so code pulled from GitHub never runs as root. When `deploy/` changes, the log says so; run `sudo bash /srv/astro-romana-v2/multiplayer/deploy/setup-v2.sh`.
+- **Logs:** `journalctl -u astro-update-v2 -f`. **Pause:** `sudo systemctl disable --now astro-update-v2.timer`.
+
 ### Alternative: Cloud Run (no VM)
 
 Only the room server, with automatic HTTPS on `*.run.app`. The game is hosted somewhere else, such as Firebase Hosting. From [Cloud Shell](https://shell.cloud.google.com/) or a machine with `gcloud`, at the root of the repository:
