@@ -178,7 +178,7 @@
     button.addEventListener('click', openSettings);
   });
   let toastTimer;
-  const toast = message => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);};
+  const toast = (message, ms = 3500) => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),ms);};
   const contactEmail = 'sabor.pinguim@proton.me';
   async function copyContactEmail(){
     try{
@@ -1654,9 +1654,61 @@
     if (!req) return;
     try { Promise.resolve(req.call(root)).catch(() => {}); } catch {}
   }
+  let playClicks = 0, playClickTimer = 0, playLaunchToken = 0, playBreakupActive = false, nancyNoticeTimer = 0, nancyOutsideOff = null;
+  function hideMenuNancyNotice() {
+    const el = $('#menu-nancy-notice');
+    clearTimeout(nancyNoticeTimer);
+    nancyOutsideOff?.();
+    nancyOutsideOff = null;
+    if (!el || el.hidden) return;
+    el.classList.remove('show');
+    setTimeout(() => { if (!el.classList.contains('show')) el.hidden = true; }, 240);
+  }
+  function showMenuNancyNotice(ms = 7000) {
+    const el = $('#menu-nancy-notice');
+    if (!el) { toast(t('menu.rocketBrokenToast'), ms); return; }
+    const txt = $('#menu-nancy-text');
+    if (txt) txt.textContent = t('menu.rocketBrokenToast');
+    el.hidden = false;
+    void el.offsetWidth;
+    el.classList.add('show');
+    window.ASTRO_MENU_NANCY?.show?.();
+    clearTimeout(nancyNoticeTimer);
+    nancyOutsideOff?.();
+    const onOutside = e => {
+      if (!el.contains(e.target)) hideMenuNancyNotice();
+    };
+    const bindTimer = setTimeout(() => {
+      document.addEventListener('pointerdown', onOutside, true);
+    }, 0);
+    nancyOutsideOff = () => {
+      clearTimeout(bindTimer);
+      document.removeEventListener('pointerdown', onOutside, true);
+    };
+    nancyNoticeTimer = setTimeout(hideMenuNancyNotice, ms);
+  }
   $('#play-button').addEventListener('click',()=>{
+    if (playBreakupActive) return;
+    playClicks += 1;
+    clearTimeout(playClickTimer);
+    playClickTimer = setTimeout(() => { playClicks = 0; }, 1600);
+    if (playClicks >= 10) {
+      playClicks = 0;
+      playLaunchToken += 1;
+      playBreakupActive = true;
+      showMenuNancyNotice(7000);
+      const finish = () => { playBreakupActive = false; };
+      window.ASTRO_LAUNCH_BREAKUP ? window.ASTRO_LAUNCH_BREAKUP().then(finish) : finish();
+      return;
+    }
     requestGameFullscreen();
-    const go=()=>{setLobbyStep(net.isGuest?'crew':net.isHost?'difficulty':'mode');showScreen('lobby');};
+    const token = ++playLaunchToken;
+    const go=()=>{
+      if (token !== playLaunchToken || playBreakupActive) return;
+      playClicks = 0;
+      setLobbyStep(net.isGuest?'crew':net.isHost?'difficulty':'mode');
+      showScreen('lobby');
+    };
     window.ASTRO_LAUNCH?window.ASTRO_LAUNCH().then(go):go();
   });
   $('#leaderboard-button')?.addEventListener('click',()=>openLeaderboard());

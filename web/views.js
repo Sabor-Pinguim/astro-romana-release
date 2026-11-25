@@ -183,9 +183,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   camera.updateMatrixWorld();
 
   // Saturn V in foreground (loaded asynchronously so the penguin easter egg never blocks on it)
-  let flight = null, spin = null, plume = null, saturnHeight = 1;
+  let flight = null, spin = null, plume = null, saturnBody = null, saturnHeight = 1;
   const home = new THREE.Vector3(), tilt = -.42;
-  let scale = 1, launch = null, wasActive = true, penguinSeq = null;
+  let scale = 1, launch = null, breakup = null, respawn = null, wasActive = true, penguinSeq = null;
   let lastPointerX = -1, lastPointerY = -1;
 
   const pointerNdc = new THREE.Vector2(), rectTmp = new THREE.Vector3();
@@ -220,8 +220,80 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   };
 
   window.ASTRO_LAUNCH = () => new Promise(resolve => {
-    if (reduce || !view.width) return resolve();
+    if (reduce || !view.width || breakup) return resolve();
     launch = { start: performance.now(), resolve, done: false };
+  });
+
+  function clearBreakup() {
+    if (!breakup) return;
+    scene.remove(breakup.group);
+    breakup.disposables.forEach(d => d.dispose?.());
+    breakup = null;
+    if (flight) flight.visible = true;
+  }
+
+  window.ASTRO_LAUNCH_BREAKUP = () => new Promise(resolve => {
+    if (reduce || !view.width || !flight || !saturnBody) return resolve();
+    if (launch) { launch.done = true; launch = null; }
+    clearBreakup();
+    flight.updateWorldMatrix(true, true);
+    const group = new THREE.Group();
+    const pieces = [];
+    const disposables = [];
+    const origin = new THREE.Vector3();
+    flight.getWorldPosition(origin);
+
+    // Clone every mesh in the Saturn V so each stage/fin/engine breaks apart and tumbles with gravity.
+    saturnBody.traverse(node => {
+      if (!node.isMesh) return;
+      const clone = node.clone();
+      const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+      node.matrixWorld.decompose(pos, quat, scl);
+      clone.position.copy(pos);
+      clone.quaternion.copy(quat);
+      clone.scale.copy(scl);
+      group.add(clone);
+      const out = pos.clone().sub(origin);
+      if (out.lengthSq() < 1e-4) out.set((Math.random() - .5) * 2, Math.random(), (Math.random() - .5) * 2);
+      out.normalize();
+      pieces.push({
+        mesh: clone,
+        vel: new THREE.Vector3(
+          out.x * (1.8 + Math.random() * 3.2) + (Math.random() - .5) * 1.4,
+          out.y * (1.4 + Math.random() * 2.6) + 1.2 + Math.random() * 2.2,
+          out.z * (1 + Math.random() * 2) + (Math.random() - .5) * 1,
+        ),
+        rot: new THREE.Vector3((Math.random() - .5) * 4.5, (Math.random() - .5) * 4.5, (Math.random() - .5) * 4.5),
+      });
+    });
+
+    // Extra low-poly faceted shards & fiery sparks for a dramatic breakup.
+    const shardGeo = new THREE.OctahedronGeometry(.28, 0);
+    const shardColors = [0xe8e4ec, 0x2a2634, 0xE04F26, 0xF59E0B, 0xFCE8A6];
+    const shardMats = shardColors.map(c => new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: .75, metalness: .1 }));
+    disposables.push(shardGeo, ...shardMats);
+    for (let i = 0; i < 16; i++) {
+      const m = new THREE.Mesh(shardGeo, shardMats[i % shardMats.length]);
+      m.position.copy(origin).add(new THREE.Vector3((Math.random() - .5) * 2.2, (Math.random() - .5) * 4.2, (Math.random() - .5) * 1.4));
+      m.scale.setScalar(.55 + Math.random() * 1.15);
+      group.add(m);
+      pieces.push({
+        mesh: m,
+        vel: new THREE.Vector3((Math.random() - .5) * 6.5, 1.2 + Math.random() * 3.8, (Math.random() - .5) * 2.5),
+        rot: new THREE.Vector3((Math.random() - .5) * 6.5, (Math.random() - .5) * 6.5, (Math.random() - .5) * 6.5),
+      });
+    }
+
+    const flashGeo = new THREE.IcosahedronGeometry(1.1, 0);
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xF59E0B, transparent: true, opacity: .9 });
+    const flash = new THREE.Mesh(flashGeo, flashMat);
+    flash.position.copy(origin);
+    group.add(flash);
+    disposables.push(flashGeo, flashMat);
+
+    flight.visible = false;
+    scene.add(group);
+    breakup = { start: performance.now(), last: performance.now(), group, pieces, flash, flashMat, disposables, resolve, done: false };
   });
 
   window.ASTRO_MENU_MARS = {
@@ -266,6 +338,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const active = isActive('menu');
     if (active && !wasActive) {
       launch = null;
+      respawn = null;
+      if (breakup) { const r = breakup.resolve; clearBreakup(); r?.(); }
       if (penguinSeq) {
         penguin.group.visible = false;
         art.classList.remove('is-penguin-front');
@@ -326,15 +400,51 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       });
     }
 
+    // Saturn V breakup easter egg
+    if (breakup) {
+      const dt = Math.min(.05, Math.max(0, (now - breakup.last) / 1000));
+      breakup.last = now;
+      const e = (now - breakup.start) / 1000;
+      for (const p of breakup.pieces) {
+        p.vel.y -= 9.5 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.mesh.rotation.x += p.rot.x * dt;
+        p.mesh.rotation.y += p.rot.y * dt;
+        p.mesh.rotation.z += p.rot.z * dt;
+      }
+      if (e < .5) {
+        const k = e / .5;
+        breakup.flash.scale.setScalar(1 + k * 2.4);
+        breakup.flashMat.opacity = .9 * (1 - k);
+      } else {
+        breakup.flash.visible = false;
+      }
+      if (e > 3.6 && !breakup.done) {
+        breakup.done = true;
+        const r = breakup.resolve;
+        clearBreakup();
+        respawn = { start: now, duration: .95 };
+        r?.();
+      }
+    }
+
     // Saturn V (when loaded)
-    if (flight && spin && plume) {
+    if (flight && spin && plume && !breakup) {
       flight.rotation.set(-.12, 0, tilt);
       spin.rotation.y = t * .25;
       flight.scale.setScalar(scale);
       flight.position.copy(home);
       flight.position.y += Math.sin(t * 1.3) * .12;
       let burn = 1;
-      if (launch) {
+      if (respawn) {
+        const k = Math.min(1, (now - respawn.start) / (respawn.duration * 1000));
+        const ease = easeOutCubic(k);
+        up.set(0, 1, -.35).normalize().applyQuaternion(flight.quaternion);
+        flight.position.addScaledVector(up, -14 * (1 - ease));
+        flight.scale.setScalar(scale * (.55 + .45 * ease));
+        burn = 1 + (1 - ease) * .9;
+        if (k >= 1) respawn = null;
+      } else if (launch) {
         const e = (now - launch.start) / 1000;
         up.set(0, 1, -.55).normalize().applyQuaternion(flight.quaternion);
         flight.position.addScaledVector(up, 26 * e * e);
@@ -349,6 +459,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   requestAnimationFrame(frame);
 
   loadGLB('rocket/saturn_v_lowpoly.glb').then(body => {
+    saturnBody = body;
     saturnHeight = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3()).y || 1;
     body.position.y = -saturnHeight / 2;
     const f = new THREE.Group(), sp = new THREE.Group();
@@ -520,6 +631,62 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   view.onResize();
   requestAnimationFrame(frame);
 })().catch(err => console.warn('Nancy wizard view disabled:', err));
+
+// Menu easter egg: full-body Dr. Nancy Grace Roman 3D notice (characters/nancy.glb) when the Saturn V is broken.
+(() => {
+  const box = document.getElementById('menu-nancy-view');
+  const notice = document.getElementById('menu-nancy-notice');
+  if (!box || !notice) return;
+  let view = null, mixer = null, actions = null, loaded = false, loading = false, last = performance.now();
+
+  async function ensureLoaded() {
+    if (loaded || loading) return;
+    loading = true;
+    try {
+      view = makeView(box, { fov: 28 });
+      if (!view) return;
+      const { scene, camera } = view;
+      const gltf = await loadGLTF('characters/nancy.glb');
+      const model = gltf.scene.clone(true);
+      const b = new THREE.Box3().setFromObject(model);
+      const h = Math.max(.01, b.getSize(new THREE.Vector3()).y);
+      model.position.set(0, -b.min.y - h * .5, 0);
+      model.rotation.y = .18;
+      scene.add(model);
+      camera.position.set(0, .06, h * 2.25);
+      camera.lookAt(0, 0, 0);
+      mixer = new THREE.AnimationMixer(model);
+      actions = Object.fromEntries((gltf.animations || []).map(c => [c.name, mixer.clipAction(c)]));
+      (actions.action_loop || actions.wave || actions.idle)?.play();
+      loaded = true;
+      view.syncSize?.();
+      function tick(now) {
+        requestAnimationFrame(tick);
+        const dt = Math.min(.05, Math.max(0, (now - last) / 1000));
+        last = now;
+        if (notice.hidden || !view.width) return;
+        if (!reduce && mixer) mixer.update(dt);
+        view.renderer.render(scene, camera);
+      }
+      requestAnimationFrame(tick);
+    } catch (err) {
+      console.warn('Menu Nancy 3D notice unavailable:', err);
+    } finally {
+      loading = false;
+    }
+  }
+
+  window.ASTRO_MENU_NANCY = {
+    show() {
+      void ensureLoaded().then(() => {
+        view?.syncSize?.();
+        if (actions?.wave) {
+          actions.wave.reset().setLoop(THREE.LoopOnce, 1).play();
+        }
+      });
+    },
+  };
+})();
 
 // Lobby Step 04: interactive 3D low-poly Mars globe with real Martian geography and accurate crater markers.
 (async () => {

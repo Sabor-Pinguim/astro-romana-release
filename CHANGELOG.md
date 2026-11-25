@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.13] - 2026-11-25
+
+### Added
+- Added a menu easter egg: clicking the Play button 10+ times breaks the display Saturn V into falling pieces, glides a new rocket smoothly back in, and shows a full-body 3D Dr. Nancy Roman notice (dismissed on outside click or after 7 seconds).
+
 ## [1.9.12] - 2026-11-25
 
 ### Changed
