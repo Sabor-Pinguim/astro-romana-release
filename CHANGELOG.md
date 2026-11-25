@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.12] - 2026-11-25
+
+### Changed
+- Grouped the Settings screen into separate chamfered responsibility cards (Interface & display, Language & units, Gameplay & assistance) above the collapsed Advanced options disclosure.
+
 ## [1.9.11] - 2026-11-25
 
 ### Changed
