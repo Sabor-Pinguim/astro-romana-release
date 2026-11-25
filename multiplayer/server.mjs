@@ -110,6 +110,14 @@ export async function startServer(config = loadConfig(), { log = console.log } =
     }
     if (path === '/api/leaderboard') {
       if (get) {
+        if (url.searchParams.get('snapshot') === '1') {
+          const snapshot = {};
+          for (const tab of ['missions', 'players']) for (const difficulty of ['all', ...DIFFICULTIES]) for (const site of ['all', ...SITES]) {
+            const filters = { difficulty, site, limit: 25 };
+            snapshot[`${tab}:${difficulty}:${site}`] = tab === 'players' ? db.getPlayerLeaderboard(filters) : db.getMissionLeaderboard(filters);
+          }
+          return json(req, res, 200, { snapshot });
+        }
         const q = url.searchParams, tab = q.get('tab') === 'players' ? 'players' : 'missions';
         const difficulty = DIFFICULTIES.includes(q.get('difficulty')) ? q.get('difficulty') : 'all';
         const site = SITES.includes(q.get('site')) ? q.get('site') : 'all';

@@ -3701,7 +3701,7 @@
     SIM.refreshUI();
     browserState.status='idle';browserState.rooms=[];browserState.fetchedAt=0;
     if(state.screen==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser(true);
-    if(state.screen==='leaderboard')loadLeaderboardScreen();
+    if(state.screen==='leaderboard')renderLeaderboardScreen();
   });
 
   // ---- Leaderboards (Server SQLite Co-op + Local Solo localStorage) ----------------------------------------
@@ -3745,7 +3745,6 @@
             ${diffLabel ? `<span class="tag">${esc(diffLabel)}</span>` : ''}
             <span class="tag">${esc(t('leaderboard.tasksCount', { done: entry.tasksDone ?? 0, total: entry.tasksTotal ?? 4 }))}</span>
             ${entry.strandedCount ? `<span class="tag is-warn">${esc(t('leaderboard.strandedTag', { count: entry.strandedCount }))}</span>` : `<span class="tag">${t('leaderboard.allReturnedTag')}</span>`}
-            ${entry.roomCode ? `<span class="tag">${esc(entry.roomCode)}</span>` : ''}
           </div>
         </div>
         <span class="lb-score">${t('results.ptsSuffix', { pts: number(entry.teamScore) })}</span>
@@ -3778,27 +3777,56 @@
     if (siteSel) siteSel.value = lbState.site;
   }
 
-  async function loadLeaderboardScreen() {
+  let leaderboardSnapshot = null, leaderboardLoading = false, leaderboardFailed = false;
+  let leaderboardUsesLegacyApi = false;
+  let leaderboardRequest = 0;
+  const leaderboardFilters = () => ({ tab: lbState.tab, difficulty: lbState.difficulty, site: lbState.site, limit: 25 });
+  const leaderboardFilterKey = ({ tab, difficulty, site }) => `${tab}:${difficulty}:${site}`;
+  function renderLeaderboardScreen() {
     syncLeaderboardControls();
     const list = $('#leaderboard-list'), status = $('#leaderboard-status');
-    if (!list || !status) return;
-    const opts = { tab: lbState.tab, difficulty: lbState.difficulty, site: lbState.site, limit: 25 };
-    if (lbState.source === 'solo') {
-      const res = net.getSoloLeaderboard?.(opts) || { entries: [] };
-      const entries = res.entries || [];
-      status.textContent = entries.length ? t('leaderboard.countSummary', { count: entries.length }) : t('leaderboard.emptySolo');
-      list.innerHTML = renderLeaderboardRows(entries, lbState.tab);
+    const opts = leaderboardFilters();
+    const entries = lbState.source === 'solo'
+      ? net.getSoloLeaderboard?.(opts)?.entries || []
+      : leaderboardSnapshot?.[leaderboardFilterKey(opts)] || [];
+    status.textContent = lbState.source === 'server' && leaderboardLoading ? t('leaderboard.loading')
+      : lbState.source === 'server' && leaderboardFailed ? t('leaderboard.offlineServer')
+      : entries.length ? t('leaderboard.countSummary', { count: entries.length })
+      : t(lbState.source === 'solo' ? 'leaderboard.emptySolo' : 'leaderboard.emptyServer');
+    list.innerHTML = renderLeaderboardRows(entries, lbState.tab);
+    $('#leaderboard-refresh').disabled = leaderboardLoading;
+  }
+  async function loadLeaderboardScreen(force = true) {
+    const filters = leaderboardFilters(), key = leaderboardFilterKey(filters);
+    if (!force && (!leaderboardUsesLegacyApi || lbState.source !== 'server' || leaderboardLoading || leaderboardSnapshot?.[key])) {
+      renderLeaderboardScreen();
       return;
     }
-    status.textContent = t('leaderboard.loading');
-    list.innerHTML = '';
+    const request = ++leaderboardRequest;
+    leaderboardLoading = true; leaderboardFailed = false;
+    renderLeaderboardScreen();
     try {
-      const res = await net.getLeaderboard?.(opts);
-      const entries = res?.entries || [];
-      status.textContent = entries.length ? t('leaderboard.countSummary', { count: entries.length }) : t('leaderboard.emptyServer');
-      list.innerHTML = renderLeaderboardRows(entries, lbState.tab);
+      const response = await net.getLeaderboardSnapshot?.(filters);
+      if (request !== leaderboardRequest) return;
+      if (response?.snapshot) {
+        leaderboardSnapshot = response.snapshot;
+        leaderboardUsesLegacyApi = false;
+      } else if (Array.isArray(response?.entries)) {
+        // Older servers ignore the snapshot flag and return just the requested ranking.
+        if (force || !leaderboardUsesLegacyApi) leaderboardSnapshot = {};
+        leaderboardSnapshot[key] = response.entries;
+        leaderboardUsesLegacyApi = true;
+      } else {
+        throw new Error('Leaderboard response unavailable');
+      }
     } catch {
-      status.textContent = t('leaderboard.offlineServer');
+      if (request === leaderboardRequest) leaderboardFailed = true;
+    } finally {
+      if (request === leaderboardRequest) {
+        leaderboardLoading = false;
+        renderLeaderboardScreen();
+        if (!leaderboardFailed && key !== leaderboardFilterKey(leaderboardFilters())) void loadLeaderboardScreen(false);
+      }
     }
   }
 
@@ -3812,10 +3840,10 @@
     loadLeaderboardScreen();
   }
 
-  $$('#lb-source [data-lb-source]').forEach(b => b.addEventListener('click', () => { lbState.source = b.dataset.lbSource; loadLeaderboardScreen(); }));
-  $$('#lb-tab [data-lb-tab]').forEach(b => b.addEventListener('click', () => { lbState.tab = b.dataset.lbTab; loadLeaderboardScreen(); }));
-  $('#lb-filter-difficulty')?.addEventListener('change', e => { lbState.difficulty = e.target.value; loadLeaderboardScreen(); });
-  $('#lb-filter-site')?.addEventListener('change', e => { lbState.site = e.target.value; loadLeaderboardScreen(); });
+  $$('#lb-source [data-lb-source]').forEach(b => b.addEventListener('click', () => { lbState.source = b.dataset.lbSource; void loadLeaderboardScreen(false); }));
+  $$('#lb-tab [data-lb-tab]').forEach(b => b.addEventListener('click', () => { lbState.tab = b.dataset.lbTab; void loadLeaderboardScreen(false); }));
+  $('#lb-filter-difficulty')?.addEventListener('change', e => { lbState.difficulty = e.target.value; void loadLeaderboardScreen(false); });
+  $('#lb-filter-site')?.addEventListener('change', e => { lbState.site = e.target.value; void loadLeaderboardScreen(false); });
 
   window.addEventListener('astro:lang', () => {
     selectWorld(state.world);
@@ -3823,7 +3851,7 @@
     renderBadge();
     renderPlanner();
     SIM.refreshUI?.();
-    if (state.screen === 'leaderboard') loadLeaderboardScreen();
+    if (state.screen === 'leaderboard') renderLeaderboardScreen();
   });
   selectWorld(state.world);paintArt();renderLobby();renderBadge();renderPlanner();setupStars();lockGuest();net.start();
   if(!DATA)fetch('assets/models/parts/manifest.json').then(r=>r.json()).then(m=>{useData(m);renderBadge();renderDifficultyStep();renderPlanner();}).catch(()=>toast(t('planner.loadPartsError')));

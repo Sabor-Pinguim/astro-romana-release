@@ -245,6 +245,10 @@
     setSeat: seat => inRoom() && room.setSeat(seat),
     kick: id => inRoom() && room.isHost && id !== room.you.id && room.kick(id), // host: remove a player from the room
     listRooms: () => apiJson('/api/rooms'),
+    getLeaderboardSnapshot: ({ tab, difficulty, site, limit }) => {
+      const query = new URLSearchParams({ snapshot: '1', tab, difficulty, site, limit });
+      return apiJson(`/api/leaderboard?${query}`);
+    },
     checkRoom: code => apiJson(`/api/rooms/${encodeURIComponent(String(code || '').trim().toUpperCase())}`),
     getLeaderboard: ({ tab = 'missions', difficulty = 'all', site = 'all', limit = 25 } = {}) =>
       apiJson(`/api/leaderboard?tab=${encodeURIComponent(tab)}&difficulty=${encodeURIComponent(difficulty)}&site=${encodeURIComponent(site)}&limit=${encodeURIComponent(limit)}`),

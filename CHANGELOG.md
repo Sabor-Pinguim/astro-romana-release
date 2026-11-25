@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.7] - 2026-11-25
+
+### Changed
+- Group leaderboard source, ranking view, and mission filters visually, and remove room codes from result rows.
+- Load rankings on entry or refresh and reuse the response when switching filters. Older room servers load each requested filter once until the next refresh.
+- Bump the room server to 1.0.1 to serve both rankings and all filter combinations in a single response.
+
 ## [1.9.6] - 2026-11-25
 
 ### Changed

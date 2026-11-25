@@ -101,6 +101,7 @@ All of them are CSS `clip-path`.
 - **Windows onto space:** `--bg-viewport` with a hexagonal honeycomb mesh (`--honeycomb` SVG tile) at ~12 % opacity.
 - **Gauges:** 9 px blocks with a 3 px gap, slanted at −24° (`skewX`). In danger they turn coral and blink in 2 steps.
 - **Alerts:** crimson background with a strip of hazard stripes (amber and void, at 45°) on the left edge.
+- **Leaderboard controls:** use labeled amethyst frames to distinguish the source and ranking view. Keep difficulty and landing site together in a darker panel. Stack the groups on narrow screens.
 - **Wizard chalkboard (`.chalkboard`):** faceted wooden frame (`#8c5b30` / `#6d4421` / `#523116`) with a bottom chalk tray (white & amber chalk sticks + two-tone eraser) framing a deep slate-green faceted surface (`#1d4233` / `#163529` / `#112920`), dashed chalk dividers, off-white chalk text (`#f3f5ec`), a red close button by default, and a chamfered 3D stage for Nancy Grace Roman (`#9B5DE5` accent).
 
 ## 6. Generated art

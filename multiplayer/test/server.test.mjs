@@ -236,6 +236,15 @@ test('SQLite leaderboard records missions, deduplicates, filters, and ranks play
   assert.equal(playersAll.entries[0].bestScore, 380);
   assert.equal(playersAll.entries[0].missions, 2);
 
+  const snapshotResponse = await fetch(`${server.http}/api/leaderboard?snapshot=1`);
+  assert.equal(snapshotResponse.status, 200);
+  const { snapshot } = await snapshotResponse.json();
+  assert.equal(Object.keys(snapshot).length, 24);
+  assert.deepEqual(snapshot['missions:all:all'], missionsAll.entries);
+  assert.deepEqual(snapshot['missions:hard:gale'], missionsHard.entries);
+  assert.deepEqual(snapshot['players:all:all'], playersAll.entries);
+  assert.equal(snapshot['players:hard:gale'].find(row => row.playerName === 'Ana').missions, 1);
+
   const health = await (await fetch(`${server.http}/health`)).json();
   assert.equal(health.dbOk, true);
   assert.equal(health.missionsRecorded, 2);
