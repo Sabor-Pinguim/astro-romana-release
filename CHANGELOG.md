@@ -11,6 +11,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.6] - 2026-11-25
+
+### Changed
+- Place settings at the right edge of headers and retain Nancy's desktop guide appearance on mobile.
+- Position the mobile planner chat between the stage labels and module totals.
+- Expand cockpit minigame controls to use the available landscape height.
+- Place radar roll controls beside the game and compact completion facts for short landscape screens.
+
 ## [1.9.5] - 2026-11-25
 
 ### Changed

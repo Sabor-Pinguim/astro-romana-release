@@ -171,7 +171,10 @@
     button.setAttribute('aria-label', t('menu.settings'));
     button.title = t('menu.settings');
     button.innerHTML = settingsGear;
-    (header.querySelector('.header-side,.lobby-header-controls') || header).append(button);
+    const controls = header.querySelector('.header-side,.lobby-header-controls') || header;
+    const guide = controls.querySelector('.wizard-toggle-btn');
+    if (guide) controls.append(guide);
+    controls.append(button);
     button.addEventListener('click', openSettings);
   });
   let toastTimer;
