@@ -1004,8 +1004,8 @@
     .chat-root{position:fixed;left:16px;bottom:72px;z-index:35;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none}
     .chat-root[hidden]{display:none}
     .chat-toggle,.chat-peek,.chat-panel{pointer-events:auto}
-    .chat-toggle{position:relative;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;color:var(--starlight-cream);background:linear-gradient(155deg,var(--f4) 0 48%,var(--f2) 48%);box-shadow:inset 0 0 0 2px var(--amethyst);clip-path:var(--hex);transition:translate .12s,background .12s}
-    .chat-toggle:hover,.chat-toggle[aria-expanded="true"]{color:var(--bg-void);background:var(--solar-amber);box-shadow:none}
+    .chat-toggle{position:relative;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;color:var(--starlight-cream);background:var(--amethyst);box-shadow:none;clip-path:var(--hex);transition:translate .12s}
+    .chat-toggle:hover,.chat-toggle[aria-expanded="true"]{color:var(--starlight-cream);background:var(--amethyst);box-shadow:none}
     .chat-toggle.has-unread{box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .chat-icon{display:block}
     .chat-unread{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:700 .56rem/1 var(--heading);color:var(--starlight-cream);background:var(--crimson-alert);box-shadow:0 0 0 2px var(--solar-amber);clip-path:var(--hex)}
@@ -1035,6 +1035,7 @@
     #chat-input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .chat-send{flex:none;min-height:36px;padding:.4rem .9rem;font-size:.66rem}
     body:has(#surface.active) .chat-root{top:82px;left:16px;bottom:auto;flex-direction:column-reverse}
+    body:has(#planner.active) .chat-root{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 
     /* Surface: the landing site in 3D, with a HUD over the canvas */
     #surface{height:100vh;height:100dvh;min-height:0}
@@ -1211,7 +1212,6 @@
     #dev-exp-dialog.is-complete .minigame-complete{display:block}
 
     @media (max-width:1200px){
-      .cockpit-layout{grid-template-rows:minmax(180px,1fr) minmax(0,1fr)}
       .assembly-grid,#planner.has-wizard .assembly-grid{grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
       .blueprint.slab{min-height:0}
       .catalog{grid-column:1/-1;min-height:0}
@@ -1236,6 +1236,7 @@
       .crew-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       #lobby-step-crew .dossier-right{gap:8px}
       .cockpit-layout,.results-grid{grid-template-columns:1fr}
+      .cockpit-layout{grid-template-rows:minmax(180px,1fr) minmax(0,1fr)}
     }
     @media (max-width:640px){
       html{font-size:13.5px}
@@ -1319,7 +1320,7 @@
       .viewport-label span{display:none}
       .rocket-view-controls{top:6px;right:6px}
       .rocket-view-controls button{min-height:32px;padding:.22rem .48rem;font-size:.58rem}
-      .rocket-navigation{top:auto;bottom:4px;right:6px;flex-direction:row;gap:3px}
+      .rocket-navigation{top:50%;bottom:auto;right:6px;translate:0 -50%;flex-direction:column;gap:8px}
       .rocket-navigation button{width:32px;height:32px;font-size:.9rem}
       .rocket-status{left:6px;right:76px;bottom:6px;gap:4px}
       .rocket-status .tag{padding:.16rem .4rem;font-size:.52rem}
@@ -1593,7 +1594,7 @@
       .viewport-label span{display:none}
       .rocket-view-controls{top:6px;right:6px}
       .rocket-view-controls button{min-height:32px;padding:.22rem .48rem;font-size:.58rem}
-      .rocket-navigation{top:auto;bottom:4px;right:6px;flex-direction:row;gap:3px}
+      .rocket-navigation{top:50%;bottom:auto;right:6px;translate:0 -50%;flex-direction:column;gap:8px}
       .rocket-navigation button{width:32px;height:32px;font-size:.9rem}
       .rocket-status{left:6px;right:76px;bottom:6px;gap:4px}
       .rocket-status .tag{padding:.16rem .4rem;font-size:.52rem}
@@ -1662,7 +1663,7 @@
       .flight-stepper{margin:4px auto 0;padding:0 12px;gap:3px;grid-template-columns:repeat(4,minmax(0,1fr))}
       .flight-phase{min-height:26px;padding:.18rem .65rem .18rem .45rem;font-size:.52rem}
       .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
-      .cockpit-layout{flex:1;min-height:0;grid-template-columns:minmax(0,1.18fr) minmax(260px,340px);gap:8px;padding:4px 10px 6px}
+      .cockpit-layout{flex:1;min-height:0;grid-template-columns:minmax(0,1.18fr) minmax(260px,340px);grid-template-rows:minmax(0,1fr);gap:8px;padding:4px 10px 6px}
       .cockpit-viewport.slab{min-height:0;height:100%}
       .cockpit-hud-bottom{display:none}
       .cockpit-deck{padding:5px 8px;gap:4px;overflow-y:auto;min-height:0}

@@ -22,11 +22,21 @@
   // picked by the seed (over budget: the program review). The solar storm adds irradiated later (web/app.js).
   function create({ seed = EXP.random.newSeed(), difficulty = 'normal', maxStars = 3, cut = 0 } = {}) {
     let experiments = EXP.draw(seed);
+    // A descent activity never replaces a crew member's surface activity.
+    for (const crew of EXP.CREW) {
+      if (experiments.some(id => EXP.byId(id)?.crew === crew && EXP.byId(id)?.place === 'surface')) continue;
+      const options = EXP.list.filter(e => e.crew === crew && e.place === 'surface');
+      const rng = EXP.random.rngFor(seed, `surface-guarantee:${crew}`);
+      if (options.length) experiments.push(options[Math.floor(rng() * options.length)].id);
+    }
     const dropped = [];
     if (cut > 0) {
       const rng = EXP.random.rngFor(seed, 'budget-cut');
       for (let i = 0; i < cut; i++) {
-        const ground = experiments.filter(id => EXP.byId(id)?.place !== 'orbit');
+        const ground = experiments.filter(id => {
+          const e = EXP.byId(id);
+          return e?.place === 'surface' && experiments.some(other => other !== id && EXP.byId(other)?.crew === e.crew && EXP.byId(other)?.place === 'surface');
+        });
         if (!ground.length) break;
         const id = ground[Math.floor(rng() * ground.length)];
         dropped.push(id);
@@ -141,6 +151,8 @@
         }
         els.dialog.classList.add('is-complete');
         onFinish?.(result);
+        clearTimeout(autoClose);
+        autoClose = setTimeout(() => { if (els.dialog.open) els.dialog.close(); }, COMPLETE_DELAY_MS);
       },
     });
     current = { els, controller, finished: false, onClose, id, mechanic: e.mechanic };
@@ -148,6 +160,7 @@
     return controller;
   }
   function close() {
+    clearTimeout(autoClose);
     if (!current) return;
     const c = current;
     current = null;
@@ -163,12 +176,22 @@
     card.setAttribute('role', 'status');
     card.innerHTML = '<span class="minigame-check" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 24 L19 34 L40 12"/></svg></span>'
       + `<strong>${t('minigames.completeBanner')}</strong><span class="minigame-stars" data-stars></span><p class="minigame-line" data-line></p><p class="minigame-fact" data-fact></p>`;
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'button primary';
+    closeButton.dataset.i18n = 'dev.closeBtn';
+    closeButton.textContent = t('dev.closeBtn');
+    closeButton.addEventListener('click', () => {
+      clearTimeout(autoClose);
+      card.closest('dialog')?.close();
+    });
+    card.append(closeButton);
     return card;
   }
 
   // The game's own #minigame-dialog (surface, Mars orbit, descent). Adds the stage and the completion card the
   // first time, closes by itself a few seconds after the result and stops the minigame when the dialog closes.
-  const COMPLETE_DELAY_MS = 3400; // game-balance: time to read the result and the "Real fact"
+  const COMPLETE_DELAY_MS = 7000; // game-balance: time to read the result and the "Real fact"
   let autoClose = 0, dialogWired = false;
   function playInDialog({ run, id, crewName, onFinish, onClose }) {
     const $ = name => document.getElementById(name);
@@ -193,7 +216,6 @@
       run, id, crewName, onClose,
       onFinish(result) {
         onFinish?.(result);
-        autoClose = setTimeout(() => { if (dialog.open) dialog.close(); }, COMPLETE_DELAY_MS);
       },
     });
   }

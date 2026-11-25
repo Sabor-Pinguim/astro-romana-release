@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.5] - 2026-11-25
+
+### Changed
+- Require leaving the multiplayer room before returning to the main menu, including room entry and reconnection flows.
+- Show ordered character-colored borders on rocket modules viewed by room members, with a mustard highlight for Lucas.
+- Guarantee a surface experiment for every crew member and protect that minimum from budget cuts.
+- Keep real-fact completion cards open for seven seconds or until dismissed with the close button.
+- Fill the mobile landscape cockpit viewport, reposition rocket navigation arrows, and raise the planner chat above module totals.
+- Give the chat button a solid light-purple background.
+
 ## [1.9.4] - 2026-11-25
 
 ### Added

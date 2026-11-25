@@ -158,7 +158,7 @@
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
   const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,isPlayerNameLocked:()=>false,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
-  const showScreen = (id, { localOnly = false } = {}) => {state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='lobby'&&id!=='settings'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();if(!localOnly)net.setPhase(id);lockGuest();};
+  const showScreen = (id, { localOnly = false } = {}) => {if(id==='menu'&&net.mode!=='solo'){void leaveRoomToMenu();return;}state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='lobby'&&id!=='settings'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();if(!localOnly)net.setPhase(id);lockGuest();};
   let settingsReturnScreen = 'menu';
   const openSettings = () => { settingsReturnScreen = state.screen; window.ASTRO_SETTINGS?.syncUI(); showScreen('settings', { localOnly: true }); };
   const settingsGear = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M10 1h4l.5 2.3 1.8.8 2-1.3 2.8 2.8-1.3 2 .8 1.8L23 10v4l-2.4.5-.8 1.8 1.3 2-2.8 2.8-2-1.3-1.8.8L14 23h-4l-.5-2.4-1.8-.8-2 1.3-2.8-2.8 1.3-2-.8-1.8L1 14v-4l2.4-.5.8-1.8-1.3-2 2.8-2.8 2 1.3 1.8-.8L10 1Zm2 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>';
@@ -445,9 +445,14 @@
     });
   }
 
+  let leavingRoomToMenu = false;
   async function leaveRoomToMenu() {
+    if (leavingRoomToMenu) return;
     if (!net.enabled || net.mode === 'solo') { showScreen('menu'); return; }
-    if (!(await promptLeaveRoom())) return;
+    leavingRoomToMenu = true;
+    let confirmed;
+    try { confirmed = await promptLeaveRoom(); } finally { leavingRoomToMenu = false; }
+    if (!confirmed) return;
     SIM?.leaveMission?.();
     net.leave();
     state.lobbyStep = 'mode';
@@ -1038,6 +1043,38 @@
     if(telBadge){telBadge.hidden=alertCount===0;telBadge.textContent=alertCount>0?String(alertCount):'';}
     return m;
   }
+  let moduleViewers = [];
+  let moduleViewOrder = 0;
+  function paintModuleViewers() {
+    $$('#stack-overlay [data-select]').forEach(button => {
+      const viewers = net.mode === 'solo' ? [] : moduleViewers.filter(v => v.module === button.dataset.select);
+      button.style.boxShadow = viewers.slice().reverse().map((v, i) => `inset 0 0 0 ${(i + 1) * 3}px ${v.seat === 'lucas' ? '#A87912' : crew.find(c => c.id === v.seat)?.color || '#9B5DE5'}`).join(',');
+    });
+  }
+  function updateModuleViewer(id, module) {
+    if (!net.isHost) return;
+    const peer = net.peers.find(p => p.id === id);
+    if (!peer) return;
+    const valid = module === 'booster' || module === 'cabin' || /^stage-\d+$/.test(module || '') && !!state.rocket.stages[Number(module.slice(6))];
+    const previous = moduleViewers.find(v => v.id === id);
+    if ((previous?.module || null) === (valid ? module : null) && previous?.seat === peer.seat) return;
+    moduleViewers = moduleViewers.filter(v => v.id !== id);
+    if (valid && peer.seat) moduleViewers.push({ id, module, seat: peer.seat, order: ++moduleViewOrder });
+    moduleViewers.sort((a,b) => a.order - b.order);
+    net.setState('moduleViewers', moduleViewers);
+    paintModuleViewers();
+  }
+  // The host orders presence updates, so all clients stack the same borders.
+  setInterval(() => {
+    if (net.mode === 'solo') { if (moduleViewers.length) { moduleViewers = []; paintModuleViewers(); } return; }
+    const module = state.screen === 'planner' ? moduleKey(state.sel) : null;
+    if (net.isHost) {
+      const peers = new Set(net.peers.filter(p => p.online !== false).map(p => p.id));
+      const kept = moduleViewers.filter(v => peers.has(v.id));
+      if (kept.length !== moduleViewers.length) { moduleViewers = kept; net.setState('moduleViewers', moduleViewers); paintModuleViewers(); }
+      updateModuleViewer(net.you.id, module);
+    } else net.send({ k: 'moduleView', module }, 'host');
+  }, 400);
   function renderRocket(){
     const r=state.rocket,keys=['booster',...r.stages.map((_,i)=>`stage-${i}`),'cabin'],cur=moduleKey(state.sel),m=DATA?metrics():null;
     $('#stack-overlay').innerHTML=keys.map((k,i)=>{const [title,sub,status]=moduleLabel(k,m),rem=k.startsWith('stage-')?`<button class="remove-stage" type="button" data-remove="${k.slice(6)}" title="${t('planner.removeTitle',{title})}" aria-label="${t('planner.removeTitle',{title})}">×</button>`:'';return `<div class="stage-node ${i%2?'right':'left'}" data-module="${k}"><button class="rocket-stage ${k===cur?'selected':''}" type="button" data-select="${k}" aria-pressed="${k===cur}"><strong>${title}</strong><small>${sub}</small>${status?`<small>${status}</small>`:''}</button>${rem}</div>`;}).join('')
@@ -1047,6 +1084,7 @@
     $$('#stack-overlay [data-insert]').forEach(b=>b.addEventListener('click',()=>addStage(+b.dataset.insert)));
     const installed=[r.booster.engine,r.booster.tank,r.booster.fins,...r.stages.flatMap(s=>s.type==='booster'?[s.engine,s.tank]:[s.item]),...r.cabin].filter(Boolean).length;
     $('#rocket-tags').innerHTML=`<span class="tag">${t('planner.stagesTag',{count:r.stages.length+2})}</span><span class="tag">${t('planner.partsTag',{count:installed})}</span>`;
+    paintModuleViewers();
     window.dispatchEvent(new Event('astro:rocket'));
   }
   const isBooster = sel => sel.kind==='booster'||(sel.kind==='stage'&&state.rocket.stages[sel.index]?.type==='booster');
@@ -1492,7 +1530,7 @@
     else showScreen('menu');
   });
   $('#mode-solo-btn').addEventListener('click',()=>{
-    if(net.isHost)net.leave();
+    if(net.mode!=='solo'){void leaveRoomToMenu();return;}
     setLobbyStep('difficulty');
   });
   $('#lobby-next').addEventListener('click',()=>{
@@ -3539,7 +3577,7 @@
   // ---- Multiplayer: lobby, screens and the shared planner (docs/multiplayer.md, items 1–4; 5–7 live in SIM) ------
   // The host sends the mission setup (state 'setup') whenever it changes; guests copy it. Only what everyone must
   // agree on travels: the selection, the tab and the open details stay on each screen.
-  const GUEST_SCREENS = ['menu','orbit','lobby','planner']; // screens a guest opens on the host's word alone
+  const GUEST_SCREENS = ['orbit','lobby','planner']; // screens a guest opens on the host's word alone
   let lastSetup='';
   function syncSetup(){
     if(!net.isHost)return;
@@ -3572,7 +3610,7 @@
   // what those screens need; a guest who comes back mid-mission gets the last snapshot from the room.
   function guestScreen(phase){
     if(!net.isGuest||!phase)return;
-    const screen = phase === 'orbit' ? 'lobby' : phase;
+    const screen = phase === 'orbit' || phase === 'menu' ? 'lobby' : phase;
     if(GUEST_SCREENS.includes(screen)){SIM.leaveMission();if(screen==='lobby')state.lobbyStep='crew';if(screen!==state.screen)showScreen(screen);else renderLobbyStepper();return;}
     if(phase==='launchpad'&&state.screen!=='launchpad'&&state.screen!=='cockpit'){
       if(window.ASTRO_LAUNCHPAD)Promise.resolve(window.ASTRO_LAUNCHPAD({ok:true,accel:1})).then(()=>{if(net.cached.flight)SIM.applyFlight(net.cached.flight);},()=>{});
@@ -3585,6 +3623,9 @@
   let role='solo'; // the role in the room, kept after it closes
   net.on('welcome',m=>{
     lastSetup='';role=net.mode;
+    moduleViewers = Array.isArray(net.cached.moduleViewers) ? net.cached.moduleViewers : [];
+    moduleViewOrder = Math.max(0, ...moduleViewers.map(v => v.order || 0));
+    if(state.screen==='menu'){state.lobbyStep=net.isGuest?'crew':'difficulty';showScreen('lobby', {localOnly:true});}
     if(net.isGuest){state.lobbyStep='crew';applySetup(net.cached.setup);guestScreen(net.phase);if(m.t!=='resumed')toast(t('lobby.room.joinedRoom',{code:net.code}));}
     else if(m.t==='resumed'){applySetup(net.cached.setup,true);if(GUEST_SCREENS.includes(net.phase)&&net.phase!==state.screen)showScreen(net.phase);else net.setPhase(state.screen);}
     else{net.setPhase(state.screen);syncSetup();}
@@ -3594,6 +3635,7 @@
     const becameHost=role==='guest'&&net.isHost;
     role=net.mode;
     if(becameHost){
+      moduleViewOrder = Math.max(moduleViewOrder, ...moduleViewers.map(v => v.order || 0));
       lockGuest();
       syncSetup();
       toast(t('lobby.room.promotedHost'));
@@ -3604,6 +3646,7 @@
   });
   net.on('phase',guestScreen);
   net.on('state',(key,data)=>{
+    if(key==='moduleViewers' && Array.isArray(data)){moduleViewers=data;paintModuleViewers();}
     if(key==='setup')applySetup(data);
     else if(key==='flight'&&net.phase==='cockpit')SIM.applyFlight(data);
     else if(key==='surface'&&net.phase==='surface')SIM.applySurface(data);
@@ -3640,7 +3683,7 @@
     if(error){net.send({k:'toast',text:error},from.id);return;}
     fitSelection();renderPlanner();
   });
-  net.on('msg',data=>{if(data?.k==='toast'&&typeof data.text==='string')toast(data.text);});
+  net.on('msg',(data,from)=>{if(data?.k==='moduleView'&&net.isHost)updateModuleViewer(from?.id || from,data.module);if(data?.k==='toast'&&typeof data.text==='string')toast(data.text);});
 
   window.addEventListener('astro:settings',()=>{
     HOST_BUTTONS.forEach(sel=>{const b=$(sel);if(b&&b.dataset.label!=null)delete b.dataset.label;});
