@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.9] - 2026-11-25
+
+### Changed
+- Use square cockpit directional buttons with centered arrows and even spacing across screen sizes.
+
 ## [1.9.8] - 2026-11-25
 
 ### Fixed
