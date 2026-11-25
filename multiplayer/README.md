@@ -48,6 +48,7 @@ JSON messages. `create`, `join` and `resume` carry `v: 1`. Every error comes bac
 | `join {code, seat?, meta?}` | Anyone, only in a joinable phase | Takes the requested seat or the first free one |
 | `resume {code, id, token}` | Someone who dropped, in any phase | Returns to the same seat |
 | `seat {seat}` | Host or guest, only in a joinable phase | Switches to a free seat |
+| `kick {id}` | Host | Removes that player: the seat frees, the session can no longer resume and the player gets `closed {reason: 'kicked'}` (a new join with the code still works) |
 | `meta {meta}` | Anyone | Updates one's own `meta` (a free-form object, up to 512 B) |
 | `phase {phase}` | Host | Changes the room's phase (the game's current screen) |
 | `state {key, data}` | Host | State for the guests. **Stored** by `key`; `data: null` deletes it |

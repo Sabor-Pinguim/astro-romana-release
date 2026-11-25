@@ -191,6 +191,29 @@ test('resume from a second connection takes the seat from the first', () => {
   assert.equal(g.last().code, 'not-in-room');
 });
 
+test('the host kicks a guest: the seat frees, the guest hears kicked and cannot resume; guests cannot kick', () => {
+  const env = setup();
+  const { c: h, room } = host(env);
+  const g = guest(env, room.code), you = g.last('joined').you;
+  const g2 = guest(env, room.code), you2 = g2.last('joined').you;
+  env.hub.handle(g2, { t: 'kick', id: you.id });
+  assert.equal(g2.last('error').code, 'not-host');
+  env.hub.handle(h, { t: 'kick', id: room.you.id });
+  assert.equal(h.last('error').code, 'bad-message');
+  env.hub.handle(h, { t: 'kick', id: 'nope' });
+  assert.equal(h.last('error').code, 'peer-not-found');
+  env.hub.handle(h, { t: 'kick', id: you.id });
+  assert.deepEqual(g.last(), { t: 'closed', reason: 'kicked' });
+  assert.deepEqual(h.last('peers').peers.map(p => p.id), [room.you.id, you2.id]);
+  env.hub.handle(g, { t: 'pose', data: 1 });
+  assert.equal(g.last().code, 'not-in-room');
+  const back = env.conn();
+  env.hub.handle(back, { v: V, t: 'resume', code: room.code, id: you.id, token: you.token });
+  assert.equal(back.last('error').code, 'bad-token');
+  const again = guest(env, room.code, { seat: you.seat }); // a fresh join with the code still works
+  assert.equal(again.last('joined').you.seat, you.seat);
+});
+
 test('host title transfers to the next player in join order when the host leaves or times out; room closes when empty or expired', () => {
   const env = setup();
   let { c: h, room } = host(env);

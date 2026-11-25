@@ -72,7 +72,7 @@
       done: '{{name}} terminou {{title}}: {{stars}}',
     },
     mechanics: {
-      keep: 'Manter na faixa', timing: 'Timing', aim: 'Mira', choice: 'Escolha sob limite',
+      keep: 'Manter na faixa', timing: 'Sincronia', aim: 'Mira', choice: 'Escolha sob limite',
       pattern: 'Busca de padrão', route: 'Planejar rota', piloting: 'Pilotagem',
     },
     places: { orbit: 'Órbita de Marte', surface: 'Superfície', descent: 'Descida' },

@@ -66,7 +66,7 @@
     if (container && i18n()) {
       const langs = i18n().languages;
       container.innerHTML = langs.map(lang =>
-        `<button type="button" data-lang="${lang.code}" aria-pressed="${lang.code === current.language}">${LANG_FLAGS[lang.code] || ''}<span>${lang.name}</span></button>`
+        `<button type="button" data-lang="${lang.code}" lang="${lang.locale || lang.code}" aria-pressed="${lang.code === current.language}">${LANG_FLAGS[lang.code] || ''}<span>${lang.name}</span></button>`
       ).join('');
       container.querySelectorAll('[data-lang]').forEach(btn => {
         btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
@@ -76,7 +76,7 @@
     if (menuBar && i18n()) {
       const langs = i18n().languages;
       menuBar.innerHTML = langs.map(lang =>
-        `<button type="button" class="menu-lang-btn" data-lang="${lang.code}" aria-pressed="${lang.code === current.language}" title="${lang.name}" aria-label="${lang.name}">${LANG_FLAGS[lang.code] || ''}<span>${LANG_SHORT[lang.code] || lang.code.toUpperCase()}</span></button>`
+        `<button type="button" class="menu-lang-btn" data-lang="${lang.code}" lang="${lang.locale || lang.code}" aria-pressed="${lang.code === current.language}" title="${lang.name}" aria-label="${lang.name}">${LANG_FLAGS[lang.code] || ''}<span>${LANG_SHORT[lang.code] || lang.code.toUpperCase()}</span></button>`
       ).join('');
       menuBar.querySelectorAll('[data-lang]').forEach(btn => {
         btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
@@ -124,6 +124,11 @@
     return Boolean((document.fullscreenEnabled ?? document.webkitFullscreenEnabled) && (el.requestFullscreen || el.webkitRequestFullscreen));
   }
 
+  // iPhone and iPad (iPadOS reports a Mac with touch): there fullscreen comes from Add to Home Screen.
+  function isAppleMobile() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
   function isFullscreen() {
     return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
   }
@@ -138,7 +143,13 @@
     const text = t(active ? 'settings.fullscreenExit' : 'settings.fullscreenEnter');
     const pathD = active ? FS_EXIT_PATH : FS_ENTER_PATH;
 
-    if (group) group.hidden = !supported;
+    // Always offered: where the browser has no fullscreen (iPhone Safari), the hint tells how to get it.
+    if (group) group.hidden = false;
+    const hint = document.getElementById('settings-fullscreen-hint');
+    if (hint) {
+      hint.hidden = supported;
+      hint.textContent = supported ? '' : t(isAppleMobile() ? 'settings.fullscreenIosHint' : 'settings.fullscreenUnsupported');
+    }
     if (menuBtn) {
       menuBtn.hidden = !supported;
       menuBtn.setAttribute('aria-pressed', String(active));
@@ -147,6 +158,7 @@
       menuBtn.querySelector('path')?.setAttribute('d', pathD);
     }
     if (settingsBtn) {
+      settingsBtn.disabled = !supported;
       settingsBtn.setAttribute('aria-pressed', String(active));
       settingsBtn.setAttribute('aria-label', text);
       settingsBtn.querySelector('path')?.setAttribute('d', pathD);

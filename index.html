@@ -7,6 +7,14 @@
   <meta name="description" content="An interactive mission design prototype for Space Mission Game.">
   <title>ASTRO ROMANA</title>
   <link rel="icon" type="image/svg+xml" href="web/favicon.svg">
+  <!-- Installed on a phone's home screen the game opens without the browser bars (iPhone has no fullscreen API). -->
+  <link rel="apple-touch-icon" href="web/icons/icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Astro Romana">
+  <!-- The manifest only over http(s): from file:// the browser blocks it and logs a CORS error. -->
+  <script>if (/^https?:/.test(location.protocol)) document.head.insertAdjacentHTML('beforeend', '<link rel="manifest" href="manifest.webmanifest">');</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +47,7 @@
       <div class="menu-lang-bar" id="menu-lang-bar" role="group" data-i18n-aria="settings.languageLabel" aria-label="Language"></div>
       <button type="button" class="menu-lang-btn menu-fs-btn" id="menu-fullscreen-btn" aria-pressed="false" data-i18n-aria="settings.fullscreenEnter" data-i18n-title="settings.fullscreenEnter" title="Enter fullscreen"><svg class="fs-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button>
     </div>
-    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span class="menu-action-icon" aria-hidden="true">↗</span><span class="menu-action-label" data-i18n="menu.play">Play</span></button><button class="button secondary" id="leaderboard-button" type="button"><span class="menu-action-icon" aria-hidden="true">★</span><span class="menu-action-label" data-i18n="menu.leaderboard">Leaderboards</span></button><button class="button secondary" id="settings-button" type="button"><span class="menu-action-icon settings-glyph" aria-hidden="true"></span><span class="menu-action-label" data-i18n="menu.settings">Settings</span></button><button class="button quiet" id="dev-button" type="button" hidden><svg class="dev-penguin-icon" viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M14.6 25L16 29L17.4 25Z" fill="#020617"/><ellipse cx="12.2" cy="27" rx="3.1" ry="1.5" fill="#f97316"/><ellipse cx="19.8" cy="27" rx="3.1" ry="1.5" fill="#f97316"/><path d="M16 3.8C10.8 3.8 8.8 9.5 8.8 17.5C8.8 24 10.6 26.5 16 26.5C21.4 26.5 23.2 24 23.2 17.5C23.2 9.5 21.2 3.8 16 3.8Z" fill="#0f172a"/><path d="M9.6 11.2C9.4 7.8 12.2 4.6 16 4.6C19.8 4.6 22.6 7.8 22.4 11.2C21.2 9.2 18.6 7.8 16 7.8C13.4 7.8 10.8 9.2 9.6 11.2Z" fill="#ffffff"/><path d="M9.6 11.2C10.6 9.5 12.5 9.5 13.5 11.2C12.4 11.8 10.6 11.8 9.6 11.2Z" fill="#ffffff"/><path d="M22.4 11.2C21.4 9.5 19.5 9.5 18.5 11.2C19.6 11.8 21.4 11.8 22.4 11.2Z" fill="#ffffff"/><path d="M16 13.8C12.8 13.8 11.2 17.2 11.2 21.8C11.2 25.2 13 26.2 16 26.2C19 26.2 20.8 25.2 20.8 21.8C20.8 17.2 19.2 13.8 16 13.8Z" fill="#ffffff"/><circle cx="12.8" cy="10.8" r="1.35" fill="#ffffff"/><circle cx="19.2" cy="10.8" r="1.35" fill="#ffffff"/><circle cx="12.8" cy="10.8" r="0.85" fill="#0f172a"/><circle cx="19.2" cy="10.8" r="0.85" fill="#0f172a"/><path d="M13.6 11.6C13.6 11.6 15.2 16 16 16.3C16.8 16 18.4 11.6 18.4 11.6C17.2 12 14.8 12 13.6 11.6Z" fill="#ea580c"/></svg><span data-i18n="dev.openBtn">Dev Mode</span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="menu-meta"><span class="coordinates" data-i18n="menu.version">v1.8.2</span><a class="contact-chip" id="contact-link" href="mailto:sabor.pinguim@proton.me" title="sabor.pinguim@proton.me"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M2 3h20v14H2Z" fill="currentColor" opacity=".22"/><path d="M2 3h20v14H2Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m2 4 10 8 10-8M2 17l7-6m13 6-7-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="bevel"/></svg><span data-i18n="menu.contact">Contact us</span></a></div></div>
+    <div class="menu-shell"><div class="menu-copy"><h1 class="menu-title" id="game-title"><span>ASTRO</span><strong>ROMANA</strong></h1><div class="menu-subtitle" data-i18n="menu.subtitle">NASA Space Apps - Space Mission Game</div><div class="menu-actions"><button class="button primary" id="play-button" type="button"><span class="menu-action-icon" aria-hidden="true">↗</span><span class="menu-action-label" data-i18n="menu.play">Play</span></button><button class="button secondary" id="leaderboard-button" type="button"><span class="menu-action-icon" aria-hidden="true">★</span><span class="menu-action-label" data-i18n="menu.leaderboard">Leaderboards</span></button><button class="button secondary" id="settings-button" type="button"><span class="menu-action-icon settings-glyph" aria-hidden="true"></span><span class="menu-action-label" data-i18n="menu.settings">Settings</span></button><button class="button quiet" id="dev-button" type="button" hidden><svg class="dev-penguin-icon" viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M14.6 25L16 29L17.4 25Z" fill="#020617"/><ellipse cx="12.2" cy="27" rx="3.1" ry="1.5" fill="#f97316"/><ellipse cx="19.8" cy="27" rx="3.1" ry="1.5" fill="#f97316"/><path d="M16 3.8C10.8 3.8 8.8 9.5 8.8 17.5C8.8 24 10.6 26.5 16 26.5C21.4 26.5 23.2 24 23.2 17.5C23.2 9.5 21.2 3.8 16 3.8Z" fill="#0f172a"/><path d="M9.6 11.2C9.4 7.8 12.2 4.6 16 4.6C19.8 4.6 22.6 7.8 22.4 11.2C21.2 9.2 18.6 7.8 16 7.8C13.4 7.8 10.8 9.2 9.6 11.2Z" fill="#ffffff"/><path d="M9.6 11.2C10.6 9.5 12.5 9.5 13.5 11.2C12.4 11.8 10.6 11.8 9.6 11.2Z" fill="#ffffff"/><path d="M22.4 11.2C21.4 9.5 19.5 9.5 18.5 11.2C19.6 11.8 21.4 11.8 22.4 11.2Z" fill="#ffffff"/><path d="M16 13.8C12.8 13.8 11.2 17.2 11.2 21.8C11.2 25.2 13 26.2 16 26.2C19 26.2 20.8 25.2 20.8 21.8C20.8 17.2 19.2 13.8 16 13.8Z" fill="#ffffff"/><circle cx="12.8" cy="10.8" r="1.35" fill="#ffffff"/><circle cx="19.2" cy="10.8" r="1.35" fill="#ffffff"/><circle cx="12.8" cy="10.8" r="0.85" fill="#0f172a"/><circle cx="19.2" cy="10.8" r="0.85" fill="#0f172a"/><path d="M13.6 11.6C13.6 11.6 15.2 16 16 16.3C16.8 16 18.4 11.6 18.4 11.6C17.2 12 14.8 12 13.6 11.6Z" fill="#ea580c"/></svg><span data-i18n="dev.openBtn">Dev Mode</span></button></div></div><div class="menu-footer"><span data-i18n="menu.footerDesign">Design</span><span data-i18n="menu.footerLaunch">Launch</span><span data-i18n="menu.footerExplore">Explore</span></div><div class="menu-meta"><span class="coordinates" data-i18n="menu.version">v1.9.0</span><a class="contact-chip" id="contact-link" href="mailto:sabor.pinguim@proton.me" title="sabor.pinguim@proton.me"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M2 3h20v14H2Z" fill="currentColor" opacity=".22"/><path d="M2 3h20v14H2Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m2 4 10 8 10-8M2 17l7-6m13 6-7-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="bevel"/></svg><span data-i18n="menu.contact">Contact us</span></a></div></div>
   </section>
 
   <section id="settings" class="screen" aria-labelledby="settings-title">
@@ -126,6 +134,7 @@
               <span id="settings-fullscreen-label" data-i18n="settings.fullscreenEnter">Enter fullscreen</span>
             </button>
           </div>
+          <p class="settings-desc settings-fs-hint" id="settings-fullscreen-hint" hidden></p>
         </section>
 
         <section class="settings-group" aria-labelledby="settings-server-heading">
@@ -270,7 +279,7 @@
         <details class="nancy-info">
           <summary data-i18n-aria="lobby.setup.nancyInfoOpen" aria-label="Who was Nancy Grace Roman?">?</summary>
           <div class="nancy-info-panel">
-            <div class="nancy-info-head"><strong>Nancy Grace Roman</strong><a href="https://science.nasa.gov/people/nancy-roman/" target="_blank" rel="noopener noreferrer" data-i18n-aria="lobby.setup.nancyInfoSource" aria-label="Read about Nancy Roman at NASA">NASA ↗</a></div>
+            <div class="nancy-info-head"><strong translate="no">Nancy Grace Roman</strong><a href="https://science.nasa.gov/people/nancy-roman/" target="_blank" rel="noopener noreferrer" data-i18n-aria="lobby.setup.nancyInfoSource" aria-label="Read about Nancy Roman at NASA">NASA ↗</a></div>
             <p data-i18n="lobby.setup.nancyInfoText">NASA's first chief of astronomy helped turn the Hubble Space Telescope into reality. Her work opened new ways to study the universe from space. Astro Romana's name honors her legacy.</p>
           </div>
         </details>
@@ -284,14 +293,14 @@
             <div class="orbit-system" data-i18n-aria="orbit.mapAria" aria-label="Stylized solar system map">
               <div class="orbit-sun"></div>
               <span class="orbit-marker" data-i18n="orbit.launchOriginMarker">LAUNCH / EARTH</span>
-              <button class="orbit-world mercury extra" type="button" data-world="mercury" aria-label="Mercury, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mercury">Mercury</span></button>
-              <button class="orbit-world venus extra" type="button" data-world="venus" aria-label="Venus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.venus">Venus</span></button>
-              <button class="orbit-world earth" type="button" data-world="earth" aria-label="Earth, launch origin"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.earth">Earth</span></button>
-              <button class="orbit-world mars-target selected" type="button" data-world="mars" aria-label="Mars, mission destination" aria-pressed="true"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mars">Mars</span></button>
-              <button class="orbit-world jupiter" type="button" data-world="jupiter" aria-label="Jupiter, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.jupiter">Jupiter</span></button>
-              <button class="orbit-world saturn extra" type="button" data-world="saturn" aria-label="Saturn, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.saturn">Saturn</span></button>
-              <button class="orbit-world uranus extra" type="button" data-world="uranus" aria-label="Uranus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.uranus">Uranus</span></button>
-              <button class="orbit-world neptune extra" type="button" data-world="neptune" aria-label="Neptune, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.neptune">Neptune</span></button>
+              <button class="orbit-world mercury extra" type="button" data-world="mercury" data-i18n-dynamic aria-label="Mercury, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mercury">Mercury</span></button>
+              <button class="orbit-world venus extra" type="button" data-world="venus" data-i18n-dynamic aria-label="Venus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.venus">Venus</span></button>
+              <button class="orbit-world earth" type="button" data-world="earth" data-i18n-dynamic aria-label="Earth, launch origin"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.earth">Earth</span></button>
+              <button class="orbit-world mars-target selected" type="button" data-world="mars" data-i18n-dynamic aria-label="Mars, mission destination" aria-pressed="true"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.mars">Mars</span></button>
+              <button class="orbit-world jupiter" type="button" data-world="jupiter" data-i18n-dynamic aria-label="Jupiter, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.jupiter">Jupiter</span></button>
+              <button class="orbit-world saturn extra" type="button" data-world="saturn" data-i18n-dynamic aria-label="Saturn, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.saturn">Saturn</span></button>
+              <button class="orbit-world uranus extra" type="button" data-world="uranus" data-i18n-dynamic aria-label="Uranus, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.uranus">Uranus</span></button>
+              <button class="orbit-world neptune extra" type="button" data-world="neptune" data-i18n-dynamic aria-label="Neptune, unavailable"><span class="planet-disc"></span><span class="world-name" data-i18n="orbit.worlds.neptune">Neptune</span></button>
             </div>
           </div>
           <div class="orbit-sidebar">
@@ -422,7 +431,7 @@
           </div>
         </div>
       </aside>
-      <div class="assembly-grid" aria-label="Rocket assembly">
+      <div class="assembly-grid" aria-label="Rocket assembly" data-i18n-aria="a11y.rocketAssembly">
       <div class="planner-mobile-tabs" id="planner-mobile-tabs" role="tablist" data-i18n-aria="planner.mobileTabsAria" aria-label="Assembly views">
         <button type="button" role="tab" data-planner-tab="blueprint" aria-selected="true" data-i18n="planner.mobileTabs.rocket">Rocket</button>
         <button type="button" role="tab" data-planner-tab="catalog" aria-selected="false" data-i18n="planner.mobileTabs.parts">Parts</button>
@@ -444,8 +453,8 @@
           <div class="alert" id="power-alert" role="alert" data-i18n="planner.alerts.powerDeficit">POWER DEFICIT! Add generation or cut the draw.</div>
         </div>
       </section>
-      <section class="panel slab blueprint" aria-labelledby="blueprint-heading"><div class="viewport-label"><strong id="blueprint-heading" data-i18n="planner.blueprintHeading">MODULAR ROCKET BLUEPRINT</strong><span data-i18n="planner.blueprintHint">Click a module or an amber mounting point. + inserts a stage.</span></div><div class="rocket-view-controls"><button id="rocket-overview" type="button" aria-pressed="false">⛶ Zoom in</button></div><div class="rocket-navigation" id="rocket-navigation" hidden><button id="rocket-up" type="button" aria-label="Select the module above">↑</button><button id="rocket-down" type="button" aria-label="Select the module below">↓</button></div><div class="stack-overlay" id="stack-overlay"></div><div class="rocket-status" id="rocket-tags"></div></section>
-      <section class="panel slab catalog" aria-labelledby="catalog-heading"><div class="panel-heading"><h3 id="catalog-heading" data-i18n="planner.catalogHeading">Compatible parts</h3><span class="tag" id="selected-stage-tag">BOOSTER</span></div><div class="category-tabs" id="category-tabs" role="tablist" aria-label="Part categories"></div><p class="catalog-summary" id="catalog-summary"></p><div class="parts-list" id="parts-list"></div></section>
+      <section class="panel slab blueprint" aria-labelledby="blueprint-heading"><div class="viewport-label"><strong id="blueprint-heading" data-i18n="planner.blueprintHeading">MODULAR ROCKET BLUEPRINT</strong><span data-i18n="planner.blueprintHint">Click a module or an amber mounting point. + inserts a stage.</span></div><div class="rocket-view-controls"><button id="rocket-overview" type="button" aria-pressed="false">⛶ Zoom in</button></div><div class="rocket-navigation" id="rocket-navigation" hidden><button id="rocket-up" type="button" aria-label="Select the module above" data-i18n-aria="a11y.moduleAbove">↑</button><button id="rocket-down" type="button" aria-label="Select the module below" data-i18n-aria="a11y.moduleBelow">↓</button></div><div class="stack-overlay" id="stack-overlay"></div><div class="rocket-status" id="rocket-tags"></div></section>
+      <section class="panel slab catalog" aria-labelledby="catalog-heading"><div class="panel-heading"><h3 id="catalog-heading" data-i18n="planner.catalogHeading">Compatible parts</h3><span class="tag" id="selected-stage-tag">BOOSTER</span></div><div class="category-tabs" id="category-tabs" role="tablist" aria-label="Part categories" data-i18n-aria="a11y.partCategories"></div><p class="catalog-summary" id="catalog-summary"></p><div class="parts-list" id="parts-list"></div></section>
     </div></div>
     <footer class="app-foot"><div class="foot-actions"><button class="button primary" id="launch-button" type="button" data-i18n-html="planner.launchBtn">Launch mission <span aria-hidden="true">↗</span></button></div></footer>
   </section>
@@ -472,7 +481,7 @@
         <span class="badge" id="cockpit-badge">NOMINAL</span>
       </div>
     </header>
-    <ol class="flight-stepper" id="flight-stepper" aria-label="Flight operation phases">
+    <ol class="flight-stepper" id="flight-stepper" aria-label="Flight operation phases" data-i18n-aria="a11y.flightPhases">
       <li class="flight-phase active" data-fstep="0" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">01</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.0">Liftoff &amp; Max-Q</span><small data-phase-time>00:15</small></span></li>
       <li class="flight-phase" data-fstep="1" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">02</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.1">Cabin docking</span><small data-phase-time>01:00</small></span></li>
       <li class="flight-phase" data-fstep="2" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">03</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.2">Orbital docking</span><small data-phase-time>00:32</small></span></li>
@@ -482,7 +491,7 @@
     <div class="cockpit-layout">
       <div class="cockpit-viewport slab" id="cockpit-viewport">
         <div class="cockpit-hud-top">
-          <span class="tag" id="cockpit-view-tag" data-i18n="cockpit.viewTag">1ST PERSON FLIGHT DECK · CAMERA_PILOT</span>
+          <span class="tag" id="cockpit-view-tag" data-i18n="cockpit.viewTag">1ST PERSON FLIGHT DECK</span>
           <span class="tag" id="cockpit-alert-tag">ALL SYSTEMS NOMINAL</span>
         </div>
         <div class="flight-exterior" id="flight-exterior" aria-hidden="true" hidden>
@@ -490,7 +499,7 @@
           <div class="exterior-stack"><span class="exterior-capsule"></span><span class="exterior-upper-stage"></span><span class="exterior-main-booster"></span><span class="exterior-plume"></span></div>
           <span class="exterior-sep-label" data-i18n="cockpit.mainBoosterSep">MAIN BOOSTER SEP</span>
         </div>
-        <div class="docking-monitor" id="docking-monitor" aria-label="External docking camera" hidden>
+        <div class="docking-monitor" id="docking-monitor" aria-label="External docking camera" data-i18n-aria="a11y.dockingCamera" hidden>
           <span class="docking-monitor-label" data-i18n="cockpit.extDockCam">EXT / DOCK CAM</span>
           <span class="docking-stars"></span><span class="docking-station"><i></i><b></b></span><span class="docking-ship"><i></i><b></b></span>
           <span class="docking-monitor-readout" id="docking-monitor-readout">ALIGN 100%</span>
@@ -509,7 +518,7 @@
           <span class="tag" id="cockpit-rad-tag" style="display:none">Mars surface RAD: 165 µGy/day</span>
         </div>
       </div>
-      <aside class="panel slab cockpit-deck" aria-label="Cockpit controls and telemetry">
+      <aside class="panel slab cockpit-deck" aria-label="Cockpit controls and telemetry" data-i18n-aria="a11y.cockpitControls">
         <div class="panel-heading">
           <h3 data-i18n="cockpit.telemetryTitle">Flight Telemetry</h3>
           <span class="dot" id="cockpit-status-dot" style="color:var(--safe)" aria-hidden="true"></span>
@@ -538,7 +547,7 @@
       </div>
       <div class="surface-tags" id="surface-tags" aria-hidden="true"></div>
       <button class="surface-prompt" id="surface-prompt" type="button" hidden></button>
-      <div class="surface-crew" id="surface-crew" aria-label="Crew member you control"></div>
+      <div class="surface-crew" id="surface-crew" aria-label="Crew member you control" data-i18n-aria="a11y.crewYouControl"></div>
       <div class="surface-actions"><button class="button quiet" id="surface-emote" type="button" aria-haspopup="true" data-i18n="surface.emotesBtn">Emotes · Q</button><button class="button quiet" id="surface-camera" type="button" data-i18n="surface.cameraBtn">Camera · V</button><button class="button primary" id="surface-board" type="button" data-i18n-html="surface.boardBtn">Board &amp; depart ↗</button></div>
       <div class="surface-stick" id="surface-stick" aria-hidden="true"><span></span></div>
       <button class="surface-jump" id="surface-jump" type="button" data-i18n="surface.jumpBtn">Jump</button>
@@ -568,7 +577,7 @@
         </div>
         <div class="podium-fallback" id="podium-fallback"></div>
       </div>
-      <section class="panel slab results-card" aria-label="Mission score and leaderboard">
+      <section class="panel slab results-card" aria-label="Mission score and leaderboard" data-i18n-aria="a11y.missionScore">
         <div class="rank-banner">
           <div>
             <span class="eyebrow" data-i18n="results.evalLabel">Mission Evaluation</span>

@@ -3,7 +3,7 @@
 The game's background sound is generated from **real radiation measurements** taken by the RAD detector on the Curiosity rover, on the surface of Mars. What the player hears follows what the instrument measured.
 
 - **Data and sources:** [references/datasets/msl-rad/](../references/datasets/msl-rad/README.md)
-- **Generator:** `tools/audio/` (rules in [AGENTS.md](../AGENTS.md), section 7)
+- **Generator:** `tools/audio/` (rules in [tools/audio/AGENTS.md](../tools/audio/AGENTS.md))
 - **Generated files:** `assets/audio/`, with the `manifest.json`
 
 The audio is generated **ahead of time**, outside the game. The game only plays the files and sets the volume, so everything works the same in the web version.

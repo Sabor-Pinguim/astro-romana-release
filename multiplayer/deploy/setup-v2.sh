@@ -192,6 +192,8 @@ $DOMAIN {
 	}
 	handle {
 		root * $APP_DIR
+		# Browsers check every file again on each load (a cheap 304 when unchanged): no stale CSS/JS after a deploy.
+		header Cache-Control "no-cache"
 		file_server {
 			hide .* node_modules
 		}

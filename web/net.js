@@ -104,7 +104,7 @@
     'wrong-password': 'Wrong room password.', unreachable: 'Could not reach the room server.',
     'connection-lost': 'Lost the connection to the room server.', 'host-left': 'The host left: the room closed.',
     expired: 'The room expired.', server: 'The room server restarted.', replaced: 'This seat was opened in another tab.',
-    'too-many-rooms': 'The room server is full. Try again later.',
+    'too-many-rooms': 'The room server is full. Try again later.', kicked: 'The host removed you from the room.',
   };
   const listeners = new Map();
   const fire = (type, ...args) => (listeners.get(type) || []).forEach(fn => { try { fn(...args); } catch (err) { console.error('ASTRO_NET listener failed:', err); } });
@@ -243,6 +243,7 @@
     pose: data => inRoom() && room.pose(data),
     send: (data, to) => inRoom() && room.send(data, to),
     setSeat: seat => inRoom() && room.setSeat(seat),
+    kick: id => inRoom() && room.isHost && id !== room.you.id && room.kick(id), // host: remove a player from the room
     listRooms: () => apiJson('/api/rooms'),
     checkRoom: code => apiJson(`/api/rooms/${encodeURIComponent(String(code || '').trim().toUpperCase())}`),
     getLeaderboard: ({ tab = 'missions', difficulty = 'all', site = 'all', limit = 25 } = {}) =>

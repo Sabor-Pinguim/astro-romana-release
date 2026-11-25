@@ -39,6 +39,11 @@ const MIME = {
 const args = process.argv.slice(2);
 const strict = args.includes('--strict');
 const saveScreenshots = args.includes('--screenshots');
+// --lang pt|es|en: audit in that language (Portuguese and Spanish run 20–30% longer than English); --pseudo: with
+// pseudo-localization (web/i18n.js), every text about a third longer, to catch text that does not fit.
+const langIdx = args.indexOf('--lang');
+const auditLang = langIdx >= 0 ? args[langIdx + 1] : null;
+const pseudoQuery = args.includes('--pseudo') ? 'pseudo&' : '';
 const outIdx = args.indexOf('--out');
 const screenshotDir = outIdx >= 0 && args[outIdx + 1]
   ? path.resolve(args[outIdx + 1])
@@ -273,6 +278,10 @@ async function runViewport(cdp, baseUrl, vp) {
     await cdp.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }, sessionId);
   }
 
+  if (auditLang) {
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem('astro-romana-settings', JSON.stringify({ language: '${auditLang}' })); } catch {}` }, sessionId);
+  }
+
   cdp.on('Runtime.exceptionThrown', p => {
     errors.push(p.exceptionDetails?.exception?.description || p.exceptionDetails?.text || 'Runtime exception');
   }, sessionId);
@@ -306,7 +315,7 @@ async function runViewport(cdp, baseUrl, vp) {
   };
 
   const results = [];
-  await navigate(`${baseUrl}/index.html`);
+  await navigate(`${baseUrl}/index.html${pseudoQuery ? `?${pseudoQuery}` : ''}`);
   await waitFor(`document.querySelector('#menu.active')`, '#menu.active');
   results.push(await auditScreen(cdp, sessionId, vp, '01-menu', errors));
 
@@ -357,7 +366,7 @@ async function runViewport(cdp, baseUrl, vp) {
   await waitFor(`document.querySelector('#results.active')`, '#results.active');
   results.push(await auditScreen(cdp, sessionId, vp, '10-results', errors));
 
-  await navigate(`${baseUrl}/index.html?audit=surface#surface-jezero`);
+  await navigate(`${baseUrl}/index.html?${pseudoQuery}audit=surface#surface-jezero`);
   await waitFor(`document.querySelector('#surface.active')`, '#surface.active', 12000);
   await waitFor(`document.querySelectorAll('#surface-goals li').length > 0`, '#surface-goals items', 12000);
   await click('#surface-start');
