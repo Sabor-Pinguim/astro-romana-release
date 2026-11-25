@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.8.3] - 2026-11-25
+
+### Changed
+- Moved the multiplayer server controls into a collapsed Advanced options section.
+
 ## [1.8.2] - 2026-11-25
 
 ### Added
