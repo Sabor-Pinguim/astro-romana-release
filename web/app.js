@@ -952,10 +952,7 @@
   $('#hint-dialog-action')?.addEventListener('click', () => {
     const act = activeHintAction;
     $('#hint-dialog')?.close();
-    if (act?.key) {
-      selectModule(act.key, act.tab);
-      if (matchMedia('(max-width:640px), (max-height:500px) and (orientation:landscape)').matches) setPlannerMobileTab('catalog');
-    }
+    if (act?.key) openPlannerParts(act.key, act.tab);
   });
   $('#hint-dialog')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.close();
@@ -1166,6 +1163,19 @@
   $$('#planner-mobile-tabs [data-planner-tab]').forEach(b=>b.addEventListener('click',()=>setPlannerMobileTab(b.dataset.plannerTab)));
   function renderPlanner(){renderTelemetry();renderRocket();renderCatalog();renderWizard();syncSetup();}
   function selectModule(key,tab){state.sel=parseKey(key);const r=state.rocket;state.tab=tab||(state.sel.kind==='booster'?(r.booster.engine&&!r.booster.tank?'tank':'engine'):state.sel.kind==='cabin'?'helena':'power');window.dispatchEvent(new CustomEvent('astro:focus-module',{detail:key}));renderPlanner();}
+  function openPlannerParts(key, tab, focusSelector = '#category-tabs [aria-selected="true"]') {
+    selectModule(key, tab);
+    setPlannerMobileTab('catalog');
+    const target = $(focusSelector);
+    target?.focus({ preventScroll: true });
+    const list = target?.closest('.parts-list');
+    if (list) {
+      const bounds = list.getBoundingClientRect();
+      const part = (target.closest('.part') || target).getBoundingClientRect();
+      if (part.top < bounds.top || part.bottom > bounds.bottom) list.scrollTop += part.top - bounds.top;
+    }
+    return target;
+  }
   function stepRocketModule(delta){
     const keys=['booster',...state.rocket.stages.map((_,i)=>`stage-${i}`),'cabin'];
     const idx=keys.indexOf(moduleKey(state.sel));
@@ -1437,22 +1447,112 @@
     }
   });
   window.addEventListener('astro:settings', () => { if (wizardState.open || wizardState.promptOpen) renderWizard(); });
+  let launchRiskTarget = null;
+  let launchRiskHighlightTimer;
+  function highlightLaunchRisk(target) {
+    clearTimeout(launchRiskHighlightTimer);
+    launchRiskTarget?.classList.remove('launch-risk-target');
+    launchRiskTarget = target?.closest('.part') || target;
+    if (!launchRiskTarget) return;
+    launchRiskTarget.classList.add('launch-risk-target');
+    launchRiskHighlightTimer = setTimeout(() => {
+      launchRiskTarget.classList.remove('launch-risk-target');
+      launchRiskTarget = null;
+    }, 2250);
+  }
+  let launchReviewPages = [], launchReviewPage = 0;
+  function showLaunchReviewRange(start, end) {
+    const risks = $('#launch-summary .launch-risks');
+    const metrics = $$('#launch-metrics > div');
+    const warnings = $$('.launch-risks > :not(h4)');
+    [...metrics, ...warnings].forEach((item, i) => { item.hidden = i < start || i >= end; });
+    $('#launch-metrics').hidden = start >= metrics.length;
+    risks.hidden = end <= metrics.length;
+  }
+  function showLaunchReviewPage(page) {
+    launchReviewPage = Math.min(launchReviewPages.length - 1, Math.max(0, page));
+    showLaunchReviewRange(...launchReviewPages[launchReviewPage]);
+    $('#launch-page-number').textContent = `${launchReviewPage + 1} / ${launchReviewPages.length}`;
+    $('#launch-prev-page').disabled = launchReviewPage === 0;
+    $('#launch-next-page').disabled = launchReviewPage === launchReviewPages.length - 1;
+  }
+  function paginateLaunchReview() {
+    if (!$('#launch-dialog').open) return;
+    const summary = $('#launch-summary'), pager = $('#launch-pager');
+    const count = $$('#launch-metrics > div, .launch-risks > :not(h4)').length;
+    if (!count) return;
+    const pageStart = launchReviewPages[launchReviewPage]?.[0] ?? 0;
+    const fits = () => summary.scrollHeight <= summary.clientHeight + 1;
+    pager.hidden = true;
+    showLaunchReviewRange(0, count);
+    launchReviewPages = [[0, count]];
+    if (!fits()) {
+      pager.hidden = false;
+      launchReviewPages = [];
+      for (let start = 0; start < count;) {
+        let end = start + 1;
+        while (end < count) {
+          showLaunchReviewRange(start, end + 1);
+          if (!fits()) break;
+          end++;
+        }
+        launchReviewPages.push([start, end]);
+        start = end;
+      }
+    }
+    showLaunchReviewPage(launchReviewPages.findIndex(([start, end]) => start <= pageStart && end > pageStart));
+  }
+  $('#launch-prev-page').addEventListener('click', () => showLaunchReviewPage(launchReviewPage - 1));
+  $('#launch-next-page').addEventListener('click', () => showLaunchReviewPage(launchReviewPage + 1));
+  new ResizeObserver(paginateLaunchReview).observe($('#launch-summary'));
   function showLaunch(){
     const m=metrics(),lift=liftoffOf(m),abort=lift.ok?abortOf(m):null,warnings=[];
-    if(!lift.ok)warnings.push(`${capFirst(lift.status.toLowerCase())}: ${t('launch.msgNoPad',{detail:''}).trim()}`);
-    m.stack.slice(1).filter(s=>s.issue).forEach(s=>warnings.push(s.issue==='thrust'?t('launch.risks.stageWeak',{stage:capFirst(stageName(s.key)),twr:U.decimal(s.twr,2),min:U.decimal(UPPER_TWR(),1)}):t('launch.risks.stageCantFire',{stage:capFirst(stageName(s.key))})));
-    if(lift.ok&&m.twr<TWR_MIN())warnings.push(t('launch.risks.lowTwr',{min:U.decimal(TWR_MIN(),1)}));
-    if(m.cost>m.budget)warnings.push(t('launch.risks.overBudget'));
-    if(m.gen<m.draw)warnings.push(t('launch.risks.powerDeficit'));
+    const addWarning = (text, key, tab, focusSelector) => warnings.push({ text, key, tab, focusSelector });
+    if (!lift.ok) {
+      const tab = ['no-tank', 'propellant'].includes(lift.reason) ? 'tank' : 'engine';
+      addWarning(lift.status, 'booster', tab);
+    }
+    for (const stage of m.stack.slice(1)) {
+      if (!stage.issue) continue;
+      const name = capFirst(stageName(stage.key));
+      const text = stage.issue === 'thrust'
+        ? t('launch.risks.stageWeak', { stage: name, twr: U.decimal(stage.twr, 2), min: U.decimal(UPPER_TWR(), 1) })
+        : t('launch.risks.stageCantFire', { stage: name });
+      const parts = state.rocket.stages[Number(stage.key.slice(6))];
+      const tab = stage.issue === 'propellant' || (stage.issue === 'incomplete' && parts.engine) ? 'tank' : 'engine';
+      addWarning(text, stage.key, tab);
+    }
+    if (lift.ok && m.twr < TWR_MIN()) {
+      const tab = state.rocket.booster.engine && (!state.rocket.booster.tank || m.issue === 'propellant') ? 'tank' : 'engine';
+      addWarning(t('launch.risks.lowTwr', { min: U.decimal(TWR_MIN(), 1) }), 'booster', tab);
+    }
+    if (m.cost > m.budget) addWarning(t('launch.risks.overBudget'), 'booster', 'engine');
+    if (m.gen < m.draw) {
+      const stages = state.rocket.stages;
+      let bayIndex = stages.findIndex(stage => stage.type !== 'booster' && !stage.item);
+      if (bayIndex < 0) bayIndex = stages.findIndex(stage => stage.type !== 'booster');
+      const text = t('launch.risks.powerDeficit');
+      if (bayIndex >= 0) addWarning(text, `stage-${bayIndex}`, 'power');
+      else if (stages.length) addWarning(text, 'stage-0', 'engine', '#stage-type');
+      else addWarning(text);
+    }
     const inst=installedParts();
-    if(LV().penalties&&!DISH_PARTS.some(id=>inst.has(id)))warnings.push(t('launch.risks.noDish',{max:CONSEQUENCE.noDishMaxStars}));
-    if(LV().penalties&&!SHELTER_PARTS.some(id=>inst.has(id)))warnings.push(t('launch.risks.noShelter'));
-    if(m.ready&&!m.orbit)warnings.push(t('launch.risks.noOrbit',{dv:U.velocityMs(m.dv),leo:U.velocityMs(m.leo)}));
-    if(m.orbit&&!m.marsOk)warnings.push(t('launch.risks.noMars',{marsDv:U.velocityMs(m.marsDv),transfer:U.velocityMs(m.transfer)}));
+    if (LV().penalties && !DISH_PARTS.some(id => inst.has(id))) {
+      addWarning(t('launch.risks.noDish', { max: CONSEQUENCE.noDishMaxStars }), 'cabin', 'oscar', '[data-part="cabin-scan-console"]');
+    }
+    if (LV().penalties && !SHELTER_PARTS.some(id => inst.has(id))) {
+      addWarning(t('launch.risks.noShelter'), 'cabin', 'maya', '[data-part="cabin-storm-shelter"]');
+    }
+    if (m.ready && !m.orbit) addWarning(t('launch.risks.noOrbit', { dv: U.velocityMs(m.dv), leo: U.velocityMs(m.leo) }), 'booster', 'tank');
+    if (m.orbit && !m.marsOk) {
+      addWarning(t('launch.risks.noMars', { marsDv: U.velocityMs(m.marsDv), transfer: U.velocityMs(m.transfer) }), m.refuelStage.key, 'tank');
+    }
     $('#launch-title').textContent=!lift.ok?t('launch.titleNoPad'):abort?(abort.reason==='no-orbit'?t('launch.titleNoOrbit'):t('launch.titleNoMars')):warnings.length?t('launch.titleRisks'):t('launch.titleReady');
     $('#launch-message').textContent=!lift.ok?t('launch.msgNoPad',{detail:lift.detail}):abort?t('launch.msgAbort',{warn:abort.warn}):warnings.length&&!LV().failures?t('launch.msgEasy'):warnings.length?t('launch.msgRisks'):t('launch.msgReady');
     const pc=playerCount();
-    $('#launch-summary').innerHTML=[
+    const summary = $('#launch-summary');
+    summary.querySelector('.launch-risks')?.remove();
+    $('#launch-metrics').innerHTML=[
       [t('launch.summary.crew'),t('launch.summary.crewVal',{players:pc,playerWord:pc>1?t('common.players'):t('common.player'),ai:crew.length-pc})],
       [t('launch.summary.site'),SITES_INFO[state.site].name],
       [t('launch.summary.difficulty'),t(`difficulty.${state.difficulty}.label`).toUpperCase()],
@@ -1463,11 +1563,52 @@
       [t('launch.summary.dvOrbit'),m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—'],
       [t('launch.summary.marsTransfer'),m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—'],
       [t('launch.summary.orbitalRefuel'),m.marsOk?(m.refuelKg>0?`${Math.ceil(m.refuelPct)}% · ${tonnes(m.refuelKg)}`:t('launch.summary.notNeeded')):'—'],
-      [t('launch.summary.power'),`${number(m.gen)} / ${number(m.draw)} W`],
-      [t('launch.summary.risks'),warnings.length?warnings.join('; '):t('common.allClear')]
+      [t('launch.summary.power'),`${number(m.gen)} / ${number(m.draw)} W`]
     ].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
+    const risks = document.createElement('section');
+    risks.className = 'launch-risks';
+    risks.setAttribute('aria-labelledby', 'launch-risks-heading');
+    const heading = document.createElement('h4');
+    heading.id = 'launch-risks-heading';
+    heading.textContent = t('launch.summary.risks');
+    risks.append(heading);
+    if (!warnings.length) {
+      const clear = document.createElement('p');
+      clear.textContent = t('common.allClear');
+      risks.append(clear);
+    }
+    const dialog = $('#launch-dialog');
+    for (const warning of warnings) {
+      const button = document.createElement('button');
+      button.className = 'launch-risk';
+      button.type = 'button';
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      button.append(warning.text, arrow);
+      button.addEventListener('click', () => {
+        dialog.close();
+        if (warning.key) {
+          highlightLaunchRisk(openPlannerParts(warning.key, warning.tab, warning.focusSelector));
+        } else {
+          setPlannerMobileTab('blueprint');
+          window.dispatchEvent(new CustomEvent('astro:focus-module', { detail: null }));
+          const insertion = $('#stack-overlay [data-insert="0"]');
+          if (insertion?.getClientRects().length) insertion.focus({ preventScroll: true });
+          else $('#rocket-overview')?.focus({ preventScroll: true });
+          highlightLaunchRisk(insertion);
+        }
+      });
+      risks.append(button);
+    }
+    summary.append(risks);
     $('#launch-confirm').textContent=!lift.ok||abort?t('launch.btnLaunchAnyway'):warnings.length&&!LV().failures?t('launch.btnLaunchWarnings'):warnings.length?t('launch.btnLaunchRisks'):t('launch.btnLaunchMission');
-    $('#launch-dialog').showModal();
+    launchReviewPages = [];
+    launchReviewPage = 0;
+    $('#launch-pager').hidden = true;
+    dialog.showModal();
+    paginateLaunchReview();
+    $('#launch-close').focus({ preventScroll: true });
   }
   function setupStars(){const canvas=$('#stars'),ctx=canvas.getContext('2d');if(!ctx)return;let stars=[];let width=0,height=0;const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;function resize(){const ratio=Math.min(devicePixelRatio||1,2);width=canvas.clientWidth;height=canvas.clientHeight;canvas.width=width*ratio;canvas.height=height*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);stars=Array.from({length:Math.min(150,Math.floor(width*height/8500))},(_,i)=>({x:((i*2819)%1009)/1009*width,y:((i*3877)%1013)/1013*height,r:.4+(i%5)*.25,phase:i*.63,c:['#FCE8A6','#f7dfff','#c9a6ff'][i%3]}));}function draw(time){ctx.clearRect(0,0,width,height);for(const star of stars){ctx.globalAlpha=.25+.45*(.5+.5*Math.sin(time*.0008+star.phase));const r=star.r*1.7;ctx.fillStyle=star.c;ctx.beginPath();ctx.moveTo(star.x,star.y-r);ctx.lineTo(star.x+r*.6,star.y);ctx.lineTo(star.x,star.y+r);ctx.lineTo(star.x-r*.6,star.y);ctx.fill();}ctx.globalAlpha=1;if(!reduce)requestAnimationFrame(draw);}resize();window.addEventListener('resize',resize);requestAnimationFrame(draw);}
   const WORLD_IDS=['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune'];

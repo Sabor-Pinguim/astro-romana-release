@@ -11,6 +11,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.8] - 2026-11-25
+
+### Fixed
+- Prevent page scrolling in rocket assembly and keep the launch review within the viewport, with pagination when needed.
+
+### Changed
+- Show launch risks as individual shortcuts to the relevant parts or stage controls. Briefly highlight the destination using the guide's amber outline.
+
 ## [1.9.7] - 2026-11-25
 
 ### Changed

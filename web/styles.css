@@ -490,7 +490,9 @@
     .perk p{margin-top:.2rem;font-size:.86rem;color:var(--muted)}
 
     /* Planner: modular rocket */
-    #planner{height:100vh;height:100dvh;min-height:0;overflow:hidden}
+    html:has(#planner.active),body:has(#planner.active){overflow:clip;overscroll-behavior:none}
+    body:has(#planner.active){min-width:0}
+    #planner{height:100vh;height:100dvh;min-height:0;overflow:clip}
     #planner .planner-content{min-height:0}
     #planner .app-header,#planner .app-foot{flex:none}
     .assembly-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(220px,.95fr) minmax(300px,1.3fr) minmax(260px,1.05fr);gap:14px}
@@ -611,15 +613,16 @@
       0%,49%{outline:3px solid var(--solar-amber);outline-offset:-3px;box-shadow:inset 0 0 0 3px var(--solar-amber)}
       50%,100%{outline:3px solid var(--starlight-cream);outline-offset:-3px;box-shadow:inset 0 0 0 3px transparent}
     }
-    .wizard-highlight{outline:3px solid var(--solar-amber);outline-offset:-3px;box-shadow:inset 0 0 0 3px var(--solar-amber)}
+    .wizard-highlight,.launch-risk-target{outline:3px solid var(--solar-amber);outline-offset:-3px;box-shadow:inset 0 0 0 3px var(--solar-amber)}
     .wizard-blink{animation:wizard-blink .75s steps(2,end) infinite}
+    .launch-risk-target{animation:wizard-blink .75s steps(2,end) 3}
     .add-stage.wizard-highlight{outline:none;box-shadow:none;background:var(--solar-amber);color:var(--bg-void)}
     .add-stage.wizard-blink{outline:none;box-shadow:none;animation:wizard-blink-fill .75s steps(2,end) infinite}
     @keyframes wizard-blink-fill{
       0%,49%{background:var(--solar-amber);color:var(--bg-void)}
       50%,100%{background:var(--starlight-cream);color:var(--bg-void)}
     }
-    @media (prefers-reduced-motion:reduce){.wizard-blink,.add-stage.wizard-blink{animation:none}}
+    @media (prefers-reduced-motion:reduce){.wizard-blink,.add-stage.wizard-blink,.launch-risk-target{animation:none}}
     .planner-mobile-tabs{display:none}
     .tab-alert-badge{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;font:700 .56rem/1 var(--heading);letter-spacing:0;color:var(--bg-void);background:var(--solar-amber);clip-path:var(--hex)}
     .tab-alert-badge[hidden]{display:none}
@@ -873,10 +876,24 @@
     dialog{width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;padding:0;border:0;color:var(--text-white);background:linear-gradient(150deg,var(--f4) 0 26%,var(--f2) 26% 72%,var(--f1) 72%);clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
     dialog[open]{animation:wipe .4s cubic-bezier(.7,0,.2,1) backwards}
     dialog::backdrop{background:#0a0414d0}
-    #launch-dialog[open]{display:flex;flex-direction:column;overflow:hidden}
-    #launch-dialog .dialog-inner{flex:1;min-height:0;overflow:hidden}
-    #launch-summary{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}
-    #launch-dialog .dialog-actions{flex:none}
+    #launch-dialog[open]{display:flex;flex-direction:column;overflow:clip;height:min(760px,100dvh)}
+    #launch-dialog .dialog-inner{flex:1;min-height:0;min-width:0;overflow:clip}
+    #launch-summary{flex:1 1 0;min-height:0;min-width:0;overflow:clip;overflow-wrap:anywhere}
+    #launch-summary [hidden],#launch-pager[hidden]{display:none}
+    #launch-metrics{grid-template-columns:minmax(0,1fr)}
+    #launch-metrics>*{min-width:0}
+    #launch-pager{display:flex;flex:none;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.75rem}
+    #launch-pager .button{min-height:32px;padding:.4rem .85rem;font-size:.66rem}
+    #launch-pager .button:disabled{opacity:.45}
+    .launch-risks{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:10px 3px 3px}
+    .launch-risks h4{font:700 .72rem/1.2 var(--heading);letter-spacing:.12em;text-transform:uppercase;color:var(--starlight-cream)}
+    .launch-risks p{font-size:.8rem}
+    .launch-risk{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;padding:.55rem .7rem;border:0;border-inline-start:3px solid var(--mars-orange);background:var(--f1);color:var(--text-white);font:600 .8rem/1.35 var(--body);text-align:start;cursor:pointer}
+    .launch-risk span{flex:none;color:var(--solar-amber);font-size:1rem}
+    .launch-risk:hover,.launch-risk:focus-visible{background:var(--f3)}
+    .launch-risk:focus-visible{outline-offset:-2px}
+    #launch-dialog .dialog-actions{flex:none;min-width:0}
+    #launch-dialog .dialog-actions .button{min-width:0;overflow-wrap:anywhere;text-align:center}
     .dialog-inner{display:flex;flex-direction:column;gap:.75rem;padding:24px 26px}
     .minigame-complete{display:none;text-align:center;padding:24px 10px;color:var(--starlight-cream);font-family:var(--heading)}
     .minigame-complete strong{display:block;font-size:1.35rem;text-transform:uppercase;letter-spacing:.08em}
@@ -1436,7 +1453,7 @@
       #launch-dialog .dialog-inner{padding:12px 14px;gap:.45rem}
       #launch-dialog h3{font-size:1.15rem}
       #launch-message{font-size:.78rem;line-height:1.35}
-      #launch-summary div{padding:.34rem .6rem;font-size:.74rem;gap:.6rem}
+      #launch-metrics > div{padding:.34rem .6rem;font-size:.74rem;gap:.6rem}
       #launch-summary strong{font-size:.7rem;overflow-wrap:anywhere}
       #launch-dialog .dialog-actions{flex-wrap:nowrap;margin-top:.25rem;gap:.45rem}
       #launch-dialog .dialog-actions .button{flex:1;min-height:38px;padding:.42rem .65rem;font-size:.7rem}
@@ -1715,9 +1732,8 @@
       #launch-dialog .dialog-inner{padding:10px 14px;gap:.35rem}
       #launch-dialog h3{font-size:1.05rem}
       #launch-message{font-size:.74rem;line-height:1.25}
-      #launch-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 6px}
-      #launch-summary div{padding:.26rem .52rem;font-size:.72rem;gap:.5rem}
-      #launch-summary div:last-child{grid-column:1 / -1}
+      #launch-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 6px}
+      #launch-metrics > div{padding:.26rem .52rem;font-size:.72rem;gap:.5rem}
       #launch-summary strong{font-size:.68rem;overflow-wrap:anywhere}
       #launch-dialog .dialog-actions{margin-top:.2rem;gap:.45rem}
       #launch-dialog .dialog-actions .button{min-height:34px;padding:.3rem .8rem;font-size:.68rem}
