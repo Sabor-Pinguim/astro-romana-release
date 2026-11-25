@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.2] - 2026-11-25
+
+### Changed
+- Fit rocket assembly and cockpit layouts to the viewport and place fullscreen first in settings.
+- Standardize player-facing automated crew labels as BOT in English, Portuguese and Spanish.
+- Open the full leaderboard from results through a dedicated button and return to results afterward.
+- Fold experiment descriptions, instructions and contextual information into a shared information button across all minigames.
+- Replace failed minigame previews and controls with the failure message and retry actions in the same screen.
+
 ## [1.9.1] - 2026-11-25
 
 ### Changed

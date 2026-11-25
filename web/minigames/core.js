@@ -228,6 +228,14 @@
 
     function mount() {
       container.replaceChildren();
+      const dialog = container.closest('dialog');
+      const infoHints = dialog?.querySelector('.minigame-info-hints');
+      const infoContent = dialog?.querySelector('.minigame-info-content');
+      const infoToggle = dialog?.querySelector('.minigame-info-toggle');
+      infoHints?.replaceChildren();
+      if (infoContent) infoContent.hidden = true;
+      infoToggle?.setAttribute('aria-expanded', 'false');
+      dialog?.classList.remove('is-failed');
       const cap = starCap(attempt);
       const wrap = el('div', 'mg');
       wrap.dataset.exp = id; wrap.dataset.level = level;
@@ -235,10 +243,13 @@
       const body = el('div', 'mg-body');
       const status = el('p', 'mg-status');
       status.setAttribute('aria-live', 'polite');
+      // Every experiment uses this channel for instructions and contextual explanations.
+      // Keep the same node alive in the shared information panel so later updates stay folded too.
+      if (infoHints) infoHints.append(status);
       const foot = el('div', 'mg-foot');
       const failBox = el('div', 'mg-fail');
       failBox.hidden = true;
-      wrap.append(head, body, status, foot, failBox);
+      wrap.append(head, body, ...(!infoHints ? [status] : []), foot, failBox);
       container.append(wrap);
 
       const loops = new Set(), timers = new Set(), keyHandlers = [], cleanups = [];
@@ -283,6 +294,8 @@
           if (!host.active) return;
           host.active = false;
           stopRuntime();
+          wrap.classList.add('is-failed');
+          dialog?.classList.add('is-failed');
           failBox.replaceChildren(
             el('strong', 'mg-fail-title', host.tc('failTitle')),
             el('p', 'mg-fail-reason', reason || ''),
@@ -345,6 +358,7 @@
       }
       labelChrome();
       instance = def.mount(host) || {};
+      if (infoHints) infoHints.append(...body.querySelectorAll('.mg-hint'));
     }
 
     function restart() {

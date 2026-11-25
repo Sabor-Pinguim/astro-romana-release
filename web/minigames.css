@@ -17,6 +17,12 @@
 .mg-fail-title{font:700 .9rem var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--coral-hover)}
 .mg-fail-reason{font-size:.82rem;color:var(--starlight-cream)}
 .mg-fail-actions{display:flex;flex-wrap:wrap;gap:8px}
+.mg.is-failed > .mg-body,.mg.is-failed > .mg-status,.mg.is-failed > .mg-foot{display:none}
+.minigame-info{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.minigame-info-toggle{margin:0}
+.minigame-info-content{width:100%;display:grid;gap:8px;padding:10px 12px;background:var(--f1);border-left:2px solid var(--solar-amber)}
+.minigame-info-content[hidden]{display:none}
+.minigame-info-hints{display:grid;gap:6px}
 
 /* Readouts, meters, controls */
 .mg-readout{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;font:700 .7rem var(--heading);letter-spacing:.08em;font-variant-numeric:tabular-nums;color:var(--solar-amber)}

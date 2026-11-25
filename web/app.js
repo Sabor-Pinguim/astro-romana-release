@@ -1468,7 +1468,7 @@
     window.ASTRO_LAUNCH?window.ASTRO_LAUNCH().then(go):go();
   });
   $('#leaderboard-button')?.addEventListener('click',()=>openLeaderboard());
-  $('#leaderboard-back')?.addEventListener('click',()=>showScreen('menu'));
+  $('#leaderboard-back')?.addEventListener('click',()=>showScreen(leaderboardReturnScreen, { localOnly: leaderboardReturnScreen === 'results' }));
   $('#leaderboard-refresh')?.addEventListener('click',()=>loadLeaderboardScreen());
   $('#results-open-lb')?.addEventListener('click',()=>openLeaderboard(net.mode==='solo'?'solo':'server'));
   $('#settings-button')?.addEventListener('click',openSettings);
@@ -2213,7 +2213,6 @@
       box.innerHTML = `
         <span class="eyebrow">${t('experiments.orbit.eyebrow')}</span>
         <h4>${t('experiments.orbit.title')}</h4>
-        <p>${t('experiments.orbit.intro')}</p>
         <div class="orbit-exp-list">${rows}</div>
         <div class="orbit-foot"><span class="orbit-window" id="orbit-window">${t('experiments.orbit.window', { time: clock(o.left) })}</span>
           ${myPending ? `<button class="button quiet" type="button" data-orbit-skip>${t('experiments.orbit.skip')}</button>` : ''}
@@ -2799,7 +2798,6 @@
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.helenaLiftoffEyebrow')}</span>
           <h4>${t('cockpit.cards.helenaLiftoffTitle')}</h4>
-          <p>${g ? t('cockpit.cards.helenaLiftoffActive') : t('cockpit.cards.helenaLiftoffIdle', { pct: LIFTOFF.throttle * 100 })}${flight.design.ready ? t('cockpit.cards.helenaLiftoffTwr', { twr: U.decimal(flight.design.twr, 2), sec: phaseDuration(0), wallow: flight.design.overweight ? t('cockpit.cards.helenaLiftoffWallow') : '' }) : ''}${flight.design.finsDrift < 1 ? t('cockpit.cards.helenaLiftoffFins', { pct: Math.round((1 - flight.design.finsDrift) * 100) }) : ''}</p>
           <div class="kir-row">
             <div class="kir kir-2d" style="--band:${(LIFTOFF.band / LIFTOFF.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">${t('cockpit.cards.noseHigh')}</span><span class="kir-label bottom">${t('cockpit.cards.noseLow')}</span></div>
             <div class="kir-ctrl ${g ? 'kir-pad' : ''}">${g
@@ -2812,7 +2810,6 @@
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.helenaDockEyebrow')}</span>
           <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
-          <p>${t('cockpit.cards.helenaDockDesc')}</p>
           <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
           <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(PORT_DOCK.zStart, 1)}</strong></div>
           <div class="kir-row">
@@ -2830,7 +2827,6 @@
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.oscarMayaEyebrow')}</span>
           <h4>${t('cockpit.cards.oscarMayaTitle')}</h4>
-          <p>${flight.docked ? t('cockpit.cards.oscarMayaDockedDesc') : t('cockpit.cards.oscarMayaApproachDesc')}</p>
           <div class="docking-readout"><span>${flight.docked ? t('cockpit.cards.latchedReadout') : t('cockpit.cards.alignmentReadout', { pct: aligned })}</span><strong>${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : t('cockpit.cards.approachTime', { sec: Math.ceil((g?.duration ?? 0) - (g?.t ?? 0)) })}</strong></div>
           ${!flight.docked ? `<div class="kir-row">
             <div class="kir kir-2d" style="--band:${(DOCKING.band / DOCKING.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div></div>
@@ -2846,7 +2842,6 @@
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.helenaLandingEyebrow')}</span>
           <h4>${t('cockpit.cards.helenaLandingTitle')}</h4>
-          <p>${t('cockpit.cards.helenaLandingDesc')}</p>
           <div class="kir-row">
             <div class="kir kir-2d" style="--band:${(MARS_BURN.band / MARS_BURN.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div><span class="kir-label top">${t('cockpit.cards.burnHigh')}</span><span class="kir-label bottom">${t('cockpit.cards.burnLow')}</span></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button></div>
@@ -3232,7 +3227,6 @@
         <div class="podium-col"><div class="podium-step is-empty" style="padding-top:${(4 - i) * 10}px">${pos} · —</div></div>`).join('');
       showScreen('results');
       window.dispatchEvent(new CustomEvent('astro:results', { detail: { ranked: [], grade: 'F', failed: true } }));
-      loadResultsLeaderboard(null, net.mode === 'solo' ? 'solo' : 'server');
     }
 
     function hasEdlLabel(d) {
@@ -3649,6 +3643,7 @@
 
   // ---- Leaderboards (Server SQLite Co-op + Local Solo localStorage) ----------------------------------------
   const lbState = { source: 'server', tab: 'missions', difficulty: 'all', site: 'all' };
+  let leaderboardReturnScreen = 'menu';
   let lastSubmittedMissionId = '';
 
   function renderLeaderboardRows(entries, tab, highlightId = null) {
@@ -3696,50 +3691,19 @@
     }).join('');
   }
 
-  async function loadResultsLeaderboard(highlightId, source) {
-    const wrap = $('#results-server-lb-wrap'), list = $('#results-server-lb'), status = $('#results-server-lb-status'), title = $('#results-server-lb-title');
-    if (!wrap || !list || !status || !title) return;
-    title.textContent = source === 'solo' ? t('results.serverLb.titleSolo') : t('results.serverLb.titleServer');
-    if (source === 'solo') {
-      const res = net.getSoloLeaderboard?.({ tab: 'missions', limit: 5 }) || { entries: [] };
-      status.hidden = res.entries.length > 0;
-      status.textContent = res.entries.length ? '' : t('results.serverLb.empty');
-      list.innerHTML = renderLeaderboardRows(res.entries, 'missions', highlightId);
-      return;
-    }
-    status.hidden = false;
-    status.textContent = t('results.serverLb.loading');
-    list.innerHTML = '';
-    try {
-      const res = await net.getLeaderboard?.({ tab: 'missions', limit: 5 });
-      const entries = res?.entries || [];
-      status.hidden = entries.length > 0;
-      status.textContent = entries.length ? '' : t('results.serverLb.empty');
-      list.innerHTML = renderLeaderboardRows(entries, 'missions', highlightId);
-    } catch {
-      status.hidden = false;
-      status.textContent = t('results.serverLb.offline');
-    }
-  }
-
   function submitAndShowResultsLeaderboard(record) {
     if (record.mode === 'solo') {
       if (lastSubmittedMissionId !== record.id) {
         lastSubmittedMissionId = record.id;
         net.recordSoloScore?.(record);
       }
-      loadResultsLeaderboard(record.id, 'solo');
       return;
     }
     if (net.isHost) {
       if (lastSubmittedMissionId !== record.id) {
         lastSubmittedMissionId = record.id;
-        net.submitScore?.(record).catch(() => null).finally(() => loadResultsLeaderboard(record.id, 'server'));
-      } else {
-        loadResultsLeaderboard(record.id, 'server');
+        net.submitScore?.(record).catch(() => null);
       }
-    } else {
-      window.setTimeout(() => loadResultsLeaderboard(record.id, 'server'), 650);
     }
   }
 
@@ -3777,7 +3741,11 @@
 
   function openLeaderboard(source = null) {
     if (source === 'solo' || source === 'server') lbState.source = source;
-    showScreen('leaderboard');
+    leaderboardReturnScreen = state.screen === 'results' ? 'results' : 'menu';
+    const back = $('#leaderboard-back');
+    back.dataset.i18n = leaderboardReturnScreen === 'results' ? 'leaderboard.backResults' : 'leaderboard.back';
+    back.textContent = t(back.dataset.i18n);
+    showScreen('leaderboard', { localOnly: leaderboardReturnScreen === 'results' });
     loadLeaderboardScreen();
   }
 

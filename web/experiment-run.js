@@ -109,10 +109,21 @@
     els.kicker.textContent = t('minigames.kicker', { id, name: crewName });
     els.title.textContent = info.title;
     els.brief.textContent = info.desc;
+    const infoToggle = els.dialog.querySelector('.minigame-info-toggle');
+    const infoContent = els.dialog.querySelector('.minigame-info-content');
+    if (infoToggle && infoContent) {
+      infoToggle.setAttribute('aria-expanded', 'false');
+      infoContent.hidden = true;
+      infoToggle.onclick = () => {
+        infoContent.hidden = !infoContent.hidden;
+        infoToggle.setAttribute('aria-expanded', String(!infoContent.hidden));
+      };
+    }
     els.summary.innerHTML = [[t('minigames.summaryMinigame'), info.minigame], [t('minigames.summaryMechanic'), info.mechanic], [t('minigames.summaryBasis'), info.basis]]
       .map(([k, v]) => `<div><span>${k}</span><strong>${v}</strong></div>`).join('');
+    if (infoContent) infoContent.insertBefore(els.summary, infoContent.querySelector('.minigame-info-hints'));
     els.dialog.dataset.exp = id;
-    els.dialog.classList.remove('is-complete');
+    els.dialog.classList.remove('is-complete', 'is-failed');
     const done = els.dialog.querySelector('.minigame-complete');
     const controller = MG.open(id, {
       root: els.stage, seed: run.seed, level: run.level, attempt: run.attempts[id],
