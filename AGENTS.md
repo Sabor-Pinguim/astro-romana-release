@@ -44,6 +44,7 @@ tools/
   modeling/             gerador procedural dos modelos 3D (Node + three.js)
     characters/<id>.mjs um arquivo por personagem: equipamento + animação de ação
     bodies/<id>.mjs     um arquivo por planeta/lua: dados reais → classe de cada face
+    portraits/          facetas e recortes da arte aprovada de Nancy para os cards de dificuldade
     lib/                rig, formas, paleta, animações, presets de partículas
   audio/                gerador da paisagem sonora a partir de dados reais (Node, sem dependências)
   model-viewer/         visualizador HTML para validar modelos
@@ -94,6 +95,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 - **Para mudar um personagem**, edite `tools/modeling/characters/<id>.mjs`.
 - **Personagem sem traje** (NPC, como a `nancy`): `astronaut: false` no arquivo dele. O rig vem vazio e o arquivo monta o corpo inteiro; `rig` ajusta posição e repouso dos pivôs para outras proporções (nomes e hierarquia não mudam). Em `characters/index.mjs`, entra depois dos jogáveis.
 - **Para mudar o que é comum a todos**, edite `tools/modeling/lib/`.
+- **Retratos de dificuldade:** a arte aprovada em `references/art/nancy-difficulty-concept.png` é a fonte visual. `tools/modeling/portraits/render-reference.mjs` gera recortes PNG recoloridos; `tools/modeling/build-portraits.mjs` gera os GLBs e SVGs a partir de `tools/modeling/portraits/nancy-facets.json`. `npm run models` gera e valida todos eles. Os cards exibem os PNGs apenas em telas largas.
 - O gerador usa three.js (formas, hierarquia, `AnimationClip`) e exporta com `GLTFExporter`.
 
 ### 5.2 Convenções geométricas
@@ -287,6 +289,7 @@ O glTF não transporta partículas, então o projeto usa âncoras:
 npm install                    # uma vez: three + validador glTF
 npm run models                 # gera os avatares (4 jogáveis + NPCs) e valida
 npm run models:build -- maya   # gera só um personagem
+npm run models:build:portraits # gera os retratos de dificuldade (PNG, SVG e GLB)
 npm run models:validate        # só valida
 npm run web:models             # empacota GLBs e specs usados pelo index.html em index.models.js
 npm run web:sites              # fotos HiRISE dos locais de pouso (assets/sites; rede: NODE_OPTIONS=--use-system-ca)

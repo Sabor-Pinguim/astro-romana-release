@@ -29,7 +29,9 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.8.0',
+        version: 'v1.8.1',
+        contact: 'Contáctanos',
+        emailCopied: 'Correo copiado: {{email}}',
         quitEyebrow: 'Abandonar misión',
         quitTitle: '¿Salir de la misión?',
         quitBody: 'Este es un prototipo local. Puedes cerrar la pestaña en cualquier momento.',
@@ -389,7 +391,6 @@
       planner: {
         back: '← Tripulación',
         eyebrow: 'Ensamblaje del cohete / 03',
-        simulationTag: 'Simulación',
         budgetRemaining: 'Presupuesto restante',
         telemetryHeading: 'Telemetría de ingeniería',
         infoBtnAria: 'Mostrar u ocultar detalles de la métrica',

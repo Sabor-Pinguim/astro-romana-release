@@ -146,6 +146,7 @@ async function main() {
     models,
     ...(previousManifest.missionRules ? { missionRules: previousManifest.missionRules } : {}),
     ...(previousManifest.parts ? { parts: previousManifest.parts } : {}),
+    ...(previousManifest.portraits ? { portraits: previousManifest.portraits } : {}),
     ...(previousManifest.bodies ? { bodyConventions: previousManifest.bodyConventions, bodies: previousManifest.bodies } : {}),
   };
   await writeFile(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);

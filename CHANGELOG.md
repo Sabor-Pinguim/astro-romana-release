@@ -11,6 +11,17 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.8.1] - 2026-11-25
+
+### Added
+- Added Nancy Grace Roman portraits to desktop difficulty cards using the approved low-poly constellation artwork and difficulty theme colors.
+- Added reproducible portrait generation and validation, including the source concept, generated assets, and web model bundle.
+- Added a contact shortcut beside the menu version that opens email and copies the address with a localized confirmation toast.
+
+### Changed
+- Removed the Simulation badge from the rocket assembly header.
+- Kept difficulty portraits hidden on narrow and mobile screens to preserve space.
+
 ## [1.8.0] - 2026-11-25
 
 ### Added

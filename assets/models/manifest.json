@@ -3965,6 +3965,44 @@
       ]
     }
   ],
+  "portraits": [
+    {
+      "id": "nancy-easy",
+      "name": "Young Nancy Grace Roman",
+      "file": "portraits/nancy-easy.glb",
+      "svg": "portraits/nancy-easy.svg",
+      "reference": "references/art/nancy-difficulty-concept.png",
+      "stats": {
+        "triangles": 1535,
+        "meshes": 18,
+        "bytes": 105760
+      }
+    },
+    {
+      "id": "nancy-normal",
+      "name": "Adult Nancy Grace Roman",
+      "file": "portraits/nancy-normal.glb",
+      "svg": "portraits/nancy-normal.svg",
+      "reference": "references/art/nancy-difficulty-concept.png",
+      "stats": {
+        "triangles": 1603,
+        "meshes": 20,
+        "bytes": 111784
+      }
+    },
+    {
+      "id": "nancy-hard",
+      "name": "Mature Nancy Grace Roman",
+      "file": "portraits/nancy-hard.glb",
+      "svg": "portraits/nancy-hard.svg",
+      "reference": "references/art/nancy-difficulty-concept.png",
+      "stats": {
+        "triangles": 1576,
+        "meshes": 20,
+        "bytes": 109836
+      }
+    }
+  ],
   "bodyConventions": {
     "units": "body radii: the mean radius is 1.0; scale by radiusMeters (or any map scale) in the scene",
     "up": "+Y = north pole (rotation axis)",

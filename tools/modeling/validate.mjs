@@ -98,6 +98,25 @@ async function validateModel(entry, conventions) {
   };
 }
 
+async function validatePortrait(entry) {
+  const bytes = await readFile(path.join(MODELS_DIR, entry.file));
+  const report = await validator.validateBytes(new Uint8Array(bytes), { uri: entry.file, maxIssues: 50 });
+  const problems = report.issues.messages.filter(issue => issue.severity === 0).map(issue => `${issue.code}: ${issue.message}`);
+  const gltf = await parseGlb(entry.file, bytes);
+  let triangles = 0, meshes = 0, textures = 0;
+  gltf.scene.traverse(o => {
+    if (!o.isMesh) return;
+    meshes++;
+    triangles += (o.geometry.index?.count ?? o.geometry.attributes.position.count) / 3;
+    for (const value of Object.values(o.material)) if (value?.isTexture) textures++;
+  });
+  if (triangles > 3000) problems.push(`${triangles} triangles > portrait budget 3000`);
+  if (meshes > 50) problems.push(`${meshes} meshes > portrait budget 50`);
+  if (bytes.length > MAX_BYTES) problems.push(`${bytes.length} bytes > portrait budget ${MAX_BYTES}`);
+  if (textures) problems.push(`${textures} textures found`);
+  return { problems, summary: `${triangles} tris, ${meshes} meshes, ${(bytes.length / 1024).toFixed(1)} KB` };
+}
+
 const DEFAULT_PART_MESH_BUDGET = {
   engines: 10,
   tanks: 8,
@@ -330,6 +349,14 @@ async function main() {
     } else {
       console.log(`✔ ${entry.id}: ${summary}`);
     }
+  }
+  for (const entry of manifest.portraits ?? []) {
+    const { problems, summary } = await validatePortrait(entry);
+    if (problems.length) {
+      failed++;
+      console.log(`✘ [portrait] ${entry.id}: ${summary}`);
+      for (const p of problems) console.log(`    - ${p}`);
+    } else console.log(`✔ [portrait] ${entry.id}: ${summary}`);
   }
   for (const entry of manifest.parts ?? []) {
     const { problems, summary } = await validatePart(entry, manifest);

@@ -29,7 +29,9 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.8.0',
+        version: 'v1.8.1',
+        contact: 'Contact us',
+        emailCopied: 'Email copied: {{email}}',
         quitEyebrow: 'Quit mission',
         quitTitle: 'Leave the mission?',
         quitBody: 'This is a local prototype. You can close the tab at any time.',
@@ -389,7 +391,6 @@
       planner: {
         back: '← Crew',
         eyebrow: 'Rocket assembly / 03',
-        simulationTag: 'Simulation',
         budgetRemaining: 'Budget remaining',
         telemetryHeading: 'Engineering telemetry',
         infoBtnAria: 'Show or hide metric details',

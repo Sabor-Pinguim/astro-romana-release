@@ -29,7 +29,9 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.8.0',
+        version: 'v1.8.1',
+        contact: 'Fale conosco',
+        emailCopied: 'E-mail copiado: {{email}}',
         quitEyebrow: 'Encerrar missão',
         quitTitle: 'Sair da missão?',
         quitBody: 'Este é um protótipo local. Você pode fechar a aba a qualquer momento.',
@@ -389,7 +391,6 @@
       planner: {
         back: '← Equipe',
         eyebrow: 'Montagem do foguete / 03',
-        simulationTag: 'Simulação',
         budgetRemaining: 'Orçamento restante',
         telemetryHeading: 'Telemetria de engenharia',
         infoBtnAria: 'Mostrar ou ocultar detalhes desta métrica',

@@ -14,12 +14,14 @@ const modelsDir = path.join(root, 'assets/models');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sources = [html, ...fs.readdirSync(path.join(root, 'web')).filter((file) => file.endsWith('.js')).map((file) => fs.readFileSync(path.join(root, 'web', file), 'utf8'))].join('\n');
 const manifest = JSON.parse(fs.readFileSync(path.join(modelsDir, 'parts/manifest.json'), 'utf8'));
+const portraitManifest = JSON.parse(fs.readFileSync(path.join(modelsDir, 'manifest.json'), 'utf8'));
 // Same filter as the builder (partsFor in web/app.js): stage 1 takes booster engines, upper stages the vacuum ones.
 const offered = manifest.parts.filter((p) => (p.category === 'engines' ? ['booster', 'upper-stage'].includes(p.specs?.engineRole)
   : p.category === 'tanks' ? p.specs?.tankRole === 'stage'
     : ['equipment', 'cabin', 'structures', 'fins'].includes(p.category)));
 const files = [...new Set([
-  ...(sources.match(/\b(?:rocket|parts|characters)\/[\w/.-]+\.glb\b/g) ?? []),
+  ...(sources.match(/\b(?:rocket|parts|characters|portraits)\/[\w/.-]+\.glb\b/g) ?? []),
+  ...(portraitManifest.portraits ?? []).map(p => p.file),
   ...offered.map((p) => p.file),
 ])].sort();
 

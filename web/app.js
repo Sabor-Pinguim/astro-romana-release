@@ -176,6 +176,25 @@
   });
   let toastTimer;
   const toast = message => {const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);};
+  const contactEmail = 'sabor.pinguim@proton.me';
+  async function copyContactEmail(){
+    try{
+      if(!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(contactEmail);
+    }catch{
+      const field = document.createElement('textarea');
+      field.value = contactEmail;
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      document.body.append(field);
+      field.select();
+      let copied = false;
+      try{ copied = document.execCommand?.('copy') || false; }
+      finally{ field.remove(); }
+      if(!copied) return;
+    }
+    toast(t('menu.emailCopied',{email:contactEmail}));
+  }
 
   // Lobby: 5-step setup (01 Play mode → 02 Difficulty → 03 Destination → 04 Landing site → 05 Crew).
   // Guests skip steps 1–4 (host controls) and land straight on step 5 to pick a crew seat.
@@ -700,13 +719,16 @@
       const lv = difficulty[id], selected = state.difficulty === id;
       const rulesLabel = t(`difficulty.${id}.rulesLong`);
       return `<button type="button" class="difficulty-card" data-difficulty="${id}" role="radio" aria-checked="${selected}" aria-pressed="${selected}" title="${esc(lv.about)}" style="--diff-accent:${lv.accent}" ${net.isGuest?'aria-disabled="true"':''}>
-        <div class="difficulty-card-head"><span class="tag">${lv.tagline}</span><span class="diff-check">${selected?t('lobby.setup.selected'):t('lobby.setup.choose')}</span></div>
-        <h4>${lv.label}</h4>
-        <ul class="setup-specs">
-          <li><span>${t('lobby.setup.specBudget')}</span><strong>${money(budgetOf(id))}</strong></li>
-          <li><span>${t('lobby.setup.specEvaWindow')}</span><strong>${formatSurfaceClock(lv.surfaceS)}</strong></li>
-          <li><span>${t('lobby.setup.specRules')}</span><strong>${rulesLabel}</strong></li>
-        </ul>
+        <div class="difficulty-portrait" aria-hidden="true"><img src="assets/models/portraits/nancy-${id}.png" alt=""></div>
+        <div class="difficulty-card-copy">
+          <div class="difficulty-card-head"><span class="tag">${lv.tagline}</span><span class="diff-check">${selected?t('lobby.setup.selected'):t('lobby.setup.choose')}</span></div>
+          <h4>${lv.label}</h4>
+          <ul class="setup-specs">
+            <li><span>${t('lobby.setup.specBudget')}</span><strong>${money(budgetOf(id))}</strong></li>
+            <li><span>${t('lobby.setup.specEvaWindow')}</span><strong>${formatSurfaceClock(lv.surfaceS)}</strong></li>
+            <li><span>${t('lobby.setup.specRules')}</span><strong>${rulesLabel}</strong></li>
+          </ul>
+        </div>
       </button>`;
     }).join('');
     $$('#difficulty-buttons [data-difficulty]').forEach(button => button.addEventListener('click', () => {
@@ -1435,6 +1457,7 @@
   $('#leaderboard-refresh')?.addEventListener('click',()=>loadLeaderboardScreen());
   $('#results-open-lb')?.addEventListener('click',()=>openLeaderboard(net.mode==='solo'?'solo':'server'));
   $('#settings-button')?.addEventListener('click',openSettings);
+  $('#contact-link')?.addEventListener('click',()=>{void copyContactEmail();});
   $('#settings-back')?.addEventListener('click',()=>showScreen(settingsReturnScreen, { localOnly: true }));
   $('#lobby-back').addEventListener('click',()=>{
     if(net.isGuest)return;
