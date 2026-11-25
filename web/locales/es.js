@@ -45,7 +45,7 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.9.14',
+        version: 'v1.9.15',
         contact: 'Contáctanos',
         emailCopied: 'Correo copiado: {{email}}',
         quitEyebrow: 'Abandonar misión',
@@ -1256,6 +1256,41 @@
         sysJoined: '{{name}} ({{seat}}) se unió.',
         sysLeft: '{{name}} ({{seat}}) salió.',
         sysHost: '{{name}} es ahora el anfitrión.',
+      },
+      guide: {
+        eyebrow: 'Cómo resolverlo',
+        btnLabel: '?',
+        btnAria: 'Cómo resolver este minijuego',
+        closeAria: 'Cerrar guía',
+        gotIt: 'Entendido',
+        previewTag: 'CLIP DEMO',
+        mechanics: {
+          keep: 'Consejo: corrige suave antes de salir del borde; la inercia sigue moviendo el indicador.',
+          timing: 'Consejo: sigue la velocidad del cursor y activa justo dentro de la zona verde.',
+          aim: 'Consejo: sigue el blanco en movimiento y dispara o fija cuando esté centrado.',
+          choice: 'Consejo: combina las opciones de mayor valor sin superar la barra límite.',
+          pattern: 'Consejo: compara formas, frecuencias o señales antes de confirmar tu pareja.',
+          route: 'Consejo: traza una ruta continua por los puntos clave evitando las zonas peligrosas.',
+          piloting: 'Consejo: da pulsos breves de empuje (WASD / flechas) para seguir en el corredor verde.',
+        },
+        cockpit: {
+          ascent: {
+            title: 'Despegue y corredor de ascenso',
+            desc: 'Aumenta el empuje (Espacio) para despegar y usa WASD o flechas para mantener la retícula en el corredor verde hasta el corte de motores.',
+          },
+          cabinDock: {
+            title: 'Acoplamiento y disyuntores',
+            desc: 'Separa el propulsor principal, restablece los disyuntores si saltaron, alinea X/Y con WASD o flechas y mantén Acercar hasta el enganche.',
+          },
+          orbitalDock: {
+            title: 'Acoplamiento orbital y repostaje',
+            desc: 'Mantén el indicador centrado durante el acercamiento hasta acoplar y bombea propelente (Flecha ↑ o Espacio) hasta alcanzar la meta a Marte.',
+          },
+          landing: {
+            title: 'Encendido de aterrizaje en Marte',
+            desc: 'Mantén la nave dentro del corredor verde con WASD o flechas, despliega el frenado (paracaídas/TRN) y estabiliza hasta tocar tierra.',
+          },
+        },
       },
     },
   };

@@ -158,7 +158,8 @@
   // Multiplayer (web/net.js, docs/multiplayer.md). Solo when the script or the server is missing.
   const net = window.ASTRO_NET || {enabled:false,mode:'solo',isHost:false,isGuest:false,peers:[],cached:{},available:()=>false,owns:()=>true,peerOf:()=>null,on:()=>()=>{},setPhase(){},setState(){},emit(){},act(){},start(){},getPlayerName:()=>'',setPlayerName:n=>n,isPlayerNameLocked:()=>false,sanitizePlayerName:n=>String(n||''),listRooms:async()=>({rooms:[]}),checkRoom:async()=>({exists:false}),getLeaderboard:async()=>({tab:'missions',entries:[]}),submitScore:async()=>({}),recordSoloScore:()=>false,getSoloLeaderboard:()=>({tab:'missions',entries:[]})};
   // The host tells the room which screen it is on; a guest follows (guestScreen) and never changes it alone.
-  const showScreen = (id, { localOnly = false } = {}) => {if(id==='menu'&&net.mode!=='solo'){void leaveRoomToMenu();return;}state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='lobby'&&id!=='settings'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();if(!localOnly)net.setPhase(id);lockGuest();};
+  let lastCockpitGuideId = null;
+  const showScreen = (id, { localOnly = false } = {}) => {if(id==='menu'&&net.mode!=='solo'){void leaveRoomToMenu();return;}state.screen=id;$$('.screen').forEach(screen=>screen.classList.toggle('active',screen.id===id));window.scrollTo(0,0);if(id!=='cockpit'){lastCockpitGuideId=null;window.ASTRO_MINIGAME_GUIDE?.close('cockpit');}if(id!=='lobby'&&id!=='settings'&&(mpExpanded||editingPlayerName)){mpExpanded=false;editingPlayerName=false;syncMpExpansionUI();renderModeStep();renderLobbyStepper();}if(id==='planner'){renderPlanner();maybeAutoOpenWizard();}if(id==='lobby'&&state.lobbyStep==='mode'&&mpExpanded)refreshRoomBrowser();if(!localOnly)net.setPhase(id);lockGuest();};
   let settingsReturnScreen = 'menu';
   const openSettings = () => { settingsReturnScreen = state.screen; window.ASTRO_SETTINGS?.syncUI(); showScreen('settings', { localOnly: true }); };
   const settingsGear = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M10 1h4l.5 2.3 1.8.8 2-1.3 2.8 2.8-1.3 2 .8 1.8L23 10v4l-2.4.5-.8 1.8 1.3 2-2.8 2.8-2-1.3-1.8.8L14 23h-4l-.5-2.4-1.8-.8-2 1.3-2.8-2.8 1.3-2-.8-1.8L1 14v-4l2.4-.5.8-1.8-1.3-2 2.8-2.8 2 1.3 1.8-.8L10 1Zm2 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>';
@@ -2256,6 +2257,7 @@
       if (flight.design.overweight && flight.design.marsOk) logFlight(t('cockpit.logs.refuelExtra', { extra: CONSEQUENCE.lowTwrRefuelExtra }));
       if (flight.design.dataCapped) logFlight(t('cockpit.logs.noDishAlert', { max: starsText(CONSEQUENCE.noDishMaxStars) }));
       if (state.run?.consequences?.dropped.length) logFlight(t('cockpit.logs.budgetCut'));
+      lastCockpitGuideId = null;
       showScreen('cockpit');
       renderFlightUI();
       cancelAnimationFrame(flight.raf);
@@ -3039,6 +3041,24 @@
             : '';
       }
 
+      const guideBtn = $('#cockpit-guide-toggle');
+      const guideId = state.screen === 'cockpit' && !orbitOn && (flight.active || guestFlight)
+        ? (['cockpit-ascent', 'cockpit-cabin-dock', 'cockpit-orbital-dock', 'cockpit-landing'][flight.step] || null)
+        : null;
+      if (guideBtn) guideBtn.hidden = !guideId;
+      if (guideId !== lastCockpitGuideId) {
+        lastCockpitGuideId = guideId;
+        if (guideId) {
+          window.ASTRO_MINIGAME_GUIDE?.onEnter(guideId, {
+            slot: 'cockpit',
+            container: $('#cockpit'),
+            button: guideBtn,
+          });
+        } else {
+          window.ASTRO_MINIGAME_GUIDE?.close('cockpit');
+        }
+      }
+
       const box = $('#cockpit-minigame');
       if (orbitOn) { renderOrbitCard(box); updateCockpitHUD(); syncFlight(true); return; }
       if (flight.step === 0) {
@@ -3747,7 +3767,7 @@
       }
     }
     // Guest: the host left the cockpit or the surface (another mission, or the room closed).
-    function leaveMission() { guestFlight = false; guestSurface = false; flight.active = false; surf.active = false; radAudio.stopAll(); }
+    function leaveMission() { lastCockpitGuideId = null; window.ASTRO_MINIGAME_GUIDE?.close('cockpit'); guestFlight = false; guestSurface = false; flight.active = false; surf.active = false; radAudio.stopAll(); }
 
     return { startFlight, failLaunch, handleCockpitAction, setPilotHold, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,

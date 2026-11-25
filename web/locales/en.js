@@ -45,7 +45,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.9.14',
+        version: 'v1.9.15',
         contact: 'Contact us',
         emailCopied: 'Email copied: {{email}}',
         quitEyebrow: 'Quit mission',
@@ -1256,6 +1256,41 @@
         sysJoined: '{{name}} ({{seat}}) joined.',
         sysLeft: '{{name}} ({{seat}}) left.',
         sysHost: '{{name}} is now room host.',
+      },
+      guide: {
+        eyebrow: 'How to solve',
+        btnLabel: '?',
+        btnAria: 'How to solve this minigame',
+        closeAria: 'Close guide',
+        gotIt: 'Got it',
+        previewTag: 'DEMO CLIP',
+        mechanics: {
+          keep: 'Tip: push gently before drifting past the edge — momentum carries the marker.',
+          timing: 'Tip: watch the sweep speed and press inside the green capture zone.',
+          aim: 'Tip: track the moving target cleanly and fire or lock while centered.',
+          choice: 'Tip: pick high-value options that fit inside the resource limit bar.',
+          pattern: 'Tip: compare shapes, rhythms, or signals closely before locking your match.',
+          route: 'Tip: chart a continuous safe path through checkpoints without hitting hazards.',
+          piloting: 'Tip: use short counter-thrust pulses (WASD / arrows) to hold the center corridor.',
+        },
+        cockpit: {
+          ascent: {
+            title: 'Liftoff & Ascent Corridor',
+            desc: 'Push throttle / press Space to ignite, then steer with W/A/S/D or Arrow keys to keep the pitch reticle centered in the green flight corridor until MECO.',
+          },
+          cabinDock: {
+            title: 'Cabin Docking & Breakers',
+            desc: 'Separate the main booster when ready, reset any tripped power breakers if active, align X/Y with W/A/S/D or arrows, and hold Forward Approach until latch.',
+          },
+          orbitalDock: {
+            title: 'Orbital Docking & Refuel',
+            desc: 'Hold the attitude indicator centered through approach until latch, then pump cryo propellant (Arrow Up / Space) until the Mars transfer tank hits target.',
+          },
+          landing: {
+            title: 'Mars Landing Burn',
+            desc: 'Hold the descent burn inside the green corridor with W/A/S/D or arrows, deploy supersonic drogue/TRN on approach, and hold stability through touchdown.',
+          },
+        },
       },
     },
   };

@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.15] - 2026-11-25
+
+### Added
+- "How to solve" guide for all 21 science experiments and the 4 cockpit flight stages (`web/minigame-guide.js`): a chamfered popup that opens once per minigame (remembered in `localStorage`) and reopens from a new "?" button next to the experiment "i" button and in the cockpit HUD, without pausing the game. It shows the goal, a tip for the mechanic (keep, timing, aim, choice, pattern, route or piloting) and an animated faceted SVG demo, which stops with reduced motion.
+- Optional walkthrough clips: a `assets/minigames/<id>.gif` or `.webp` replaces the SVG demo when present; `assets/minigames/README.md` lists the 25 file names.
+- Guide texts in English, Portuguese and Spanish.
+
 ## [1.9.14] - 2026-11-25
 
 ### Added

@@ -140,6 +140,7 @@
       onRestart: attempt => { run.attempts[id] = attempt; },
       onFinish(raw) {
         current = { ...current, finished: true };
+        window.ASTRO_MINIGAME_GUIDE?.close('dialog');
         // No antenna on board: the result keeps at most maxStars (the rest of the data never reaches home).
         const cap = maxStarsOf(run), result = raw.stars > cap ? { ...raw, stars: cap } : raw;
         if (done) {
@@ -157,10 +158,16 @@
     });
     current = { els, controller, finished: false, onClose, id, mechanic: e.mechanic };
     if (!els.dialog.open) els.dialog.showModal();
+    window.ASTRO_MINIGAME_GUIDE?.onEnter(id, {
+      slot: 'dialog',
+      container: els.dialog,
+      button: els.dialog.querySelector('.minigame-guide-toggle'),
+    });
     return controller;
   }
   function close() {
     clearTimeout(autoClose);
+    window.ASTRO_MINIGAME_GUIDE?.close('dialog');
     if (!current) return;
     const c = current;
     current = null;

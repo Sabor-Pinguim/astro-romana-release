@@ -144,3 +144,71 @@
 .mg-stars{display:inline-flex;gap:.04em;white-space:nowrap}
 .mg-stars b{font-weight:inherit;color:inherit}
 .mg-stars i{font-style:normal;opacity:.28}
+
+/* Guide popup ("How to solve", web/minigame-guide.js) and "?" triggers */
+.minigame-info-bar{display:flex;align-items:center;gap:6px}
+.cockpit-hud-right{display:flex;align-items:center;gap:6px;pointer-events:auto}
+.cockpit-hud-right .tag{pointer-events:none}
+.cockpit-guide-toggle,.minigame-guide-toggle{font-style:normal;font-family:var(--heading)}
+.cockpit-guide-toggle[hidden]{display:none}
+#cockpit{position:relative}
+dialog:has(> .mg-guide-pop){position:fixed}
+.mg-guide-pop{position:absolute;z-index:25;display:grid;gap:8px;width:min(310px,calc(100% - 24px));max-height:calc(100% - 24px);overflow-y:auto;padding:12px 14px;color:var(--text-white);background:linear-gradient(150deg,var(--f3) 0 32%,var(--f1) 32%);clip-path:var(--chamfer);box-shadow:inset 3px 0 0 var(--solar-amber),0 14px 28px #07020fd9}
+.mg-guide-pop[hidden],.mg-guide-pop [hidden]{display:none!important}
+dialog > .mg-guide-pop{top:12px;right:12px}
+#cockpit > .mg-guide-pop{bottom:54px;left:clamp(16px,3vw,44px);width:min(330px,36vw);max-height:calc(100dvh - 150px);z-index:12}
+.mg-guide-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.mg-guide-title-wrap{display:grid;gap:2px;min-width:0}
+.mg-guide-eyebrow{font-size:.58rem}
+.mg-guide-title{font:700 .88rem/1.12 var(--heading);letter-spacing:.04em;text-transform:uppercase;color:var(--starlight-cream)}
+.mg-guide-head-right{display:flex;align-items:center;gap:6px;flex:none}
+.mg-guide-mech{padding:.26rem .5rem .26rem .6rem;font-size:.54rem;background:var(--f4);color:var(--solar-amber)}
+.mg-guide-close{flex:none;display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;font:700 .8rem/1 var(--heading);color:var(--bg-void);background:var(--mars-orange);clip-path:var(--hex);transition:background .12s}
+.mg-guide-close:hover,.mg-guide-close:focus-visible{outline:none;background:var(--starlight-cream)}
+.mg-guide-stage{position:relative;aspect-ratio:220/96;width:100%;overflow:hidden;background:#11071f;border:1px solid #3a1a62}
+.mg-guide-media{display:block;width:100%;height:100%;object-fit:cover}
+.mg-guide-anim,.mg-guide-svg{display:block;width:100%;height:100%}
+.mg-guide-badge{position:absolute;left:6px;bottom:6px;padding:2px 5px;font:700 .52rem/1 var(--heading);letter-spacing:.1em;color:var(--bg-void);background:var(--solar-amber);clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+.mg-guide-desc{margin:0;font-size:.78rem;line-height:1.38;color:var(--starlight-cream)}
+.mg-guide-tip{margin:0;padding:5px 8px;font-size:.7rem;line-height:1.3;color:var(--safe);background:#101f27;border-left:2px solid var(--safe)}
+.mg-guide-foot{display:flex;justify-content:flex-end}
+.mg-guide-ok{min-height:34px;padding:.42rem 1rem;font-size:.68rem}
+
+/* Low-poly SVG walkthrough keyframes */
+.mg-anim-pulse,.mg-anim-cue{animation:mgGuidePulse 1.4s ease-in-out infinite}
+.mg-anim-keep-needle{animation:mgGuideKeep 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.mg-anim-timing-bar{animation:mgGuideTiming 2.2s linear infinite;transform-box:fill-box;transform-origin:center}
+.mg-anim-aim-reticle{animation:mgGuideAim 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.mg-anim-pilot-craft{animation:mgGuidePilot 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.mg-anim-choice-bar{animation:mgGuideChoiceBar 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:left center}
+.mg-anim-choice-1{animation:mgGuideChoiceRow 2.8s ease-in-out infinite}
+.mg-anim-choice-3{animation:mgGuideChoiceRow 2.8s ease-in-out 1.4s infinite}
+.mg-anim-pattern-scan{animation:mgGuidePatternScan 2.6s steps(4,end) infinite}
+.mg-anim-route-path{animation:mgGuideRoute 2.4s ease-in-out infinite}
+.mg-anim-route-dot{animation:mgGuideRouteDot 2.4s ease-in-out infinite}
+@keyframes mgGuidePulse{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes mgGuideKeep{0%{transform:translateX(-34px)}35%{transform:translateX(8px)}65%{transform:translateX(-12px)}100%{transform:translateX(-34px)}}
+@keyframes mgGuideTiming{0%{transform:translateX(0)}100%{transform:translateX(162px)}}
+@keyframes mgGuideAim{0%{transform:translate(-34px,-16px)}45%,65%{transform:translate(0,0)}100%{transform:translate(32px,14px)}}
+@keyframes mgGuidePilot{0%{transform:translate(-26px,-14px)}35%,55%{transform:translate(0,0)}80%{transform:translate(22px,12px)}100%{transform:translate(-26px,-14px)}}
+@keyframes mgGuideChoiceBar{0%,100%{transform:scaleX(.58)}50%{transform:scaleX(1)}}
+@keyframes mgGuideChoiceRow{0%,45%,100%{fill:#281147}55%,85%{fill:#1e6357}}
+@keyframes mgGuidePatternScan{0%{transform:translate(0,0)}25%{transform:translate(34px,0)}50%{transform:translate(68px,26px)}75%{transform:translate(102px,26px)}100%{transform:translate(0,0)}}
+@keyframes mgGuideRoute{0%{stroke-dashoffset:140}70%,100%{stroke-dashoffset:0}}
+@keyframes mgGuideRouteDot{0%{transform:translate(0,0)}33%{transform:translate(0,26px)}66%{transform:translate(68px,26px)}100%{transform:translate(102px,26px)}}
+
+@media (max-width:640px){
+  .mg-guide-pop{padding:10px 12px;gap:6px}
+  dialog > .mg-guide-pop{top:10px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 20px)}
+  #cockpit > .mg-guide-pop{top:102px;bottom:auto;left:10px;right:10px;width:auto;max-height:calc(100dvh - 114px)}
+  .mg-guide-stage{max-height:84px}
+}
+@media (max-height:500px) and (orientation:landscape){
+  .mg-guide-pop{padding:8px 10px;gap:5px}
+  dialog > .mg-guide-pop{top:8px;right:8px;width:min(300px,calc(100vw - 16px));max-height:calc(100dvh - 16px)}
+  #cockpit > .mg-guide-pop{top:auto;bottom:8px;left:max(12px,env(safe-area-inset-left,0px));right:auto;width:min(296px,46vw);max-height:calc(100dvh - 78px)}
+  .mg-guide-stage{max-height:72px}
+  .mg-guide-desc{font-size:.72rem;line-height:1.28}
+  .mg-guide-tip{font-size:.64rem;padding:4px 6px}
+}
+@media (prefers-reduced-motion:reduce){.mg-guide-pop *{animation:none!important;transition:none!important}}

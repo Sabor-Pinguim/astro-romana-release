@@ -45,7 +45,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.9.14',
+        version: 'v1.9.15',
         contact: 'Fale conosco',
         emailCopied: 'E-mail copiado: {{email}}',
         quitEyebrow: 'Encerrar missão',
@@ -1256,6 +1256,41 @@
         sysJoined: '{{name}} ({{seat}}) entrou.',
         sysLeft: '{{name}} ({{seat}}) saiu.',
         sysHost: '{{name}} agora é o anfitrião.',
+      },
+      guide: {
+        eyebrow: 'Como resolver',
+        btnLabel: '?',
+        btnAria: 'Como resolver este minigame',
+        closeAria: 'Fechar guia',
+        gotIt: 'Entendi',
+        previewTag: 'CLIPE DEMO',
+        mechanics: {
+          keep: 'Dica: corrija antes de passar da borda — a inércia continua puxando o marcador.',
+          timing: 'Dica: acompanhe o ritmo do cursor e acione dentro da zona verde.',
+          aim: 'Dica: acompanhe o movimento do alvo e dispare ou trave quando estiver centralizado.',
+          choice: 'Dica: escolha os itens de maior valor que caibam na barra de limite.',
+          pattern: 'Dica: compare formas, frequências ou sinais com calma antes de confirmar.',
+          route: 'Dica: trace uma rota contínua passando pelos pontos-chave e evitando perigos.',
+          piloting: 'Dica: dê toques curtos de propulsão (WASD / setas) para manter a mira no corredor verde.',
+        },
+        cockpit: {
+          ascent: {
+            title: 'Decolagem e Corredor de Subida',
+            desc: 'Empurre o acelerador (Espaço) para decolar e use WASD ou Setas para manter o retículo dentro do corredor verde até o corte do motor.',
+          },
+          cabinDock: {
+            title: 'Acoplagem de Cabine e Disjuntores',
+            desc: 'Separe o propulsor quando pronto, religue disjuntores desarmados se houver, alinhe X/Y com WASD ou setas e segure Aproximar até travar.',
+          },
+          orbitalDock: {
+            title: 'Acoplagem Orbital e Reabastecimento',
+            desc: 'Mantenha o indicador centralizado durante a aproximação até o encaixe e bombeie propelente (Seta ↑ ou Espaço) até atingir a meta para Marte.',
+          },
+          landing: {
+            title: 'Queima de Pouso em Marte',
+            desc: 'Segure o retículo dentro do corredor verde com WASD ou setas, acione o sistema de descida (paraquedas/TRN) e mantenha a estabilidade até tocar o solo.',
+          },
+        },
       },
     },
   };
