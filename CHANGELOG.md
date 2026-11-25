@@ -11,6 +11,19 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.7.6] - 2026-11-25
+
+### Added
+- Added a fullscreen toggle button to the main menu top-right bar (`#menu-fullscreen-btn`) and Settings screen (`#settings-fullscreen-btn`), with responsive touch sizing and automatic hiding when the browser Fullscreen API is unavailable.
+
+### Changed
+- Adapted the launch review modal (`#launch-dialog`) for portrait and landscape mobile with a scrollable 2-column summary and pinned bottom action buttons.
+- Updated the 3D pilot cockpit model, flight deck visuals, documentation, and reference images (`tools/modeling/parts/cockpit.mjs`, `web/flight.js`, `web/app.js`, `assets/models/`, `index.models.js`).
+
+### Fixed
+- Adjusted the 3D results podium camera distance dynamically from aspect ratio so all 4 astronauts and pedestals remain framed without edge clipping on every screen size (`web/flight.js`).
+- Initialized `i18next` synchronously (`initImmediate: false`, `nsSeparator: false`) with local-dictionary fallback in `web/i18n.js` to prevent raw translation keys from appearing, and added the missing `lobby.setup.steps.mode.next` key across EN/PT-BR/ES.
+
 ## [1.7.5] - 2026-11-24
 
 ### Changed

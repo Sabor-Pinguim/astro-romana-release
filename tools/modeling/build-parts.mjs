@@ -177,7 +177,7 @@ async function main() {
           tankOrigin: 'bottom interface (stands above y = 0)',
           equipmentOrigin: 'bottom mounting plate (stands on y = 0 inside cutaway stage bay)',
           cabinOrigin: 'bottom mounting deck (stands on y = 0 inside cutaway cabin bay)',
-          cockpitOrigin: 'cabin floor center (minY = 0, forward windshield toward -Z, Camera_Pilot at (0, 1.18, 0.38))',
+          cockpitOrigin: 'cabin floor centre (minY = 0); the crew face -Z; Camera_Seat_1..4 at the eyes of the 4 reclined seats (Camera_Pilot = seat 1)',
           structureOrigin: 'bottom interface (y = 0); Ø 1.00 m normalized builder modules with Attach_* mounting points',
           fxAnchorPrefix: 'FX_',
         },

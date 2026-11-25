@@ -51,6 +51,8 @@
       fallbackLng,
       resources,
       returnObjects: true,
+      initImmediate: false,
+      nsSeparator: false,
       interpolation: { escapeValue: false },
     });
   }
@@ -58,7 +60,7 @@
   function t(key, opts) {
     if (hasI18next) {
       const res = window.i18next.t(key, opts);
-      if (res !== key || !opts?.defaultValue) return res;
+      if (res !== undefined && res !== key) return res;
     }
     const primary = lookup(locales[currentLang]?.translation, key);
     const fb = primary !== undefined ? primary : lookup(locales[fallbackLng]?.translation, key);

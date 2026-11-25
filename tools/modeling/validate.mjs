@@ -150,6 +150,18 @@ async function validatePart(entry, manifest) {
       'Alarm_Caution_Amber',
       'FX_Sparks_Left',
       'FX_Sparks_Right',
+      // The 4-seat cabin (Orion layout): a camera per seat, the panel frame and the lower-seat displays.
+      'Camera_Seat_1',
+      'Camera_Seat_2',
+      'Camera_Seat_3',
+      'Camera_Seat_4',
+      'Seat_1',
+      'Seat_2',
+      'Seat_3',
+      'Seat_4',
+      'Panel_Frame',
+      'Screen_Seat_3',
+      'Screen_Seat_4',
     ]) {
       if (!names.has(reqNode)) problems.push(`missing cockpit node "${reqNode}"`);
     }
@@ -206,9 +218,10 @@ async function validatePart(entry, manifest) {
       problems.push(`base at y = ${bounds.min.y.toFixed(3)} m, expected 0`);
     }
   } else if (entry.category === 'cockpit') {
-    if (size.x > 2.20 + 1e-4) problems.push(`width ${size.x.toFixed(3)} m > 2.20 m`);
-    if (size.y > 1.70 + 1e-4) problems.push(`height ${size.y.toFixed(3)} m > 1.70 m`);
-    if (size.z > 1.50 + 1e-4) problems.push(`depth ${size.z.toFixed(3)} m > 1.50 m`);
+    // Crew cabin with 4 reclined seats, two over two (references/parts/cockpit/cockpit-pilot/README.md).
+    if (size.x > 2.40 + 1e-4) problems.push(`width ${size.x.toFixed(3)} m > 2.40 m`);
+    if (size.y > 2.30 + 1e-4) problems.push(`height ${size.y.toFixed(3)} m > 2.30 m`);
+    if (size.z > 2.30 + 1e-4) problems.push(`depth ${size.z.toFixed(3)} m > 2.30 m`);
     if (Math.abs(bounds.min.y) > GROUND_TOLERANCE) {
       problems.push(`base at y = ${bounds.min.y.toFixed(3)} m, expected 0`);
     }

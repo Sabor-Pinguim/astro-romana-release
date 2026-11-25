@@ -4,6 +4,8 @@ Pesquisa de referências reais da NASA, análise das 3 referências visuais envi
 
 - **Especificação técnica e árvore de nós 3D (EN):** [references/parts/pilot-cockpit.md](../../references/parts/pilot-cockpit.md).
 
+> **Atualizado em 2026-11-24:** o modelo virou a cabine inteira no layout da Orion: 4 assentos reclinados, dois sobre dois (Helena e Lucas em cima, sob o painel; Oscar e Maya embaixo, com uma tela no encosto do assento de cima) e uma câmera por assento (`Camera_Seat_1..4`); numa sala, cada jogador vê a cabine do próprio assento; no solo, a câmera segue quem está agindo (Helena pilotando, Lucas num disjuntor desarmado, Oscar na aproximação da acoplagem orbital, Maya na transferência de propelente, cada um no seu experimento de órbita). De qualquer assento dá para olhar em volta arrastando na vista fora dos controles (ou com o botão direito em qualquer lugar): a cabeça vira para o lado do movimento, na velocidade da superfície, e o cursor continua livre para os controles e os minigames; duplo clique, toque duplo ou C centraliza. Render em corte com a tripulação: [docs/images/cockpit-crew-cutaway.png](../images/cockpit-crew-cutaway.png). A especificação atual está em [references/parts/cockpit/cockpit-pilot/README.md](../../references/parts/cockpit/cockpit-pilot/README.md); o resto deste documento é a pesquisa inicial.
+
 ---
 
 ## 1. Análise das 3 Referências Visuais + Cockpits Reais da NASA

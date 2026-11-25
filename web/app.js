@@ -3386,6 +3386,16 @@
 
     return { startFlight, failLaunch, handleCockpitAction, setPilotHold, startSurface, completeSurfaceTask, board: () => board(null), flight, surf,
       applyFlight, applySurface, onAct, onEvent, onPeers, leaveMission, requestCrew, myCrew,
+      // Who is acting in the cockpit now (the solo camera and the lower-seat displays follow them): the crew member
+      // playing an orbit experiment, Lucas while a breaker is tripped, else the step's crew (step 2: Oscar flies the
+      // approach, Maya runs the propellant transfer once docked).
+      cockpitCrew: () => {
+        const playing = RUN()?.playing, exp = playing ? window.ASTRO_EXPERIMENTS?.byId(playing) : null;
+        if (flight.orbit?.active) return exp?.crew || null;
+        if (flight.breakers?.some(Boolean)) return ACTION_CREW.breaker[0];
+        const seats = STEP_CREW[flight.step] || [];
+        return seats[seats.length > 1 && flight.docked ? 1 : 0] || null;
+      },
       jumpCockpit: step => { startFlight(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); },
       // Dev Mode: straight to the Mars orbit experiments (after the refuelling step), with a fresh draw.
       jumpMarsOrbit: seed => { startFlight(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },

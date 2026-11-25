@@ -173,7 +173,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const { renderer, scene, camera } = makeViewport(container, { fov: 62, clearColor: 0x030710 });
     addStandardStudioLights(scene, { warmRim: 0x5aaeff });
     const consoleGlow = new THREE.PointLight(0x52d6ff, 1.4, 3.5);
-    consoleGlow.position.set(0, 1.05, -0.2);
+    consoleGlow.position.set(0, 1.45, 0.35); // under the overhead panel, lighting its face
     scene.add(consoleGlow);
 
     const stars = createStarfield(600, 35, 110);
@@ -185,15 +185,20 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const gltf = await parseFreshGLB(window.ASTRO?.COCKPIT_MODEL || 'rocket/cockpit_pilot.glb');
     const root = gltf.scene;
     scene.add(root);
+    // Orion cabin (tools/modeling/parts/cockpit.mjs): the panel hangs over the reclined crew; its frame comes from
+    // the model, so the screens below follow it.
+    root.updateMatrixWorld(true);
+    const panelFrame = root.getObjectByName('Panel_Frame');
+    const PANEL_O = panelFrame ? panelFrame.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, .86, -.7);
+    const panelTilt = panelFrame ? panelFrame.rotation.x : -35 * Math.PI / 180;
 
     // The centre display shares the GLB's screen dimensions and panel tilt.
     const dockingTarget = new THREE.WebGLRenderTarget(512, 354);
     dockingTarget.texture.colorSpace = THREE.SRGBColorSpace;
     const centreScreen = new THREE.Mesh(new THREE.PlaneGeometry(.34, .235),
       new THREE.MeshBasicMaterial({ map: dockingTarget.texture, toneMapped: false }));
-    const panelTilt = -35 * Math.PI / 180;
     centreScreen.rotation.x = panelTilt;
-    centreScreen.position.set(0, .86, -.7).add(new THREE.Vector3(0, .065, .068).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
+    centreScreen.position.copy(PANEL_O).add(new THREE.Vector3(0, .065, .068).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
     centreScreen.visible = false;
     root.add(centreScreen);
 
@@ -271,7 +276,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(.34, .235), new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }));
       mesh.rotation.x = panelTilt;
-      mesh.position.set(0, .86, -.7).add(new THREE.Vector3(x, .065, .09).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
+      mesh.position.copy(PANEL_O).add(new THREE.Vector3(x, .065, .09).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
       root.add(mesh);
       return { canvas, texture, mesh, ctx: canvas.getContext('2d') };
     }
@@ -293,7 +298,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       group.add(top, bottom, left, right);
       group.rotation.x = panelTilt;
       const w = idx === 0 ? 0.064 : idx === 1 ? 0.070 : 0.092;
-      group.position.set(0, 0.86, -0.7).add(new THREE.Vector3(u, 0.065, w).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
+      group.position.copy(PANEL_O).add(new THREE.Vector3(u, 0.065, w).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
       group.visible = idx === 0;
       group.userData.mat = mat;
       root.add(group);
@@ -316,13 +321,270 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     centreScreen.visible = true;
     drawMissionScreen({ docked: false, docking: null });
 
-    const camAnchor = root.getObjectByName('Camera_Pilot');
-    const baseCamPos = camAnchor
-      ? camAnchor.getWorldPosition(new THREE.Vector3())
-      : new THREE.Vector3(0, 1.18, 0.38);
-    const lookTarget = new THREE.Vector3(0, 0.86, -0.55);
-    camera.position.copy(baseCamPos);
-    camera.lookAt(lookTarget);
+    // Four reclined seats, two over two (Orion layout): Helena and Lucas under the panel, Oscar and Maya below with a
+    // display on the back of the seat above. Each seat has its camera (Camera_Seat_n, aimed at that seat's screens). In
+    // a room everyone looks from their own seat; solo follows whoever is acting (SIM.cockpitCrew: the step's crew, Lucas
+    // on a tripped breaker, the crew member playing an orbit experiment), and keys 1–4 look from another seat until the
+    // next task.
+    const seatCams = CREW_IDS.map((id, i) => {
+      const a = root.getObjectByName(`Camera_Seat_${i + 1}`) || root.getObjectByName('Camera_Pilot');
+      const t = a?.userData?.target;
+      return {
+        pos: a ? a.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, 1.18, 0.38),
+        target: Array.isArray(t) ? root.localToWorld(new THREE.Vector3(...t)) : new THREE.Vector3(0, 0.86, -0.55),
+      };
+    });
+    const baseCamPos = new THREE.Vector3(), lookTarget = new THREE.Vector3();
+    const SEAT_FOV = root.getObjectByName('Camera_Seat_1')?.userData?.fov || camera.fov;
+    const seated = {}; // crew id → avatar model
+    let soloSeat = null, seatCrew = null, lastActing;
+    const actingCrew = () => (window.ASTRO_SIM?.flight?.active && window.ASTRO_SIM.cockpitCrew?.()) || null;
+    const viewCrew = () => {
+      const net = window.ASTRO_NET;
+      if (net && net.mode !== 'solo' && CREW_IDS.includes(net.seat)) return net.seat;
+      const acting = actingCrew();
+      if (acting !== lastActing) { lastActing = acting; soloSeat = null; } // a new task takes the camera back
+      return soloSeat || (CREW_IDS.includes(acting) ? acting : 'helena');
+    };
+    const viewTag = document.getElementById('cockpit-view-tag');
+    function updateViewTag() {
+      if (!viewTag) return;
+      const T = window.ASTRO_I18N?.t, member = window.ASTRO?.crew?.find(p => p.id === seatCrew);
+      const base = (T ? T('cockpit.viewTag') : viewTag.textContent).split(' · ')[0];
+      viewTag.textContent = member ? `${base} · ${member.name} · ${member.role}`.toUpperCase() : base;
+    }
+    window.addEventListener('astro:lang', updateViewTag);
+    // Looking around from the seat (the pointer handlers are further down): the head turns within LOOK limits around
+    // the seat's own view; recentring eases back. A new seat starts centred.
+    const LOOK = { yaw: 120 * Math.PI / 180, up: 70 * Math.PI / 180, down: 60 * Math.PI / 180, ease: 0.22 };
+    const look = { yaw: 0, pitch: 0, goalYaw: 0, goalPitch: 0, drag: null, lastTap: 0 };
+    const lookDir = new THREE.Vector3(), lookPoint = new THREE.Vector3();
+    function setLook(yaw, pitch, instant = false) {
+      look.goalYaw = THREE.MathUtils.clamp(yaw, -LOOK.yaw, LOOK.yaw);
+      look.goalPitch = THREE.MathUtils.clamp(pitch, -LOOK.down, LOOK.up);
+      if (instant || reducedMotion) { look.yaw = look.goalYaw; look.pitch = look.goalPitch; }
+    }
+    function aimCamera() { // the seat's view direction turned by the look angles (yaw about +Y: positive turns left)
+      lookDir.subVectors(lookTarget, baseCamPos).normalize();
+      const theta = Math.atan2(lookDir.x, lookDir.z) + look.yaw;
+      const phi = THREE.MathUtils.clamp(Math.asin(lookDir.y) + look.pitch, -1.45, 1.45);
+      lookPoint.set(Math.sin(theta) * Math.cos(phi), Math.sin(phi), Math.cos(theta) * Math.cos(phi)).add(camera.position);
+      camera.lookAt(lookPoint);
+    }
+
+    // Changing seats dips the view to black for a moment (a cut with reduced motion).
+    const SEAT_FADE_MS = 170;
+    renderer.domElement.style.transition = `opacity ${SEAT_FADE_MS}ms ease`;
+    let fadeTimer = 0;
+    function applySeat(instant = false) {
+      const id = viewCrew();
+      if (id !== seatCrew && seatCrew && !instant && !reducedMotion) {
+        if (!fadeTimer) {
+          renderer.domElement.style.opacity = '0';
+          fadeTimer = window.setTimeout(() => { fadeTimer = 0; placeCamera(viewCrew()); renderer.domElement.style.opacity = '1'; }, SEAT_FADE_MS);
+        }
+        return;
+      }
+      placeCamera(id);
+    }
+    function placeCamera(id) {
+      const cam = seatCams[CREW_IDS.indexOf(id)];
+      renderer.clippingPlanes = [];
+      if (camera.fov !== SEAT_FOV) { camera.fov = SEAT_FOV; camera.updateProjectionMatrix(); }
+      baseCamPos.copy(cam.pos);
+      lookTarget.copy(cam.target);
+      if (id !== seatCrew) setLook(0, 0, true);
+      camera.position.copy(baseCamPos);
+      aimCamera();
+      for (const [cid, model] of Object.entries(seated)) model.visible = cid !== id; // your own suit would fill the view
+      if (id === seatCrew) return;
+      seatCrew = id;
+      updateViewTag();
+    }
+    applySeat(true);
+    window.addEventListener('keydown', e => {
+      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+      if (n < 0 || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !section.classList.contains('active')) return;
+      if ((window.ASTRO_NET && window.ASTRO_NET.mode !== 'solo') || document.querySelector('dialog[open]')) return;
+      if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+      viewCrew(); // note the current task first, so the key holds until the next one
+      soloSeat = CREW_IDS[n];
+      applySeat();
+    });
+    window.ASTRO_COCKPIT = {
+      get seat() { return seatCrew; },
+      get view() { return { yaw: look.goalYaw * 180 / Math.PI, pitch: look.goalPitch * 180 / Math.PI }; },
+      seats: CREW_IDS.slice(),
+      goTo(seat) { // 1–4 or a crew id (tests and solo; a room keeps each player on their own seat)
+        const id = typeof seat === 'number' ? CREW_IDS[seat - 1] : seat;
+        if (CREW_IDS.includes(id)) { viewCrew(); soloSeat = id; applySeat(true); }
+        return seatCrew;
+      },
+      peek(pos, target, clip, fov) { // tests and renders: look from any point, with the whole crew, until the seat changes;
+        // clip = [nx, ny, nz, d] (or a list of them) keeps the side of each plane its normal points to (a cutaway)
+        const planes = !clip ? [] : Array.isArray(clip[0]) ? clip : [clip];
+        renderer.clippingPlanes = planes.map(([x, y, z, d]) => new THREE.Plane(new THREE.Vector3(x, y, z), d));
+        for (const model of Object.values(seated)) model.visible = true;
+        baseCamPos.set(...pos); lookTarget.set(...target);
+        setLook(0, 0, true);
+        if (fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+        camera.position.copy(baseCamPos); aimCamera();
+      },
+      look(yawDeg = 0, pitchDeg = 0) { // tests: turn the head (degrees; positive yaw turns left, positive pitch up)
+        setLook(yawDeg * Math.PI / 180, pitchDeg * Math.PI / 180, true);
+        aimCamera();
+        return { yaw: look.yaw * 180 / Math.PI, pitch: look.pitch * 180 / Math.PI };
+      },
+    };
+
+    // The crew in their seats: Seat_n is the Hips pivot of the seated avatar and carries the seated pose (degrees,
+    // relative to the rig rest). Orion crew fly in launch suits, so the PLSS backpack (and anything hung on it) is left
+    // out: triangles of the torso behind BACKPACK_Z.
+    const BACKPACK_Z = -0.25;
+    function dropBackpack(torso) {
+      const v = new THREE.Vector3(), getters = ['getX', 'getY', 'getZ', 'getW'];
+      for (const mesh of torso ? torso.children : []) {
+        const src = mesh.geometry, pos = src?.attributes.position;
+        if (!mesh.isMesh || !pos || src.index) continue;
+        const keep = [];
+        for (let i = 0; i < pos.count; i += 3) {
+          let z = 0;
+          for (let k = 0; k < 3; k++) z += v.fromBufferAttribute(pos, i + k).applyMatrix4(mesh.matrix).z;
+          if (z / 3 >= BACKPACK_Z) keep.push(i);
+        }
+        if (keep.length * 3 === pos.count) continue;
+        const geo = new THREE.BufferGeometry();
+        for (const [name, attr] of Object.entries(src.attributes)) {
+          const n = attr.itemSize, out = new Float32Array(keep.length * 3 * n);
+          keep.forEach((first, t) => {
+            for (let k = 0; k < 3; k++) for (let c = 0; c < n; c++) out[(t * 3 + k) * n + c] = attr[getters[c]](first + k);
+          });
+          geo.setAttribute(name, new THREE.BufferAttribute(out, n, attr.normalized));
+        }
+        mesh.geometry = geo;
+      }
+    }
+    await Promise.all(CREW_IDS.map(async (id, i) => {
+      const anchor = root.getObjectByName(`Seat_${i + 1}`);
+      if (!anchor) return;
+      try {
+        const model = (await parseFreshGLB(window.ASTRO?.CREW_MODELS?.[id] || `characters/${id}.glb`)).scene;
+        model.updateMatrixWorld(true);
+        const hips = model.getObjectByName('Hips');
+        if (hips) model.position.sub(hips.getWorldPosition(new THREE.Vector3()));
+        model.traverse(o => { if (o.name.startsWith('Prop_')) o.visible = false; });
+        dropBackpack(model.getObjectByName('Torso'));
+        for (const [name, r] of Object.entries(anchor.userData?.pose || {})) {
+          const pivot = model.getObjectByName(name);
+          if (pivot && Array.isArray(r)) pivot.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...r.map(d => d * Math.PI / 180))));
+        }
+        anchor.add(model);
+        model.visible = id !== seatCrew;
+        seated[id] = model;
+      } catch (err) {
+        console.warn(`[cockpit] ${id} not seated:`, err);
+      }
+    }));
+
+    // Displays of the lower seats (Screen_Seat_3/4): Oscar watches the flight telemetry and the link, Maya the crew's
+    // pulses and the radiation. Graphics only (no figures): the labels reuse the crew and cockpit strings. When the
+    // step is theirs (step 2), the display shows the task: Oscar the docking view of the right display, Maya the
+    // propellant transfer; it is framed in amber and works like the right display.
+    const lowerScreens = CREW_IDS.map((id, i) => {
+      const anchor = root.getObjectByName(`Screen_Seat_${i + 1}`);
+      if (!anchor) return null;
+      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 348;
+      const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+      const { w = 0.28, h = 0.19 } = anchor.userData || {};
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }));
+      mesh.userData.holdHalf = [w * 0.41, h * 0.425]; // the share of the screen that steers fully, like the panel displays
+      anchor.add(mesh);
+      const frameMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.95, toneMapped: false });
+      const frame = new THREE.Group(), t = 0.01;
+      for (const [fw, fh, x, y] of [[w + 2 * t, t, 0, (h + t) / 2], [w + 2 * t, t, 0, -(h + t) / 2], [t, h, -(w + t) / 2, 0], [t, h, (w + t) / 2, 0]]) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.004), frameMat);
+        bar.position.set(x, y, 0.002);
+        frame.add(bar);
+      }
+      frame.visible = false;
+      anchor.add(frame);
+      return { id, canvas, texture, ctx: canvas.getContext('2d'), mesh, frame, frameMat, task: false };
+    }).filter(Boolean);
+    function updateLowerTasks(f, pulse) {
+      const acting = actingCrew();
+      for (const s of lowerScreens) {
+        s.task = !!f && f.step === 2 && !f.orbit?.active && acting === s.id;
+        s.frame.visible = s.task;
+        s.frameMat.opacity = pulse;
+        s.mesh.userData.onCockpitClick = s.task ? rightScreenAction : null;
+        s.mesh.userData.cockpitRole = s.task ? 'monitor_right' : null;
+        const map = s.task && s.id === 'oscar' ? rightScreen.texture : s.texture;
+        if (s.mesh.material.map !== map) { s.mesh.material.map = map; s.mesh.material.needsUpdate = true; }
+      }
+    }
+    let lowerDrawnAt = -1;
+    function drawLowerScreens(now, f) {
+      const T = window.ASTRO_I18N?.t || (k => k), crewInfo = window.ASTRO?.crew || [];
+      const tm = reducedMotion ? 0 : now / 1000, prog = Math.max(0, Math.min(1, (f?.progress || 0) / 100));
+      for (const s of lowerScreens) {
+        const { ctx, canvas, texture } = s, W = canvas.width, H = canvas.height;
+        const me = crewInfo.find(p => p.id === s.id), accent = me?.color || CREW_COLORS[s.id];
+        ctx.fillStyle = '#061220'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = accent; ctx.fillRect(0, 0, W, 6);
+        ctx.font = 'bold 19px sans-serif'; ctx.fillText(me ? `${me.name} · ${me.role}`.toUpperCase() : s.id, 16, 32);
+        ctx.fillStyle = '#8fb3c9'; ctx.font = 'bold 16px sans-serif';
+        if (s.task && s.id === 'maya') {
+          // Propellant transfer: the same figures as the cockpit card (game values).
+          const done = f?.refuelDone || 0, target = f?.design?.refuelTarget ?? 100, share = Math.min(1, done / Math.max(1, target));
+          ctx.fillText(T('cockpit.cards.latchedReadout').toUpperCase(), 16, 62);
+          ctx.fillStyle = '#1d3346'; ctx.fillRect(16, 96, W - 32, 96);
+          ctx.fillStyle = accent; ctx.fillRect(16, 96, (W - 32) * share, 96);
+          ctx.fillStyle = '#061220';
+          for (let k = 1; k < 10; k++) ctx.fillRect(16 + ((W - 32) * k) / 10 - 1, 96, 2, 96);
+          ctx.fillStyle = '#e8f4fb'; ctx.font = 'bold 44px sans-serif'; ctx.fillText(`${done}/${target}%`, 16, 262);
+          for (let p = 0; p < 6; p++) { ctx.fillStyle = (Math.floor(tm * 4) + p) % 6 === 0 ? '#f6c445' : '#2a465c'; ctx.fillRect(16 + p * 30, 300, 22, 14); }
+        } else if (s.id === 'oscar') {
+          ctx.fillText(T('cockpit.telemetryTitle').toUpperCase(), 16, 62);
+          // Link bars, a scrolling carrier and the mission progress.
+          const lit = 3 + Math.round(1.5 + Math.sin(tm * 0.7) * 1.5);
+          for (let b = 0; b < 6; b++) { ctx.fillStyle = b < lit ? '#5fe0c0' : '#1d3346'; ctx.fillRect(W - 120 + b * 17, 64 - b * 7, 12, 10 + b * 7); }
+          ctx.strokeStyle = '#1d3346'; ctx.lineWidth = 1;
+          for (let gx = 16; gx < W - 16; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 92); ctx.lineTo(gx, 250); ctx.stroke(); }
+          ctx.strokeStyle = '#52b7ff'; ctx.lineWidth = 3; ctx.beginPath();
+          for (let x = 16; x <= W - 16; x += 4) {
+            const y = 171 + Math.sin(x * 0.045 - tm * 3) * 34 * (0.6 + 0.4 * Math.sin(x * 0.011 + tm * 0.5)) + Math.sin(x * 0.21 + tm * 7) * 5;
+            x === 16 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.fillStyle = '#1d3346'; ctx.fillRect(16, 280, W - 32, 22);
+          ctx.fillStyle = accent; ctx.fillRect(16, 280, (W - 32) * prog, 22);
+          for (let p = 0; p < 4; p++) { ctx.fillStyle = (Math.floor(tm * 2) + p) % 4 === 0 ? '#f6c445' : '#2a465c'; ctx.fillRect(16 + p * 30, 316, 22, 14); }
+        } else {
+          // One pulse line per crew member and a radiation strip.
+          ctx.fillText(T('results.breakdown.radLabel').toUpperCase(), 16, H - 52);
+          crewInfo.forEach((p, r) => {
+            const y0 = 78 + r * 50;
+            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(26, y0, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#c7d8e4'; ctx.font = 'bold 15px sans-serif'; ctx.fillText(p.name.toUpperCase(), 42, y0 + 5);
+            ctx.strokeStyle = p.color; ctx.lineWidth = 2.5; ctx.beginPath();
+            for (let x = 140; x <= W - 16; x += 3) {
+              const ph = ((x - 140) / 90 + tm * (1.1 + r * 0.07)) % 1;
+              const y = y0 - (ph > 0.42 && ph < 0.47 ? 18 : ph > 0.47 && ph < 0.51 ? -10 : ph > 0.6 && ph < 0.7 ? 4 : 0);
+              x === 140 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          });
+          ctx.fillStyle = '#1d3346'; ctx.fillRect(16, H - 38, W - 32, 20);
+          for (let k = 0; k < 26; k++) {
+            const x = 16 + ((k * 97 + Math.floor(tm * 9) * 31) % (W - 40));
+            ctx.fillStyle = k % 5 ? '#4be08a' : '#f6c445'; ctx.fillRect(x, H - 36, 4, 16);
+          }
+        }
+        texture.needsUpdate = true;
+      }
+      lowerDrawnAt = now;
+    }
+    drawLowerScreens(performance.now(), null);
 
     const throttlePivot = root.getObjectByName('Throttle_Lever');
     const stickRHC = root.getObjectByName('Joystick_RHC');
@@ -340,7 +602,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
     leftScreenHit.rotation.x = panelTilt;
-    leftScreenHit.position.set(0, 0.86, -0.7).add(new THREE.Vector3(-0.5, 0.065, 0.095).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
+    leftScreenHit.position.copy(PANEL_O).add(new THREE.Vector3(-0.5, 0.065, 0.095).applyAxisAngle(new THREE.Vector3(1, 0, 0), panelTilt));
     root.add(leftScreenHit);
 
     // Navball: the ball turns so its horizon line reaches the green brackets (20° on the ball) at the band edge.
@@ -423,7 +685,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       else window.ASTRO_SIM?.handleCockpitAction('stabilize');
     }, 'monitor_left');
     tagPivot(centreScreen, () => window.ASTRO_SIM?.handleCockpitAction('stabilize'), 'monitor_centre');
-    tagPivot(rightScreen.mesh, () => {
+    function rightScreenAction() {
       const f = window.ASTRO_SIM?.flight;
       if (f?.step === 2 && f.docked) {
         if (f.refuelDone >= (f.design?.refuelTarget ?? 100)) window.ASTRO_SIM?.handleCockpitAction('complete_step');
@@ -431,7 +693,9 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       } else {
         window.ASTRO_SIM?.handleCockpitAction('stabilize');
       }
-    }, 'monitor_right');
+    }
+    tagPivot(rightScreen.mesh, rightScreenAction, 'monitor_right');
+    interactiveMeshes.push(...lowerScreens.map(s => s.mesh)); // live only while they show a task (updateLowerTasks)
 
     // Spark particles for FX_Sparks_Left & FX_Sparks_Right
     const sparkAnchors = ['FX_Sparks_Left', 'FX_Sparks_Right']
@@ -470,10 +734,12 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       const role = ctrl.role;
       let dx = 0, dy = 0;
       if (role.startsWith('monitor_') && hit) {
-        const targetMesh = role === 'monitor_left' ? leftScreenHit : role === 'monitor_centre' ? centreScreen : rightScreen.mesh;
+        const own = hit.object.userData.holdHalf;
+        const targetMesh = own ? hit.object : role === 'monitor_left' ? leftScreenHit : role === 'monitor_centre' ? centreScreen : rightScreen.mesh;
+        const [hx, hy] = own || [0.14, 0.10];
         const local = targetMesh.worldToLocal(hit.point.clone());
-        dx = THREE.MathUtils.clamp(local.x / 0.14, -1, 1);
-        dy = THREE.MathUtils.clamp(local.y / 0.10, -1, 1);
+        dx = THREE.MathUtils.clamp(local.x / hx, -1, 1);
+        dy = THREE.MathUtils.clamp(local.y / hy, -1, 1);
       } else {
         const r = renderer.domElement.getBoundingClientRect();
         dx = THREE.MathUtils.clamp(((e.clientX - ctrl.startX) / Math.max(1, r.width)) * 7.5, -1, 1);
@@ -509,31 +775,58 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       return Object.keys(h).length ? h : null;
     }
 
+    // Looking around: drag on the view, off the controls (or with the right button anywhere), and the head turns the
+    // way the pointer moves, at the Mars surface's speeds (web/views.js). The cursor stays free, since the cockpit is
+    // played by clicking (3D controls, the cards beside the view, the minigames). Double click or tap, or C, recentres.
+    const LOOK_SPEED = { mouse: 0.004, touch: 0.006 };
+    const canvasEl = renderer.domElement;
+    const turnLook = (dx, dy, k) => setLook(look.goalYaw - dx * k, look.goalPitch - dy * k, true); // right turns right
+
     function raycastCockpit(e) {
-      const r = renderer.domElement.getBoundingClientRect();
+      const r = canvasEl.getBoundingClientRect();
       pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      return raycaster.intersectObjects(interactiveMeshes, false);
+      return raycaster.intersectObjects(interactiveMeshes, false).filter(h => h.object.userData.onCockpitClick || h.object.userData.cockpitRole);
+    }
+    function startLook(e) {
+      look.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType !== 'mouse' };
+      try { canvasEl.setPointerCapture(e.pointerId); } catch {}
+      canvasEl.style.cursor = 'grabbing';
     }
 
-    renderer.domElement.addEventListener('pointerdown', e => {
+    canvasEl.addEventListener('contextmenu', e => e.preventDefault()); // the right button looks around
+    canvasEl.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button === 2) { startLook(e); return; }
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       const hits = raycastCockpit(e);
-      if (!hits.length) return;
+      if (!hits.length) {
+        const now = performance.now();
+        if (now - look.lastTap < 320) { setLook(0, 0); look.lastTap = 0; return; } // double click or tap: recentre
+        look.lastTap = now;
+        startLook(e);
+        return;
+      }
       const hit = hits[0];
       const obj = hit.object;
       const role = obj.userData.cockpitRole;
       if (obj.userData.onCockpitClick) obj.userData.onCockpitClick();
       if (role) {
         e.preventDefault();
-        try { renderer.domElement.setPointerCapture(e.pointerId); } catch {}
+        try { canvasEl.setPointerCapture(e.pointerId); } catch {}
         active3DControl = { role, startX: e.clientX, startY: e.clientY };
         setHold(compute3DHold(active3DControl, e, hit));
-        renderer.domElement.style.cursor = 'grabbing';
+        canvasEl.style.cursor = 'grabbing';
       }
     });
 
-    renderer.domElement.addEventListener('pointermove', e => {
+    canvasEl.addEventListener('pointermove', e => {
+      if (look.drag && e.pointerId === look.drag.id) {
+        turnLook(e.clientX - look.drag.x, e.clientY - look.drag.y, look.drag.touch ? LOOK_SPEED.touch : LOOK_SPEED.mouse);
+        look.drag.x = e.clientX;
+        look.drag.y = e.clientY;
+        return;
+      }
       const hits = raycastCockpit(e);
       if (window.ASTRO_SIM?.flight?.step === 1 && !active3DControl) {
         hoverOffset.set(0, 0);
@@ -542,32 +835,42 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
       }
       if (active3DControl) {
         setHold(compute3DHold(active3DControl, e, hits[0] || null));
-        renderer.domElement.style.cursor = 'grabbing';
+        canvasEl.style.cursor = 'grabbing';
         return;
       }
-      renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
+      canvasEl.style.cursor = hits.length ? 'pointer' : 'grab';
     });
 
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-      renderer.domElement.addEventListener(ev, () => {
+      canvasEl.addEventListener(ev, e => {
+        if (look.drag && e.pointerId === look.drag.id) look.drag = null;
         if (active3DControl) {
           active3DControl = null;
           setHold(null);
-          renderer.domElement.style.cursor = 'default';
         }
+        canvasEl.style.cursor = 'grab';
       });
     }
+    window.addEventListener('keydown', e => {
+      if (e.code !== 'KeyC' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !section.classList.contains('active')) return;
+      if (document.querySelector('dialog[open]') || e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+      setLook(0, 0);
+    });
 
     let lastT = performance.now();
     function frame(now) {
       requestAnimationFrame(frame);
       if (!section.classList.contains('active')) {
         lastT = now;
+        soloSeat = null; // the next cockpit opens on the seat of whoever acts
         return;
       }
       const dt = Math.min((now - lastT) / 1000, 0.05);
       lastT = now;
       const f = window.ASTRO_SIM?.flight;
+      let sx = 0, sy = 0; // camera shake
+      if (viewCrew() !== seatCrew) applySeat(); // the next task, or a room seat that arrived after the cockpit opened
+      if (lowerScreens.length && now - lowerDrawnAt > (reducedMotion ? 1000 : 100)) drawLowerScreens(now, f);
 
       if (f) {
         const activeMonitor = f.step === 1 ? 1 : f.step === 2 ? 2 : 0;
@@ -576,6 +879,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
           hl.visible = idx === activeMonitor;
           if (hl.visible) hl.userData.mat.opacity = pulse;
         });
+        updateLowerTasks(f, pulse);
         if (f.step === 0 || (f.step === 1 && f.portDock)) {
           const d = f.step === 1 ? f.portDock : { x: 0.45, y: -0.3, z: 5 };
           dockingCamera.position.set(d.x, d.y, d.z); dockingCamera.lookAt(d.x, d.y, 0);
@@ -660,15 +964,17 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         }
 
         // Camera vibration from engine thrust / parachute opening
-        let sx = 0, sy = 0;
         if (!reducedMotion && ((f.throttle || 0) > 0.55 || f.edlChuteDeployed || sparking)) {
           const amp = sparking ? 0.014 : f.edlChuteDeployed ? 0.011 : 0.006 * (f.throttle || 0);
           sx = (Math.random() - 0.5) * amp;
           sy = (Math.random() - 0.5) * amp;
         }
-        camera.position.set(baseCamPos.x + hoverOffset.x + sx, baseCamPos.y + hoverOffset.y + sy, baseCamPos.z);
-        camera.lookAt(lookTarget);
       }
+      const k = reducedMotion ? 1 : 1 - Math.pow(1 - LOOK.ease, dt * 60);
+      look.yaw += (look.goalYaw - look.yaw) * k;
+      look.pitch += (look.goalPitch - look.pitch) * k;
+      camera.position.set(baseCamPos.x + hoverOffset.x + sx, baseCamPos.y + hoverOffset.y + sy, baseCamPos.z);
+      aimCamera();
 
       renderer.render(scene, camera);
     }
@@ -850,8 +1156,13 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         }
       }
       if (!reducedMotion) angle += dt * 0.35;
-      camera.position.set(0.3 + Math.sin(angle) * 0.55, 2.35, 5.4);
-      camera.lookAt(0.3, 1.35, 0);
+      const tanHalfV = Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5);
+      const aspect = Math.max(camera.aspect || 1, 0.5);
+      const distH = 3.15 / (tanHalfV * aspect) + 0.85;
+      const distV = 1.9 / tanHalfV + 0.85;
+      const camZ = Math.max(5.8, distH, distV);
+      camera.position.set(0.3 + Math.sin(angle) * 0.4, 2.35 + (camZ - 5.8) * 0.14, camZ);
+      camera.lookAt(0.3, 1.42, 0);
       renderer.render(scene, camera);
     }
     requestAnimationFrame(frame);

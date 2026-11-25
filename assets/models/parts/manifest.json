@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T22:32:57.287Z",
+  "generatedAt": "2026-11-25T02:15:17.995Z",
   "generator": "tools/modeling/build-parts.mjs",
   "conventions": {
     "units": "meters",
@@ -9,7 +9,7 @@
     "tankOrigin": "bottom interface (stands above y = 0)",
     "equipmentOrigin": "bottom mounting plate (stands on y = 0 inside cutaway stage bay)",
     "cabinOrigin": "bottom mounting deck (stands on y = 0 inside cutaway cabin bay)",
-    "cockpitOrigin": "cabin floor center (minY = 0, forward windshield toward -Z, Camera_Pilot at (0, 1.18, 0.38))",
+    "cockpitOrigin": "cabin floor centre (minY = 0); the crew face -Z; Camera_Seat_1..4 at the eyes of the 4 reclined seats (Camera_Pilot = seat 1)",
     "structureOrigin": "bottom interface (y = 0); Ø 1.00 m normalized builder modules with Attach_* mounting points",
     "fxAnchorPrefix": "FX_"
   },
@@ -3254,15 +3254,15 @@
     },
     {
       "id": "cockpit-pilot",
-      "name": "Pilot Control Panel (Orion layout)",
+      "name": "Crew Cabin and Control Panel (Orion layout)",
       "nodeName": "CockpitPilot",
       "category": "cockpit",
       "tier": 2,
       "vehicle": "NASA Orion crew module (layout reference)",
-      "role": "First-person cockpit for launch, ascent, orbit and landing minigames",
+      "role": "Cockpit of the flight phase: four reclined seats, a camera per seat, the panel for the flight minigames",
       "file": "parts/cockpit/cockpit-pilot.glb",
-      "summary": "Orion-style panel: 3 display units with bezel keys, 7 switch panels (58 switches), circuit breakers, guarded stage and landing switches, hand controllers, cursor controls, caution and warning lights, two forward windows.",
-      "originNote": "Origin on the cabin floor under the pilot; windshield toward -Z; Camera_Pilot at (0, 1.18, 0.38)",
+      "summary": "Orion-style cabin: 4 reclined seats two over two, 3 display units, 7 switch panels (51 switches), 15 circuit breakers, guarded stage and landing switches, hand controllers, cursor controls, caution and warning lights, displays for the lower seats",
+      "originNote": "Origin on the cabin floor centre; the crew face -Z; Camera_Seat_1..4 at the eyes of each seat (Camera_Pilot = seat 1)",
       "requiredNodes": [
         "Attach_Top",
         "Attach_Bottom",
@@ -3292,11 +3292,11 @@
         }
       ],
       "dimensions": {
-        "width": 2.148,
-        "height": 1.591,
-        "depth": 1.43,
+        "width": 2.38,
+        "height": 2.278,
+        "depth": 2.27,
         "minY": 0,
-        "maxY": 1.591
+        "maxY": 2.278
       },
       "specs": {
         "crewRole": "helena",
@@ -3328,9 +3328,9 @@
         "meshes": 48
       },
       "stats": {
-        "triangles": 4864,
-        "meshes": 42,
-        "bytes": 381512
+        "triangles": 4564,
+        "meshes": 40,
+        "bytes": 362508
       },
       "references": [
         "references/parts/cockpit/cockpit-pilot/README.md",

@@ -1,6 +1,6 @@
 # First-Person Pilot Control Panel (`pilot-cockpit.md`)
 
-> **Model redone on 2026-11-15** on the real Orion layout (3 display units, 7 switch panels, hand controllers). The current model spec, with sources and images, is [cockpit/cockpit-pilot/README.md](cockpit/cockpit-pilot/README.md); the archetypes below are the earlier design notes.
+> **Model redone on 2026-11-15** on the real Orion layout (3 display units, 7 switch panels, hand controllers), and **on 2026-11-24** as the full crew cabin: four reclined seats, two over two, a camera per seat (`Camera_Seat_1..4`). The current model spec, with sources and images, is [cockpit/cockpit-pilot/README.md](cockpit/cockpit-pilot/README.md); the archetypes below are the earlier design notes.
 
 Real spacecraft cockpit references, human-factors layout analysis, and low-poly 3D model specification for the **First-Person Pilot Control Panel** (`assets/models/rocket/cockpit_pilot.glb`) used in **Phase 5 (Launch & Orbit Insertion)** and **Phase 6 (Orbital Refueling, Transit Emergencies & Mars Landing)** — see [docs/resources/space-mission-game-transcricao-organizada.md](../../docs/resources/space-mission-game-transcricao-organizada.md) §7–§8.
 

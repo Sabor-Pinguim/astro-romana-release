@@ -102,7 +102,11 @@
     .menu-footer{position:absolute;left:clamp(24px,5vw,80px);bottom:28px;display:flex;align-items:center;font:600 .7rem var(--heading);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
     .menu-footer span+span::before{content:"";display:inline-block;width:6px;height:8px;margin:0 .9rem;background:var(--mars-orange);clip-path:polygon(0 0,100% 50%,0 100%)}
     .coordinates{position:absolute;right:clamp(24px,5vw,80px);bottom:28px;font:500 .66rem var(--heading);letter-spacing:.16em;color:var(--muted)}
-    .menu-lang-bar{position:absolute;top:24px;right:clamp(24px,5vw,80px);z-index:3;display:flex;gap:4px}
+    .menu-top-bar{position:absolute;top:24px;right:clamp(24px,5vw,80px);z-index:3;display:flex;align-items:center;gap:6px}
+    .menu-lang-bar{display:flex;gap:4px}
+    .menu-fs-btn{padding:.42rem .55rem}
+    .menu-fs-btn[hidden]{display:none}
+    .fs-icon{display:block;flex:none}
     .menu-lang-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .72rem;border:0;cursor:pointer;font:700 .64rem/1 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:#160b25e6;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);transition:background .12s,color .12s,translate .12s}
     .menu-lang-btn:hover{color:var(--starlight-cream);background:var(--f4);translate:0 -1px}
     .menu-lang-btn[aria-pressed="true"]{color:var(--bg-void);background:var(--solar-amber)}
@@ -835,6 +839,10 @@
     dialog{width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;padding:0;border:0;color:var(--text-white);background:linear-gradient(150deg,var(--f4) 0 26%,var(--f2) 26% 72%,var(--f1) 72%);clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
     dialog[open]{animation:wipe .4s cubic-bezier(.7,0,.2,1) backwards}
     dialog::backdrop{background:#0a0414d0}
+    #launch-dialog[open]{display:flex;flex-direction:column;overflow:hidden}
+    #launch-dialog .dialog-inner{flex:1;min-height:0;overflow:hidden}
+    #launch-summary{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--f4) transparent}
+    #launch-dialog .dialog-actions{flex:none}
     .dialog-inner{display:flex;flex-direction:column;gap:.75rem;padding:24px 26px}
     .minigame-complete{display:none;text-align:center;padding:24px 10px;color:var(--starlight-cream);font-family:var(--heading)}
     .minigame-complete strong{display:block;font-size:1.35rem;text-transform:uppercase;letter-spacing:.08em}
@@ -1050,6 +1058,8 @@
     .settings-units-group button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;min-width:170px}
     .settings-units-group button small{font:500 .68rem/1.2 var(--body);letter-spacing:.02em;text-transform:none;opacity:.82}
     .settings-scale-group{flex-wrap:wrap}
+    .settings-fs-row{display:flex;align-items:center;gap:10px}
+    #settings-fullscreen-btn{min-height:42px;padding:.6rem 1.15rem;font-size:.72rem}
     .settings-server-row{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
     .settings-server-row input{flex:1 1 280px;min-width:0;min-height:46px;padding:.6rem .9rem;border:1px solid var(--amethyst);border-radius:0;color:var(--starlight-cream);background:var(--bg-void);font:600 .88rem var(--heading);letter-spacing:.04em}
     .settings-server-row input::placeholder{color:var(--muted);opacity:.65}
@@ -1156,6 +1166,7 @@
       :root{--header-h:52px;--stepper-h:44px;--foot-h:56px}
       .menu-shell{align-items:flex-end;padding-bottom:96px}
       .mars{right:-45vw;top:26%;width:118vw;opacity:.6}
+      .menu-top-bar{top:12px;right:12px}
       .menu-actions .button{flex:1;padding-inline:1rem}
       .coordinates{display:block;bottom:10px;font-size:.55rem}
       .header-title{gap:.5rem}
@@ -1333,6 +1344,14 @@
       .surface-jump{bottom:calc(62px + env(safe-area-inset-bottom,0px));right:10px;width:60px;height:60px}
       #minigame-dialog,#dev-exp-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0}
       .dialog-inner{padding:16px 14px;gap:.5rem}
+      #launch-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+      #launch-dialog .dialog-inner{padding:12px 14px;gap:.45rem}
+      #launch-dialog h3{font-size:1.15rem}
+      #launch-message{font-size:.78rem;line-height:1.35}
+      #launch-summary div{padding:.34rem .6rem;font-size:.74rem;gap:.6rem}
+      #launch-summary strong{font-size:.7rem;overflow-wrap:anywhere}
+      #launch-dialog .dialog-actions{flex-wrap:nowrap;margin-top:.25rem;gap:.45rem}
+      #launch-dialog .dialog-actions .button{flex:1;min-height:38px;padding:.42rem .65rem;font-size:.7rem}
       .moxie-bars,.bio-tools{grid-template-columns:1fr}
       .bio-cell{min-height:32px;font-size:.54rem}
       .kir-row{flex-wrap:nowrap;gap:6px}
@@ -1385,7 +1404,7 @@
       #lobby .app-foot:has(#lobby-next[hidden]){display:none}
       #lobby .app-foot .button,#planner .app-foot .button{min-height:34px;padding:.35rem 1rem;font-size:.72rem}
       .menu-shell{padding:40px clamp(16px,4vw,40px) 16px;align-items:center}
-      .menu-lang-bar{top:8px;right:max(12px,env(safe-area-inset-right,0px))}
+      .menu-top-bar{top:8px;right:max(12px,env(safe-area-inset-right,0px))}
       .menu-copy{max-width:100%}
       .menu-title{font-size:clamp(1.9rem,8.5dvh,3rem);flex-direction:row;align-items:baseline;gap:.3em}
       .menu-title span:nth-child(2){padding-left:0}
@@ -1592,6 +1611,16 @@
       #minigame-dialog .dialog-inner,#dev-exp-dialog .dialog-inner{padding:10px 14px;gap:5px}
       #minigame-dialog h3,#dev-exp-dialog h3{font-size:1.05rem}
       #minigame-summary,#dev-exp-summary{display:none}
+      #launch-dialog{width:min(740px,calc(100vw - 16px));max-height:calc(100dvh - 12px)}
+      #launch-dialog .dialog-inner{padding:10px 14px;gap:.35rem}
+      #launch-dialog h3{font-size:1.05rem}
+      #launch-message{font-size:.74rem;line-height:1.25}
+      #launch-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 6px}
+      #launch-summary div{padding:.26rem .52rem;font-size:.72rem;gap:.5rem}
+      #launch-summary div:last-child{grid-column:1 / -1}
+      #launch-summary strong{font-size:.68rem;overflow-wrap:anywhere}
+      #launch-dialog .dialog-actions{margin-top:.2rem;gap:.45rem}
+      #launch-dialog .dialog-actions .button{min-height:34px;padding:.3rem .8rem;font-size:.68rem}
     }
     @media (max-width:700px) and (max-height:500px) and (orientation:landscape){
       #lobby:has(#lobby-step-crew:not([hidden])) .lobby-header-controls .badge{display:none}
@@ -1620,6 +1649,7 @@
       .mp-name-edit-btn,.mp-browser-head .button,.room-browser-item .button{min-width:44px;min-height:44px}
       .menu-lang-btn,.chalk-btn,.alert-hint-go,.results-open-lb,.surface-goals-toggle,.surface-crew button{min-height:36px}
       .menu-lang-btn{padding:.45rem .8rem}
+      .menu-fs-btn{min-width:36px;min-height:36px;justify-content:center}
       .chalk-step-pip,.chalk-close{min-width:32px;min-height:32px}
       .invite,.pick{min-height:36px;display:inline-flex;align-items:center;justify-content:center}
       .orbit-system.is-3d .orbit-world{min-width:44px;min-height:44px}

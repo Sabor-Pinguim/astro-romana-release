@@ -178,6 +178,9 @@ described in the README of its folder.
 | `references/experiments/minigames/o-s1-uhf-relay/in-context-1.jpg` | https://images.nasa.gov/details/PIA26632 | NASA/JPL-Caltech | Public domain (NASA) |
 | `references/parts/cockpit/cockpit-pilot/in-context-1.jpg` | https://images.nasa.gov/details/jsc2022e046106 | NASA | Public domain (NASA) |
 | `references/parts/cockpit/cockpit-pilot/in-context-2.jpg` | https://images.nasa.gov/details/jsc2022e044164 | Robert Markowitz (NASA) | Public domain (NASA) |
+| `references/parts/cockpit/cockpit-pilot/in-context-3.jpg` | https://images.nasa.gov/details/jsc2022e044165 | Robert Markowitz (NASA) | Public domain (NASA) |
+| `references/parts/cockpit/cockpit-pilot/in-context-4.jpg` | https://images.nasa.gov/details/jsc2022e044162 | Robert Markowitz (NASA) | Public domain (NASA) |
+| `references/parts/cockpit/cockpit-pilot/in-context-5.jpg` | https://images.nasa.gov/details/jsc2025e004075 | Mark Sowa (NASA) | Public domain (NASA) |
 | `references/parts/engines/aj10-190/side-1.jpg` | https://images.nasa.gov/details/jsc2022e045018 | NASA JSC | Public domain (NASA) |
 | `references/parts/engines/aj10-190/three-quarter-1.jpg` | https://images.nasa.gov/details/jsc2022e045016 | NASA JSC | Public domain (NASA) |
 | `references/parts/engines/aj10-190/in-context-1.jpg` | https://images.nasa.gov/details/art001e001619 | NASA JSC | Public domain (NASA) |

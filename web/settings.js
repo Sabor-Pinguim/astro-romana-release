@@ -116,8 +116,63 @@
     }
   }
 
+  const FS_ENTER_PATH = 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4';
+  const FS_EXIT_PATH = 'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4';
+
+  function fullscreenSupported() {
+    const el = document.documentElement;
+    return Boolean((document.fullscreenEnabled ?? document.webkitFullscreenEnabled) && (el.requestFullscreen || el.webkitRequestFullscreen));
+  }
+
+  function isFullscreen() {
+    return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function syncFullscreenUI() {
+    const supported = fullscreenSupported();
+    const active = isFullscreen();
+    const menuBtn = document.getElementById('menu-fullscreen-btn');
+    const group = document.getElementById('settings-fullscreen-group');
+    const settingsBtn = document.getElementById('settings-fullscreen-btn');
+    const label = document.getElementById('settings-fullscreen-label');
+    const text = t(active ? 'settings.fullscreenExit' : 'settings.fullscreenEnter');
+    const pathD = active ? FS_EXIT_PATH : FS_ENTER_PATH;
+
+    if (group) group.hidden = !supported;
+    if (menuBtn) {
+      menuBtn.hidden = !supported;
+      menuBtn.setAttribute('aria-pressed', String(active));
+      menuBtn.setAttribute('aria-label', text);
+      menuBtn.title = text;
+      menuBtn.querySelector('path')?.setAttribute('d', pathD);
+    }
+    if (settingsBtn) {
+      settingsBtn.setAttribute('aria-pressed', String(active));
+      settingsBtn.setAttribute('aria-label', text);
+      settingsBtn.querySelector('path')?.setAttribute('d', pathD);
+    }
+    if (label) label.textContent = text;
+  }
+
+  async function toggleFullscreen() {
+    if (!fullscreenSupported()) return false;
+    try {
+      if (isFullscreen()) {
+        await (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.());
+      } else {
+        const el = document.documentElement;
+        await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
+      }
+      syncFullscreenUI();
+      return isFullscreen();
+    } catch {
+      return false;
+    }
+  }
+
   function syncUI() {
     renderLanguageButtons();
+    syncFullscreenUI();
     document.querySelectorAll('#settings-units [data-unit]').forEach(btn => {
       btn.setAttribute('aria-pressed', String(btn.dataset.unit === current.unitSystem));
     });
@@ -226,6 +281,11 @@
     document.querySelectorAll('#settings-ui-scale [data-ui-scale]').forEach(btn => {
       btn.addEventListener('click', () => setUiScale(btn.dataset.uiScale));
     });
+    document.getElementById('menu-fullscreen-btn')?.addEventListener('click', () => toggleFullscreen());
+    document.getElementById('settings-fullscreen-btn')?.addEventListener('click', () => toggleFullscreen());
+    document.addEventListener('fullscreenchange', syncFullscreenUI);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenUI);
+    window.addEventListener('astro:lang', syncFullscreenUI);
     const serverInput = document.getElementById('settings-server-input');
     const serverSave = document.getElementById('settings-server-save');
     const serverReset = document.getElementById('settings-server-reset');
@@ -257,6 +317,7 @@
     setUnitSystem,
     setHints,
     setUiScale,
+    toggleFullscreen,
     setServerUrl,
     resetAll,
     syncUI,
