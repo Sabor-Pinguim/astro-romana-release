@@ -78,6 +78,7 @@ Details: [datasets/earth/](datasets/earth/).
 | NASA GISS Mars24 Algorithm (Allison & McEwen 2000) | https://www.giss.nasa.gov/tools/mars24/help/algorithm.html | Real-time Mars Sol Date (MSD), MTC, LMST, LTST, solar longitude (L_s), and Sun position in the sky | NASA/GISS |
 | JPL Solar System Dynamics: Planetary Satellite Mean Elements & Physical Parameters (Jacobson 2010) | https://ssd.jpl.nasa.gov/sats/elem/ | Phobos and Deimos orbital elements, radii, and precession rates for live sky positions, lobby globe orbits, and eclipses | NASA/JPL |
 | IAU WGCCRE Report (Archinal et al. 2018) | https://astrogeology.usgs.gov/search/map/Docs/WGCCRE | Mars prime meridian rotation rate (W) and equatorial radius (3396.19 km) | IAU/USGS |
+| NASA Science: Mars Moons Facts | https://science.nasa.gov/mars/moons/facts/ | Phobos and Deimos in the Mars arrival cutscene: Phobos is larger and closer, and its orbital period is about one quarter of Deimos's. Visual orbit spacing and animation speed are cinematic, not to scale. | NASA, public domain |
 
 ---
 
@@ -101,6 +102,10 @@ The main documents behind the game's numbers. Every other citation is in the fil
 | SLS Core Stage Fact Sheet | https://www.nasa.gov/wp-content/uploads/2020/02/sls_core_stage_fact_sheet_04262021_508.pdf | Core stage tank part |
 | Recommended Figures of Merit for Green Monopropellants (NASA Glenn, NTRS) | https://ntrs.nasa.gov/citations/20140009573 | Propellant density |
 | NASA Image and Video Library | https://images.nasa.gov | Reference photos for the 3D models (section 5) |
+| International Docking System Standard, Rev. F | https://ntrs.nasa.gov/api/citations/20220011643/downloads/IDSS%20IDD%20Rev%20F%20Final_07262022.pdf | Orbital docking sequence: soft capture, attenuation, retraction and structural hard capture |
+| Dragon cargo craft approaches the ISS | https://www.nasa.gov/image-article/the-spacex-dragon-cargo-craft-approaches-the-station-for-docking-2/ | Earth-horizon framing and relative spacecraft scale for the orbital docking scene |
+| Orbital Express autonomous servicing | https://ntrs.nasa.gov/search.jsp?R=20150014716 | Historical reference for spacecraft docking and propellant transfer; the game tanker and cryogenic transfer are fictional |
+| Cryogenic fluid management | https://www.nasa.gov/directorates/stmd/tech-demo-missions-program/cryogenic-fluid-management-cfm/stay-cool-nasa-tests-innovative-technique-for-super-cold-fuel-storage/ | Reference for insulated propellant tanks and the challenges of storing and transferring cryogenic fluids in orbit |
 
 ---
 

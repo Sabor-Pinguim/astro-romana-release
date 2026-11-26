@@ -11,7 +11,7 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
-## [1.10.0] - 2026-11-26
+## [1.10.4] - 2026-11-26
 
 ### Added
 - "How to solve" clips recorded from the real game: every one of the 21 experiments and the 4 cockpit stages played the right way (3 stars, or a clean docking and landing), as looping GIFs in English, Portuguese and Spanish (`assets/minigames/{en,pt,es}/`, 75 clips, ~18 MB). The guide shows the clip in the player's language (English when one is missing) at its own aspect ratio in a wider popup; with reduced motion it waits on its first frame behind a ▶ button. They replace the generic SVG animation per mechanic, which stays as the fallback.
@@ -30,8 +30,44 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 - Removed a stale comment saying the landing controls are mirrored (they never were).
 
 ### Changed
+- Merged `origin/main` orbital docking, Mars arrival cutscene, and Dev Mode updates (`1.10.3`) with the live Mars sky, Keplerian orbits, and minigame clips.
 - `tools/web/lib/browser.mjs`: the headless browser, static server and DevTools client shared by the page audit, the smoke test and the clip recorder. The minigame lab also loads the Spanish texts.
 - README, AGENTS.md, `assets/minigames/README.md` and the visual identity describe the clips and when to re-record them.
+
+## [1.10.3] - 2026-11-26
+
+### Changed
+- Integrate the upstream audit fixes and centralized version label with the orbital flight and Dev Mode updates.
+
+## [1.10.2] - 2026-11-26
+
+### Added
+- Add Dev Mode shortcuts for automatic docking, the manual emergency sequence, the six-direction controls, the live exterior view, and Mars arrival.
+
+## [1.10.1] - 2026-11-26
+
+### Changed
+- Describe the three difficulty cards by player experience level in English, Portuguese, and Spanish.
+
+## [1.10.0] - 2026-11-26
+
+### Added
+- Add full-screen orbital docking and refuelling with the assembled rocket, a cryogenic tanker and Earth below.
+- Add localized docking telemetry and source references for docking and orbital propellant transfer.
+
+### Changed
+- Show the exterior approach before automatic capture or a construction-triggered pilot intervention.
+- Limit cockpit flight to one manual intervention. Helena sees a triangular warning and enters the cockpit while the rest of the crew watches her live motion from outside.
+- Show soft and hard capture, propellant transfer into the receiving stage and departure from the tanker.
+- Show a 15-second arrival at Mars with Phobos and Deimos, and automate landing when no manual intervention is required.
+
+### Fixed
+- Resolve splashdown aborts before orbital minigames and refuelling.
+
+## [1.9.21] - 2026-11-26
+
+### Changed
+- Connect rocket assembly labels to the corresponding stages with leader lines.
 
 ## [1.9.20] - 2026-11-26
 
@@ -49,6 +85,7 @@ Technical debt from `AUDITORIA.md` (revision 2 marks what each finding's status 
 - 18 locals named `t` that hid the i18n helper `t()` (the bug behind GAME-01, SURF-01 and FLT-01) renamed in `web/app.js`, `web/views.js`, `web/launch.js` and `web/minigames/core.js`.
 
 ### Added
+- Show installed mission bonuses on the launch review and award a fourth experiment star with telecom equipment.
 - `npm run lint`: ESLint 10 with bug rules only (undefined names, use before define in the same scope, duplicates, unreachable code) and `astro/no-shadow-t`, which flags a `t` that hides the i18n helper.
 - `npm run check:imports`: every relative import in the `.mjs` tools resolves to a file that exports the names asked for.
 - `npm run web:smoke`: a mission end to end in headless Chrome/Edge with reduced motion (menu, lobby, planner, launch pad, cockpit, surface with the player's experiments done, boarding, results); fails on any exception, `console.error` or step that never happens. The mobile audit now also reports `console.error`.

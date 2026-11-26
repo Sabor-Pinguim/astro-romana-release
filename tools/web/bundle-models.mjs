@@ -20,7 +20,7 @@ const offered = manifest.parts.filter((p) => (p.category === 'engines' ? ['boost
   : p.category === 'tanks' ? p.specs?.tankRole === 'stage'
     : ['equipment', 'cabin', 'structures', 'fins'].includes(p.category)));
 const files = [...new Set([
-  ...(sources.match(/\b(?:rocket|parts|characters|portraits)\/[\w/.-]+\.glb\b/g) ?? []),
+  ...(sources.match(/\b(?:rocket|parts|characters|portraits|bodies)\/[\w/.-]+\.glb\b/g) ?? []),
   ...(portraitManifest.portraits ?? []).map(p => p.file),
   ...offered.map((p) => p.file),
 ])].sort();

@@ -522,6 +522,13 @@
           <div class="exterior-stack"><span class="exterior-capsule"></span><span class="exterior-upper-stage"></span><span class="exterior-main-booster"></span><span class="exterior-plume"></span></div>
           <span class="exterior-sep-label" data-i18n="cockpit.mainBoosterSep">MAIN BOOSTER SEP</span>
         </div>
+        <div class="orbital-dock-scene" id="orbital-dock-scene" hidden>
+          <span class="orbital-dock-status" id="orbital-dock-status"></span>
+          <div class="orbital-emergency" id="orbital-emergency" role="alert" hidden>
+            <span class="orbital-emergency-icon" aria-hidden="true">!</span>
+            <p class="orbital-emergency-message" id="orbital-emergency-message" aria-hidden="true"></p>
+          </div>
+        </div>
         <div class="docking-monitor" id="docking-monitor" aria-label="External docking camera" data-i18n-aria="a11y.dockingCamera" hidden>
           <span class="docking-monitor-label" data-i18n="cockpit.extDockCam">EXT / DOCK CAM</span>
           <span class="docking-stars"></span><span class="docking-station"><i></i><b></b></span><span class="docking-ship"><i></i><b></b></span>
@@ -529,6 +536,28 @@
         </div>
         <div class="cockpit-reticle" aria-hidden="true"><div class="cockpit-pip" id="cockpit-pip"></div></div>
         <div class="dock-outcome" id="port-dock-outcome" role="status" aria-live="polite" hidden></div>
+        <div class="flight-cutscene" id="flight-cutscene" hidden>
+          <div class="cutscene-stage" id="mars-cutscene-stage" aria-hidden="true"></div>
+          <div class="cutscene-refuel-art" id="cutscene-refuel-art" aria-hidden="true" hidden>
+            <div class="cutscene-space-stars"></div>
+            <div class="cutscene-earth-arc"></div>
+            <div class="cutscene-dock-pair">
+              <div class="cutscene-tanker"><span></span></div>
+              <div class="cutscene-transfer-beam"></div>
+              <div class="cutscene-ship"><span></span></div>
+            </div>
+            <div class="cutscene-prop-meter">
+              <div class="cutscene-prop-head"><span data-i18n="cockpit.cutscene.propLabel">ORBITAL PROPELLANT</span><strong id="cutscene-prop-pct">18%</strong></div>
+              <div class="cutscene-prop-track"><div class="cutscene-prop-fill" id="cutscene-prop-fill"></div></div>
+            </div>
+          </div>
+          <div class="cutscene-caption slab">
+            <span class="eyebrow" id="cutscene-eyebrow">EARTH ORBIT · REFUEL</span>
+            <h3 id="cutscene-title">Orbital Refuelling</h3>
+            <p id="cutscene-body">To reach Mars, the spacecraft refuels in Earth orbit before burning for interplanetary transfer.</p>
+          </div>
+          <button class="button quiet cutscene-skip" id="cutscene-skip" type="button" data-i18n-html="launch.pad.skip">Skip ▸▸ <kbd>Esc</kbd></button>
+        </div>
         <div class="cockpit-fallback">
           <div>
             <span class="eyebrow" data-i18n="cockpit.fallbackEyebrow">2D Telemetry Fallback</span>
@@ -720,7 +749,11 @@
           <button class="button secondary" type="button" data-dev-jump="launchpad" data-i18n="dev.phase.launchpad">Launch Pad</button>
           <button class="button secondary" type="button" data-dev-jump="cockpit-0" data-i18n="dev.phase.cockpit0">Cockpit · Liftoff</button>
           <button class="button secondary" type="button" data-dev-jump="cockpit-1" data-i18n="dev.phase.cockpit1">Cockpit · Cabin docking</button>
-          <button class="button secondary" type="button" data-dev-jump="cockpit-2" data-i18n="dev.phase.cockpit2">Cockpit · Orbital docking</button>
+          <button class="button secondary" type="button" data-dev-jump="orbital-auto" data-i18n="dev.phase.orbitalAuto">Automatic docking cutscene</button>
+          <button class="button secondary" type="button" data-dev-jump="orbital-manual" data-i18n="dev.phase.orbitalManual">Docking alert and transition</button>
+          <button class="button secondary" type="button" data-dev-jump="orbital-controls" data-i18n="dev.phase.cockpit2">Cockpit · Orbital docking</button>
+          <button class="button secondary" type="button" data-dev-jump="orbital-spectator" data-i18n="dev.phase.orbitalSpectator">Live exterior docking (W/S, A/D, ↑/↓)</button>
+          <button class="button secondary" type="button" data-dev-jump="orbital-arrival" data-i18n="dev.phase.orbitalArrival">Mars arrival cutscene</button>
           <button class="button secondary" type="button" data-dev-jump="cockpit-orbit" data-i18n="experiments.dev.jumpOrbit">Cockpit · Mars orbit</button>
           <button class="button secondary" type="button" data-dev-jump="cockpit-3" data-i18n="dev.phase.cockpit3">Cockpit · Mars landing</button>
           <button class="button primary" type="button" data-dev-jump="surface" data-i18n="dev.phase.surface">Mars Surface EVA</button>

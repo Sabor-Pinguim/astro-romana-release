@@ -151,6 +151,10 @@
       else ast.jumpCockpit?.(0);
       return;
     }
+    if (target.startsWith('orbital-')) {
+      window.ASTRO_SIM?.previewOrbital(target.slice('orbital-'.length));
+      return;
+    }
     if (target === 'cockpit-orbit') {
       ast.jumpMarsOrbit?.(Number(devState.seed));
       return;

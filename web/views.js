@@ -1057,6 +1057,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   if (!view) return;
   blueprint.classList.add('is-3d');
   const { scene, camera, renderer } = view, overlay = blueprint.querySelector('#stack-overlay');
+  const leadersSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  leadersSvg.setAttribute('class', 'stack-leaders');
+  leadersSvg.setAttribute('aria-hidden', 'true');
+  blueprint.appendChild(leadersSvg);
   const stack = new THREE.Group(); scene.add(stack);
 
   let key = '', build = 0, layout = [], gaps = [], focusKey = null;
@@ -1150,15 +1154,31 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     camera.position.set(0, cameraCenter.y + cameraDistance * .2, cameraDistance);
     camera.lookAt(cameraCenter);
     // Labels sit beside their module; "+" buttons sit in the gaps on the rocket axis.
+    v.set(0, 0, 0).project(camera);
+    const axisX = (v.x + 1) / 2 * view.width;
+    let leaderMarkup = '';
     for (const { key: k, mid } of layout) {
       const el = overlay.querySelector(`[data-module="${k}"]`);
       if (!el) continue;
-      el.style.display = focused && k !== focusKey ? 'none' : '';
-      el.style.top = Math.max(52, Math.min(view.height - 96, toY(mid) - el.offsetHeight / 2)) + 'px';
+      const hidden = focused && k !== focusKey;
+      el.style.display = hidden ? 'none' : '';
+      const midY = toY(mid);
+      const topPx = Math.max(52, Math.min(view.height - 96, midY - el.offsetHeight / 2));
+      el.style.top = topPx + 'px';
       el.classList.add('placed');
+      if (!hidden && el.offsetWidth > 0) {
+        const elMidY = topPx + el.offsetHeight / 2;
+        const onLeft = (el.offsetLeft + el.offsetWidth / 2) < axisX;
+        const x1 = onLeft ? (el.offsetLeft + el.offsetWidth) : el.offsetLeft;
+        const x2 = axisX + (onLeft ? -14 : 14);
+        const sel = el.classList.contains('selected') || el.getAttribute('aria-pressed') === 'true';
+        const cls = sel ? 'leader-line is-selected' : 'leader-line';
+        if ((onLeft && x2 > x1 + 6) || (!onLeft && x1 > x2 + 6)) {
+          leaderMarkup += `<line class="${cls}" x1="${x1.toFixed(1)}" y1="${elMidY.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${midY.toFixed(1)}"/><circle class="${cls}" cx="${x2.toFixed(1)}" cy="${midY.toFixed(1)}" r="2.6"/>`;
+        }
+      }
     }
-    v.set(0, 0, 0).project(camera);
-    const axisX = (v.x + 1) / 2 * view.width;
+    leadersSvg.innerHTML = leaderMarkup;
     for (const { insert, y } of gaps) {
       const el = overlay.querySelector(`[data-insert="${insert}"]`);
       if (!el) continue;
@@ -1170,6 +1190,508 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
+
+  // The orbital camera follows the same alignment values and transfer progress as the controls.
+  (() => {
+    const host = document.getElementById('orbital-dock-scene');
+    if (!host) return;
+    document.body.append(host);
+    let view, earth, ship, tanker, collar, plume, jets = [], state, wasActive = false, unavailable = false;
+    let captureAt = 0, departureAt = 0, pulseUntil = 0, lastInput = '';
+    const orbitEye = new THREE.Vector3(0, 1.2, 10.5), orbitLook = new THREE.Vector3(0, .15, 0);
+    const cabinFocus = new THREE.Vector3(), cabinEye = new THREE.Vector3(), cameraLook = new THREE.Vector3();
+    const shipTarget = new THREE.Vector3();
+    let lastFrame = 0;
+    const pilotView = () => {
+      if (state?.orbitalPreview === 'spectator') return false;
+      const net = window.ASTRO_NET;
+      return !net || net.mode === 'solo' || net.seat === 'helena';
+    };
+    const mat = (color, metalness = .2) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: .68, metalness });
+    const hull = mat(0xd9e3e1), shadow = mat(0x25394b), foil = mat(0xd7aa54), steel = mat(0x81929e, .65);
+    const glow = color => new THREE.MeshBasicMaterial({ color });
+    function piece(group, geometry, material, x, y, z, rx = 0, ry = 0, rz = 0) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z); mesh.rotation.set(rx, ry, rz); group.add(mesh);
+      return mesh;
+    }
+    function makeTanker() {
+      const g = new THREE.Group();
+      // Two insulated cryogenic tanks, a service spine, radiators, and a forward capture collar.
+      piece(g, new THREE.CylinderGeometry(.45, .45, 2.65, 10), hull, 0, 0, 0, 0, 0, Math.PI / 2);
+      piece(g, new THREE.CylinderGeometry(.48, .48, 1.05, 10), foil, -.6, 0, 0, 0, 0, Math.PI / 2);
+      piece(g, new THREE.CylinderGeometry(.49, .49, .13, 10), steel, 0, 0, 0, 0, 0, Math.PI / 2);
+      piece(g, new THREE.CylinderGeometry(.49, .49, .13, 10), steel, -1.12, 0, 0, 0, 0, Math.PI / 2);
+      piece(g, new THREE.BoxGeometry(2.6, .12, .16), shadow, -.05, -.48, 0);
+      for (const s of [-1, 1]) {
+        piece(g, new THREE.BoxGeometry(1.4, .04, .52), shadow, -.1, s * .83, 0, 0, 0, s * .1);
+        piece(g, new THREE.BoxGeometry(.26, .15, .3), steel, -.9, s * .46, 0);
+        piece(g, new THREE.OctahedronGeometry(.065, 0), glow(s > 0 ? 0x7edac2 : 0xe04f26), -.95, s * .53, .23);
+      }
+      piece(g, new THREE.CylinderGeometry(.32, .32, .16, 12), steel, 1.38, 0, 0, 0, 0, Math.PI / 2);
+      piece(g, new THREE.TorusGeometry(.29, .045, 5, 12), hull, 1.49, 0, 0, 0, Math.PI / 2);
+      collar = new THREE.Group(); collar.position.x = 1.55; g.add(collar);
+      piece(collar, new THREE.TorusGeometry(.27, .025, 5, 12), foil, 0, 0, 0, 0, Math.PI / 2);
+      for (let i = 0; i < 3; i++) {
+        const a = i * Math.PI * 2 / 3;
+        piece(collar, new THREE.BoxGeometry(.12, .07, .07), steel, .04, Math.cos(a) * .27, Math.sin(a) * .27);
+      }
+      return g;
+    }
+    async function makeShip() {
+      const built = await window.ASTRO_BUILD_ROCKET?.();
+      if (!built) return null;
+      // The main booster has separated before orbital operations.
+      if (built.children.length > 1) built.children[0].visible = false;
+      // The launch escape tower is gone by Earth orbit; expose the cabin's modeled docking collar.
+      const cabinHull = built.children.at(-1);
+      cabinHull?.traverse(o => {
+        if (o.isMesh && o.position.y > 2.2) o.visible = false;
+      });
+      const box = new THREE.Box3().setFromObject(built), size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const model = new THREE.Group();
+      built.position.sub(center);
+      const body = new THREE.Group();
+      body.scale.setScalar(4.8 / Math.max(size.y, .01));
+      body.rotation.z = Math.PI / 2;
+      body.add(built);
+      model.add(body);
+      body.updateMatrixWorld(true);
+      const dockFace = new THREE.Box3().setFromObject(body);
+      model.userData.dockX = 1.55 - 1.75 - dockFace.min.x;
+      model.userData.cabinFocus = new THREE.Vector3(dockFace.min.x + .35, 0, 0);
+      plume = piece(model, new THREE.ConeGeometry(.16, .65, 6), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: .7 }), dockFace.max.x + .26, 0, 0, 0, 0, -Math.PI / 2);
+      plume.visible = false;
+      for (const s of [-1, 1]) {
+        const jet = piece(model, new THREE.ConeGeometry(.05, .22, 5), new THREE.MeshBasicMaterial({ color: 0xa4e9ff, transparent: true, opacity: .75 }), .65, s * .2, 0, 0, 0, s * Math.PI / 2);
+        jet.visible = false; jets.push(jet);
+      }
+      return model;
+    }
+    function stars(scene) {
+      const positions = [];
+      let seed = 73;
+      const rand = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+      for (let i = 0; i < 120; i++) positions.push((rand() - .5) * 24, (rand() - .5) * 12, -11 - rand() * 6);
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xfce8a6, size: .045 })));
+    }
+    async function start() {
+      if (view) return;
+      view = makeView(host, { fov: 38 });
+      if (!view) {
+        unavailable = true;
+        return;
+      }
+      view.renderer.domElement.classList.add('orbital-dock-canvas');
+      stars(view.scene);
+      tanker = makeTanker(); tanker.position.set(-1.75, .35, 0); view.scene.add(tanker);
+      ship = await makeShip();
+      if (ship) view.scene.add(ship);
+      if (ship) host.classList.add('has-docking-model');
+      const model = await loadGLB('bodies/earth.glb');
+      const box = new THREE.Box3().setFromObject(model), scale = 12 / Math.max(box.getSize(new THREE.Vector3()).y / 2, .01);
+      model.scale.setScalar(scale); model.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(scale));
+      earth = new THREE.Group(); earth.add(model); earth.position.set(0, -13.6, -5.5); view.scene.add(earth);
+      view.camera.position.set(0, 1.2, 10.5); view.camera.lookAt(0, .15, 0);
+      requestAnimationFrame(frame);
+    }
+    function frame(now) {
+      requestAnimationFrame(frame);
+      const dt = Math.min(.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      if (!view || host.hidden || !isActive('cockpit') || !ship || !state) return;
+      const g = state.docking;
+      const refuel = state.cutscene?.kind === 'refuel' ? state.cutscene : null;
+      const emergencyApproach = state.orbitalEmergency;
+      const manual = !refuel && emergencyApproach?.stage === 'control' ? state.portDock : null;
+      const progress = state.docked ? 1 : refuel
+        ? THREE.MathUtils.smoothstep(refuel.t, 0, refuel.approach || 1)
+        : THREE.MathUtils.smoothstep(emergencyApproach?.stage === 'approach' ? emergencyApproach.elapsed : 2.4, 0, 4);
+      if (state.docked && !captureAt) captureAt = now;
+      if (!state.docked) captureAt = 0;
+      const capture = captureAt ? Math.min(1, (now - captureAt) / 1100) : 0;
+      const soft = Math.min(1, capture * 2), hard = Math.max(0, capture * 2 - 1);
+      const approachGap = 1.75 * (1 - THREE.MathUtils.smoothstep(2.4, 0, 4));
+      const gap = manual ? approachGap * (1 - state.progress / 65) : 1.75 * (1 - progress);
+      const relative = state.docked ? .05 * (1 - soft) : gap;
+      shipTarget.set(ship.userData.dockX + relative + (state.docked ? .04 * Math.sin(soft * Math.PI) : 0),
+        .35 + (state.docked ? 0 : manual ? manual.y * .3 : (g?.value?.[0] || 0) * .075),
+        state.docked ? 0 : manual ? manual.x * .3 : (g?.value?.[1] || 0) * .075);
+      if (manual && !reduce) ship.position.lerp(shipTarget, 1 - Math.exp(-14 * dt));
+      else ship.position.copy(shipTarget);
+      ship.rotation.y = state.docked ? 0 : (g?.value?.[1] || 0) * .018;
+      ship.rotation.z = state.docked ? 0 : (g?.value?.[0] || 0) * .012;
+      collar.position.x = 1.55 - .09 * soft + .09 * hard;
+      const input = state.input || {};
+      const activeInput = [input.up, input.down, input.left, input.right].some(Boolean);
+      const inputKey = JSON.stringify(input);
+      if (activeInput && inputKey !== lastInput) pulseUntil = now + 130;
+      lastInput = inputKey;
+      jets.forEach((jet, i) => { jet.visible = !reduce && now < pulseUntil && (i ? input.down || input.right : input.up || input.left); });
+      if (plume) plume.visible = departureAt > 0 && now - departureAt < 1500 && !reduce;
+      if (departureAt) {
+        const away = Math.min(3, (now - departureAt) / 700);
+        ship.position.x += away;
+        tanker.position.x = -1.75 - away * .15;
+      }
+      if (earth && !reduce) earth.rotation.y += .00005;
+      const emergency = state.orbitalEmergency;
+      const progressToCabin = !reduce && pilotView() && emergency?.stage === 'zoom'
+        ? THREE.MathUtils.smoothstep(emergency.elapsed, 0, 1.65) : 0;
+      cabinFocus.copy(ship.userData.cabinFocus);
+      ship.localToWorld(cabinFocus);
+      cabinEye.copy(cabinFocus).addScaledVector(orbitEye, .065);
+      view.camera.position.lerpVectors(orbitEye, cabinEye, progressToCabin);
+      view.camera.lookAt(cameraLook.lerpVectors(orbitLook, cabinFocus, progressToCabin));
+      view.renderer.render(view.scene, view.camera);
+    }
+    window.addEventListener('astro:cockpit', e => {
+      state = e.detail;
+      const emergency = state?.orbitalEmergency;
+      const refuel = state?.cutscene?.kind === 'refuel';
+      const manualIntro = !state?.cutscene && ['approach', 'warning', 'zoom'].includes(emergency?.stage);
+      const spectator = !pilotView();
+      const manualSpectating = spectator && !state?.cutscene && emergency?.stage === 'control';
+      const active = !!(state?.active && state.step === 2 && (refuel || manualIntro || manualSpectating));
+      const stage = document.getElementById('mars-cutscene-stage');
+      const parent = refuel && active && stage ? stage : document.body;
+      if (host.parentElement !== parent) parent.append(host);
+      host.classList.toggle('in-refuel-cutscene', !!refuel);
+      host.hidden = !active;
+      if (unavailable) document.getElementById('docking-monitor')?.toggleAttribute('hidden', emergency?.stage !== 'control');
+      host.classList.toggle('is-zooming', !spectator && emergency?.stage === 'zoom');
+      const warning = document.getElementById('orbital-emergency');
+      if (warning) warning.hidden = !active || spectator || !manualIntro || emergency.stage === 'approach';
+      const message = document.getElementById('orbital-emergency-message');
+      if (message && active && emergency?.stage === 'warning') {
+        const key = emergency.reason === 'shortfall' ? 'cockpit.emergency.shortfall' : 'cockpit.emergency.highDemand';
+        const full = Array.from(window.ASTRO_I18N?.t(key) ?? '').slice(0, 80);
+        if (warning?.getAttribute('aria-label') !== full.join('')) warning?.setAttribute('aria-label', full.join(''));
+        message.textContent = full.slice(0, reduce ? full.length : Math.floor((emergency.elapsed || 0) * 38)).join('');
+      }
+      if (active && !wasActive && !unavailable) { captureAt = 0; departureAt = 0; tanker && (tanker.position.x = -1.75); void start(); }
+      wasActive = active;
+      const label = document.getElementById('orbital-dock-status');
+      if (label) label.hidden = !!refuel || (!spectator && ['warning', 'zoom'].includes(emergency?.stage));
+      if (label && active) label.textContent = window.ASTRO_I18N?.t(
+        state.docked ? (state.refuelDone > 0 ? (state.design?.refuelTank ? 'cockpit.orbitalTransferTank' : 'cockpit.orbitalTransfer') : 'cockpit.orbitalCapture') : 'cockpit.orbitalApproach',
+        { pct: Math.round(state.docked ? state.refuelDone : state.progress || 0), tank: state.design?.refuelTank || '' }
+      ) ?? '';
+    });
+    window.addEventListener('astro:orbital-departure', () => { departureAt = performance.now(); });
+  })();
+
+  // Flight 3D cutscenes: ethereal low-poly nebula + dense starfield backdrop, shared by:
+  // - 'refuel': low-poly Earth GLB (bodies/earth.glb) rising on the bottom horizon
+  // - 'mars': faceted Mars and its two moons on the right, closed custom spacecraft on the left
+  (() => {
+    const host = document.getElementById('mars-cutscene-stage');
+    if (!host) return;
+    let mView = null, mActive = false, mKind = 'mars', mStart = 0, mDur = 15, mRaf = 0;
+    let marsMesh = null, marsSystem = null, moonOrbits = [], earthGrp = null, upperGrp = null, lowerGrp = null, nebulaGrp = null;
+    let signalRings = [], starLayers = [], sparkles = [];
+    const camRefuel = new THREE.Vector3(0, 0.35, 9.2);
+    const lookRefuel = new THREE.Vector3(0, -0.45, -2.5);
+    const camStart = new THREE.Vector3(0, 0.85, 11);
+    const lookStart = new THREE.Vector3(0.25, -0.25, -2);
+    const camEnd = new THREE.Vector3(-0.55, 0.95, 8);
+    const lookEnd = new THREE.Vector3(0.05, 0.2, -2);
+    const curCam = new THREE.Vector3(), curLook = new THREE.Vector3();
+
+    function buildEtherealSpace(scene) {
+      // Multi-layered dense starfield with varied cosmic colors (cream, cyan, gold, lavender)
+      const makeStars = (count, palette, size, rMin, rMax, seed, opacity = 0.92) => {
+        let s = seed; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+        const pos = new Float32Array(count * 3), cols = new Float32Array(count * 3);
+        const c = new THREE.Color();
+        for (let i = 0; i < count; i++) {
+          const a = rnd() * Math.PI * 2, u = rnd() * 2 - 1, r = rMin + rnd() * (rMax - rMin), k = Math.sqrt(1 - u * u);
+          pos[i * 3] = r * k * Math.cos(a);
+          pos[i * 3 + 1] = r * u;
+          pos[i * 3 + 2] = r * k * Math.sin(a) - 12;
+          c.set(palette[Math.floor(rnd() * palette.length)]);
+          cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+        return new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, size, transparent: true, opacity, depthWrite: false }));
+      };
+      const layer1 = makeStars(1600, ['#ffffff', '#fce8a6', '#a8d4ff', '#d8b8ff'], 0.11, 36, 86, 41, 0.85);
+      const layer2 = makeStars(750, ['#ffe49e', '#7fd8ff', '#f3c6ff', '#ffffff'], 0.2, 30, 72, 97, 0.95);
+      const layer3 = makeStars(220, ['#fff6d6', '#67d4ff', '#ffbe76'], 0.3, 28, 60, 173, 0.95);
+      starLayers = [layer1, layer2, layer3];
+      scene.add(layer1, layer2, layer3);
+
+      // Ethereal low-poly faceted nebula / galaxy clouds (radial ellipses with soft edge falloff, no hard rectangles)
+      nebulaGrp = new THREE.Group();
+      const nebSpecs = [
+        [15, 5.2, '#2b1e7a', 0.24, -2, 2.5, -24, 0.42],
+        [12, 3.8, '#6c3cff', 0.20, 0.5, 1.8, -22, 0.44],
+        [8.5, 2.5, '#c96bff', 0.16, 1.2, 2.1, -20.5, 0.46],
+        [10, 3.2, '#1fa2ff', 0.14, -3.5, 0.2, -23, 0.38],
+        [6.0, 1.8, '#ffd2f4', 0.14, 1.5, 2.2, -19.5, 0.45],
+      ];
+      nebSpecs.forEach(([rx, ry, col, op, x, y, z, rz], idx) => {
+        const geo = new THREE.CircleGeometry(1, 20).toNonIndexed();
+        const p = geo.attributes.position, cols = [];
+        let s = 31 + idx * 17; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+        const base = new THREE.Color(col), c = new THREE.Color();
+        for (let i = 0; i < p.count; i += 3) {
+          const mx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
+          const my = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
+          const falloff = Math.max(0, 1 - Math.hypot(mx, my));
+          c.copy(base).multiplyScalar(falloff * falloff * (0.75 + rnd() * 0.5));
+          for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
+        }
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+        const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+          vertexColors: true, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+        }));
+        mesh.scale.set(rx, ry, 1);
+        mesh.position.set(x, y, z);
+        mesh.rotation.z = rz;
+        nebulaGrp.add(mesh);
+      });
+
+      // Bright 4-point diamond sparkle stars scattered along the nebula
+      sparkles = [];
+      let ss = 211; const srnd = () => (ss = (ss * 16807) % 2147483647) / 2147483647;
+      const spGeo = new THREE.OctahedronGeometry(0.16, 0);
+      for (let i = 0; i < 28; i++) {
+        const sp = new THREE.Mesh(spGeo, new THREE.MeshBasicMaterial({
+          color: i % 3 === 0 ? 0x9ee8ff : i % 3 === 1 ? 0xfff3c4 : 0xe5b8ff,
+          transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        sp.position.set((srnd() - 0.5) * 28, (srnd() - 0.5) * 14, -18 - srnd() * 12);
+        sp.scale.set(0.35, 1.35, 0.35);
+        sp.userData.phase = srnd() * Math.PI * 2;
+        nebulaGrp.add(sp);
+        sparkles.push(sp);
+      }
+      scene.add(nebulaGrp);
+    }
+
+    function buildMars(scene) {
+      // Huge faceted Mars with polar caps and warm atmospheric rim
+      const ramp = window.ASTRO_ART?.PLANETS?.mars?.ramp || ['#6d2c1b', '#8e3a22', '#b84b28', '#d96638', '#eb8854'];
+      const geo = new THREE.IcosahedronGeometry(2.9, 3);
+      const p = geo.attributes.position, cols = [];
+      let s = 19; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      const c = new THREE.Color(), tri = new THREE.Vector3(), tmp = new THREE.Vector3();
+      for (let i = 0; i < p.count; i += 3) {
+        tri.set(0, 0, 0);
+        for (let k = 0; k < 3; k++) tri.add(tmp.fromBufferAttribute(p, i + k));
+        tri.normalize();
+        const isPole = Math.abs(tri.y) > 0.87;
+        c.set(isPole ? '#efe6db' : ramp[Math.min(ramp.length - 1, Math.floor(rnd() * ramp.length))]);
+        for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
+      }
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+      marsMesh = new THREE.Group();
+      marsMesh.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })));
+      marsMesh.add(new THREE.Mesh(
+        new THREE.IcosahedronGeometry(3.07, 2),
+        new THREE.MeshBasicMaterial({ color: 0xe04f26, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide })
+      ));
+      marsMesh.rotation.z = THREE.MathUtils.degToRad(25.2);
+      marsSystem = new THREE.Group();
+      marsSystem.position.set(4.0, -0.75, -6.5);
+      marsSystem.add(marsMesh);
+      // Cinematic spacing is compressed so both orbits fit the frame. Phobos is larger,
+      // closer and moves roughly four times faster than Deimos (NASA Mars Moons: Facts).
+      const orbitTiltZ = THREE.MathUtils.degToRad(-12);
+      const cosZ = Math.cos(orbitTiltZ), sinZ = Math.sin(orbitTiltZ);
+      const moonPos = (r, a) => {
+        const lx = r * Math.cos(a), ly = r * .24 * Math.sin(a), lz = r * .97 * Math.sin(a);
+        return new THREE.Vector3(lx * cosZ - ly * sinZ, lx * sinZ + ly * cosZ, lz);
+      };
+      moonOrbits = [
+        { radius: 3.65, size: .2, phase: 2.1, speed: .12, color: 0x968c84 },
+        { radius: 4.65, size: .13, phase: 5.3, speed: .03, color: 0xb6aaa0 },
+      ].map(spec => {
+        const points = Array.from({ length: 97 }, (_, i) => moonPos(spec.radius, i * Math.PI * 2 / 96));
+        const orbit = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points.slice(0, -1)),
+          new THREE.LineDashedMaterial({ color: 0xf59e0b, dashSize: .24, gapSize: .16, transparent: true, opacity: .82 }));
+        orbit.computeLineDistances();
+        const moon = new THREE.Mesh(new THREE.IcosahedronGeometry(spec.size, 1),
+          new THREE.MeshLambertMaterial({ color: spec.color, flatShading: true }));
+        marsSystem.add(orbit, moon);
+        return { ...spec, moon, posAt: a => moonPos(spec.radius, a) };
+      });
+      scene.add(marsSystem);
+    }
+
+    async function ensureEarth(scene) {
+      if (earthGrp) return earthGrp;
+      earthGrp = new THREE.Group();
+      const model = await loadGLB('bodies/earth.glb');
+      const box = new THREE.Box3().setFromObject(model);
+      const radius = Math.max(0.001, box.getSize(new THREE.Vector3()).y / 2);
+      const targetR = 16.5; // large radius so only the sweeping horizon curve spans the full bottom edge
+      model.scale.setScalar(targetR / radius);
+      model.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(targetR / radius));
+      earthGrp.add(model);
+      // Crisp glowing cyan-blue atmospheric limb hugging the horizon
+      earthGrp.add(new THREE.Mesh(
+        new THREE.IcosahedronGeometry(targetR * 1.032, 3),
+        new THREE.MeshBasicMaterial({ color: 0x45caff, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide })
+      ));
+      earthGrp.position.set(0, -17.4, -5.2);
+      earthGrp.rotation.set(0.28, -1.15, THREE.MathUtils.degToRad(14));
+      scene.add(earthGrp);
+      return earthGrp;
+    }
+
+    async function populateRocket(scene) {
+      if (upperGrp) { scene.remove(upperGrp); upperGrp = null; }
+      if (lowerGrp) { scene.remove(lowerGrp); lowerGrp = null; }
+      signalRings = [];
+      const data = ui.data();
+      if (!data) return;
+      const r = ui.state.rocket;
+      const groups = await Promise.all([booster(r, data.parts), ...r.stages.map((_, i) => stage(r, i, data.parts, true)), cabin(r, data.parts, true)]);
+
+      // Detached lower booster/stages vs upper spacecraft + cabin
+      lowerGrp = new THREE.Group();
+      upperGrp = new THREE.Group();
+      const splitIdx = Math.max(1, groups.length - 1);
+      let yLow = 0, yUp = 0;
+      groups.forEach((g, i) => {
+        const top = g.userData.top || 1;
+        if (i < splitIdx) {
+          g.position.y = yLow; lowerGrp.add(g); yLow += top + GAP * 0.4;
+        } else {
+          g.position.y = yUp; upperGrp.add(g); yUp += top + GAP * 0.4;
+        }
+      });
+
+      const scale = 0.21;
+      upperGrp.scale.setScalar(scale);
+      upperGrp.position.set(-1.45, 0.62, 0.4);
+      upperGrp.rotation.set(0.18, -0.55, -1.18);
+
+      lowerGrp.scale.setScalar(scale * 0.92);
+      lowerGrp.position.set(-3.1, 0.15, -0.35);
+      lowerGrp.rotation.set(0.32, -0.35, -1.32);
+
+      // Pulsing telemetry signal rings radiating from the detached upper module
+      for (let i = 0; i < 4; i++) {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.16, 0.21, 24),
+          new THREE.MeshBasicMaterial({ color: i % 2 ? 0xf2a900 : 0x1fa2ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+        );
+        ring.position.set(0, yUp * 0.72, 0);
+        ring.rotation.x = Math.PI / 2;
+        ring.userData.phase = i / 4;
+        upperGrp.add(ring);
+        signalRings.push(ring);
+      }
+      scene.add(lowerGrp, upperGrp);
+    }
+
+    function tick(now) {
+      if (!mActive || !mView) return;
+      mRaf = requestAnimationFrame(tick);
+      const elapsed = Math.max(0, (now - mStart) / 1000);
+      const p = Math.min(1, elapsed / mDur);
+      if (starLayers[0]) starLayers[0].rotation.y = elapsed * 0.005;
+      if (starLayers[1]) starLayers[1].rotation.y = -elapsed * 0.008;
+      if (starLayers[2]) starLayers[2].rotation.x = elapsed * 0.004;
+      if (nebulaGrp) nebulaGrp.rotation.z = Math.sin(elapsed * 0.15) * 0.025;
+      if (marsSystem?.visible) for (const orbit of moonOrbits) {
+        const a = orbit.phase + (reduce ? 0 : elapsed * orbit.speed);
+        orbit.moon.position.copy(orbit.posAt(a));
+        orbit.moon.rotation.y = a;
+      }
+      for (const sp of sparkles) {
+        const tw = 0.55 + 0.45 * Math.sin(elapsed * 2.6 + sp.userData.phase);
+        sp.material.opacity = 0.35 + tw * 0.65;
+        sp.scale.set(0.28 * tw + 0.12, 1.1 * tw + 0.35, 0.28 * tw + 0.12);
+      }
+
+      if (mKind === 'refuel') {
+        if (earthGrp) earthGrp.rotation.y = -1.15 + elapsed * 0.035;
+        mView.camera.position.copy(camRefuel);
+        mView.camera.lookAt(lookRefuel);
+      } else if (mKind === 'landing') {
+        if (marsMesh) marsMesh.rotation.y = elapsed * 0.035;
+        if (upperGrp) {
+          upperGrp.position.set(-2.8 + p * 3.5, 1.6 - p * 2.1, 0.4);
+          upperGrp.rotation.z = -1.18 * (1 - p);
+          upperGrp.rotation.x = 0.18 * (1 - p);
+        }
+        mView.camera.position.copy(camStart);
+        mView.camera.lookAt(lookStart);
+      } else {
+        if (marsMesh) marsMesh.rotation.y = elapsed * 0.09;
+        if (upperGrp) {
+          upperGrp.position.x = -1.65 + p * 0.32;
+          upperGrp.position.y = 0.56 + Math.sin(elapsed * 1.4) * 0.04 + p * 0.08;
+          upperGrp.rotation.x = 0.18 + Math.sin(elapsed * 0.9) * 0.05;
+        }
+        if (lowerGrp) {
+          lowerGrp.position.x = -3.1 - p * 0.58;
+          lowerGrp.position.y = 0.15 - p * 0.28;
+          lowerGrp.rotation.z = -1.32 - elapsed * 0.18;
+        }
+        for (const ring of signalRings) {
+          const ph = (ring.userData.phase + elapsed * 0.65) % 1;
+          const sc = 1 + ph * 8.5;
+          ring.scale.setScalar(sc);
+          ring.position.y = (ring.userData.baseY ?? (ring.userData.baseY = ring.position.y)) + ph * 1.8;
+          ring.material.opacity = (1 - ph) * 0.85;
+        }
+        // Smooth zoom-in toward the detached spacecraft in the final 42% of the cutscene
+        const zRaw = Math.max(0, Math.min(1, (p - 0.58) / 0.42));
+        const zEase = reduce ? 1 : zRaw * zRaw * (3 - 2 * zRaw);
+        curCam.lerpVectors(camStart, camEnd, zEase);
+        curLook.lerpVectors(lookStart, lookEnd, zEase);
+        mView.camera.position.copy(curCam);
+        mView.camera.lookAt(curLook);
+      }
+      mView.renderer.render(mView.scene, mView.camera);
+    }
+
+    window.addEventListener('astro:mars-cutscene', async e => {
+      const active = !!e.detail?.active;
+      if (!active) {
+        mActive = false;
+        cancelAnimationFrame(mRaf);
+        return;
+      }
+      mKind = e.detail?.kind || 'mars';
+      mDur = e.detail?.duration || 15;
+      mActive = true;
+      if (!mView) {
+        mView = makeView(host, { fov: 34 });
+        if (!mView) return;
+        host.classList.add('is-3d');
+        buildEtherealSpace(mView.scene);
+        buildMars(mView.scene);
+      }
+      if (mKind === 'refuel') {
+        await ensureEarth(mView.scene);
+        if (earthGrp) earthGrp.visible = true;
+        if (marsSystem) marsSystem.visible = false;
+        if (upperGrp) upperGrp.visible = false;
+        if (lowerGrp) lowerGrp.visible = false;
+      } else {
+        if (earthGrp) earthGrp.visible = false;
+        if (marsSystem) marsSystem.visible = true;
+        await populateRocket(mView.scene);
+        if (upperGrp) upperGrp.visible = true;
+        if (lowerGrp) lowerGrp.visible = mKind !== 'landing';
+        if (mKind === 'landing') signalRings.forEach(ring => { ring.visible = false; });
+      }
+      if (!mActive) return;
+      mStart = performance.now();
+      cancelAnimationFrame(mRaf);
+      mRaf = requestAnimationFrame(tick);
+    });
+  })();
 })().catch(err => console.warn('3D rocket not shown:', err));
 
 // Planner catalog: render each part's 3D GLB once into an offscreen studio view (cached in window.ASTRO_THUMBS),
