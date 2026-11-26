@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.21] - 2026-11-26
+
+### Changed
+- Connect rocket assembly labels to the corresponding stages with leader lines.
+
 ## [1.9.20] - 2026-11-26
 
 ### Added

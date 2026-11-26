@@ -1033,6 +1033,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   if (!view) return;
   blueprint.classList.add('is-3d');
   const { scene, camera, renderer } = view, overlay = blueprint.querySelector('#stack-overlay');
+  const leadersSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  leadersSvg.setAttribute('class', 'stack-leaders');
+  leadersSvg.setAttribute('aria-hidden', 'true');
+  blueprint.appendChild(leadersSvg);
   const stack = new THREE.Group(); scene.add(stack);
 
   let key = '', build = 0, layout = [], gaps = [], focusKey = null;
@@ -1126,15 +1130,31 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     camera.position.set(0, cameraCenter.y + cameraDistance * .2, cameraDistance);
     camera.lookAt(cameraCenter);
     // Labels sit beside their module; "+" buttons sit in the gaps on the rocket axis.
+    v.set(0, 0, 0).project(camera);
+    const axisX = (v.x + 1) / 2 * view.width;
+    let leaderMarkup = '';
     for (const { key: k, mid } of layout) {
       const el = overlay.querySelector(`[data-module="${k}"]`);
       if (!el) continue;
-      el.style.display = focused && k !== focusKey ? 'none' : '';
-      el.style.top = Math.max(52, Math.min(view.height - 96, toY(mid) - el.offsetHeight / 2)) + 'px';
+      const hidden = focused && k !== focusKey;
+      el.style.display = hidden ? 'none' : '';
+      const midY = toY(mid);
+      const topPx = Math.max(52, Math.min(view.height - 96, midY - el.offsetHeight / 2));
+      el.style.top = topPx + 'px';
       el.classList.add('placed');
+      if (!hidden && el.offsetWidth > 0) {
+        const elMidY = topPx + el.offsetHeight / 2;
+        const onLeft = (el.offsetLeft + el.offsetWidth / 2) < axisX;
+        const x1 = onLeft ? (el.offsetLeft + el.offsetWidth) : el.offsetLeft;
+        const x2 = axisX + (onLeft ? -14 : 14);
+        const sel = el.classList.contains('selected') || el.getAttribute('aria-pressed') === 'true';
+        const cls = sel ? 'leader-line is-selected' : 'leader-line';
+        if ((onLeft && x2 > x1 + 6) || (!onLeft && x1 > x2 + 6)) {
+          leaderMarkup += `<line class="${cls}" x1="${x1.toFixed(1)}" y1="${elMidY.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${midY.toFixed(1)}"/><circle class="${cls}" cx="${x2.toFixed(1)}" cy="${midY.toFixed(1)}" r="2.6"/>`;
+        }
+      }
     }
-    v.set(0, 0, 0).project(camera);
-    const axisX = (v.x + 1) / 2 * view.width;
+    leadersSvg.innerHTML = leaderMarkup;
     for (const { insert, y } of gaps) {
       const el = overlay.querySelector(`[data-insert="${insert}"]`);
       if (!el) continue;
