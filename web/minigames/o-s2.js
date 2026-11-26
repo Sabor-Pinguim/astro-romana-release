@@ -113,7 +113,9 @@
     const fixedNoise = Array.from({ length: COLS }, () => host.R.float(0, 1));
 
     let time = 0, tuner = L.tuner0, locked = false, inside = 0, outside = 0, lockedTime = 0, keyDir = 0, rowClock = 0;
-    let dialAngle = 0, dialLast = null, lastState = '', told = { link: false, back: false };
+    // lastState starts at 'searching' (where every run starts), so the first frame keeps the intro instead of
+    // saying "lock lost" before there ever was a lock.
+    let dialAngle = 0, dialLast = null, lastState = 'searching', told = { link: false, back: false };
     const rows = [];
 
     const readout = ui.readout(['lock', 'time', 'power']);

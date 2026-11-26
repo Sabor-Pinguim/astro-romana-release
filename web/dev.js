@@ -169,9 +169,50 @@
     }
   }
 
+  function updateSkyStatus() {
+    const sky = window.ASTRO_MARS_SKY;
+    const statusEl = $('dev-sky-status');
+    if (!sky || !statusEl) return;
+    const site = window.ASTRO?.sites?.[devState.site] || window.ASTRO?.sites?.jezero;
+    const st = sky.now(site);
+    statusEl.textContent = t('marsSky.dev.status', {
+      time: sky.formatClock(st.ltst),
+      sol: st.sol,
+      el: st.sun.elDeg.toFixed(1),
+      mode: sky.isLive() ? t('marsSky.dev.live') : `${sky.getRate()}x`,
+    });
+  }
+
+  dlg.querySelectorAll('[data-sky-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sky = window.ASTRO_MARS_SKY;
+      if (!sky) return;
+      const site = window.ASTRO?.sites?.[devState.site] || window.ASTRO?.sites?.jezero;
+      const preset = btn.dataset.skyPreset;
+      if (preset === 'live') { sky.setTime(null); sky.setRate(1); }
+      else if (preset === 'dawn') sky.jumpToSolarHour(site, 6.1);
+      else if (preset === 'noon') sky.jumpToSolarHour(site, 12);
+      else if (preset === 'sunset') sky.jumpToSolarHour(site, 17.85);
+      else if (preset === 'night') sky.jumpToSolarHour(site, 0.5);
+      else if (preset === 'solar-phobos' || preset === 'lunar-phobos') {
+        const hit = sky.jumpToNextEclipse(site, preset, 10);
+        if (!hit) window.ASTRO?.toast?.(t('marsSky.dev.noEclipseFound'));
+      }
+      updateSkyStatus();
+    });
+  });
+
+  dlg.querySelectorAll('[data-sky-rate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.ASTRO_MARS_SKY?.setRate(Number(btn.dataset.skyRate) || 1);
+      updateSkyStatus();
+    });
+  });
+
   function open() {
     syncControlsFromGame();
     renderExperiments();
+    updateSkyStatus();
     if (!dlg.open) dlg.showModal();
   }
 

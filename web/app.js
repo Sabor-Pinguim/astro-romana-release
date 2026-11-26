@@ -2039,6 +2039,7 @@
         f.throttle = e >= EDL_POWERED ? 0.6 : 0; // descent engines only fire after the backshell separates
         if (e >= EDL_CHUTE && !f.edlChuteDeployed) {
           f.edlChuteDeployed = true;
+          f.edlCalm = EDL_CHUTE_CALM.auto;
           logFlight(t('cockpit.logs.chuteDeployed', { alt: U.altitudeKm(11), vel: U.speedKmh(1512) }));
           radAudio.tone(820, 0.12, 'triangle', 0.06);
         }
@@ -2164,7 +2165,7 @@
       separationAdvancing: false,
       refuelDone: 0,
       stormShielded: false,
-      edlChuteDeployed: false,
+      edlChuteDeployed: false, edlCalm: 1,
       score: 100,
       design: null,
       phaseElapsed: 0,
@@ -2299,7 +2300,7 @@
       flight.separationAdvancing = false;
       flight.refuelDone = 0;
       flight.stormShielded = false;
-      flight.edlChuteDeployed = false;
+      flight.edlChuteDeployed = false; flight.edlCalm = 1;
       flight.score = 100 - (flight.design.budgetPenalty ? 12 : 0) - (flight.design.overweight ? 10 : 0);
       flight.sparksUntil = flight.design.powerDeficit || flight.design.overweight ? performance.now() + 2800 : 0;
       flight.phaseElapsed = 0;
@@ -2598,17 +2599,21 @@
       renderFlightUI();
     }
 
-    // Phase 04 reuses the pilot mechanic with the response mirrored: the burn is observed
-    // from behind the vehicle, so the player has to counter-steer in the opposite direction.
+    // Phase 04 reuses the pilot mechanic of the liftoff (same controls): keep the descent burn in the corridor.
     const MARS_BURN = { duration: phaseDuration(3), band: LIFTOFF.band, limit: LIFTOFF.limit, authority: LIFTOFF.authority };
+    // game-balance: once the parachute is out it damps the gusts for the rest of the burn (drift × this). Deployed by
+    // the crew it steadies more, and most with Terrain Relative Navigation or LOFTID aboard; deployed by the
+    // automatic trigger at EDL_CHUTE it helps a little.
+    const EDL_CHUTE_CALM = { guided: 0.7, manual: 0.85, auto: 0.92 };
     function startMarsBurn() {
       const s1 = Math.random() * 100, s2 = Math.random() * 100;
       const transferPenalty = flight.docking?.stars() < 2 ? 1.25 : 1;
+      const k = () => transferPenalty * (flight.edlCalm ?? 1);
       return createKeepInRange({
         axes: 2, ...MARS_BURN,
         drift: time => [
-          transferPenalty * (2.6 * Math.sin(time * .82 + s1) + 1.9 * Math.sin(time * 2.1 + s1 * 1.4)),
-          transferPenalty * (2.2 * Math.sin(time * 1.16 + s2) + 1.7 * Math.sin(time * 2.5 + s2 * .8)),
+          k() * (2.6 * Math.sin(time * .82 + s1) + 1.9 * Math.sin(time * 2.1 + s1 * 1.4)),
+          k() * (2.2 * Math.sin(time * 1.16 + s2) + 1.7 * Math.sin(time * 2.5 + s2 * .8)),
         ],
       });
     }
@@ -2778,9 +2783,9 @@
       } else if (actionId === 'edl_arm') {
         if (flight.step === 3 && !flight.edlChuteDeployed) {
           flight.edlChuteDeployed = true;
-          const bonus = (flight.design.hasTrn || flight.design.hasLoftid) ? 18 : 6;
-          flight.stability = Math.min(100, flight.stability + bonus);
-          logFlight(t(flight.design.hasTrn || flight.design.hasLoftid ? 'cockpit.logs.edlFull' : 'cockpit.logs.edlBackup'));
+          const guided = flight.design.hasTrn || flight.design.hasLoftid;
+          flight.edlCalm = guided ? EDL_CHUTE_CALM.guided : EDL_CHUTE_CALM.manual; // the burn's gusts calm down from now on
+          logFlight(t(guided ? 'cockpit.logs.edlFull' : 'cockpit.logs.edlBackup'));
           radAudio.tone(820, 0.12, 'triangle', 0.06);
         }
       } else if (actionId === 'complete_step') {
@@ -2939,8 +2944,6 @@
         const g = flight.marsBurn;
         if (g) {
           const [pitch, yaw] = pilotInput();
-          // Mirrored burn: the outside view reverses the correction axes.
-          // Keep the pressed-state tied to the mirrored labels; the physics input below is inverted.
           flight.input = { up: pitch > 0, down: pitch < 0, right: yaw > 0, left: yaw < 0 };
           g.tick(dt, [pitch, yaw]);
           flight.phaseElapsed = g.t;
@@ -3055,9 +3058,14 @@
         const st = g.stars(); $('#kir-stars').innerHTML = starsHtml(st);
       }
       if (flight.step === 2 && flight.docking && !flight.docked && mark) {
-        mark.style.left = `${50 + (flight.docking.value[1] / flight.docking.limit) * 50}%`;
-        mark.style.top = `${50 - (flight.docking.value[0] / flight.docking.limit) * 50}%`;
-        mark.classList.toggle('out', flight.docking.error > flight.docking.band);
+        const g = flight.docking;
+        mark.style.left = `${50 + (g.value[1] / g.limit) * 50}%`;
+        mark.style.top = `${50 - (g.value[0] / g.limit) * 50}%`;
+        mark.classList.toggle('out', g.error > g.band);
+        // The card's readouts follow the approach (renderFlightUI only draws them once).
+        const align = $('#dock-align'), left = $('#dock-time');
+        if (align) align.textContent = t('cockpit.cards.alignmentReadout', { pct: Math.round(g.share() * 100) });
+        if (left) left.textContent = t('cockpit.cards.approachTime', { sec: Math.ceil(g.duration - g.t) });
       }
       const activeInput = flight.step === 1 ? flight.portDock?.input : flight.input;
       $$('[data-hold]').forEach(b => b.classList.toggle('on', !!activeInput?.[b.dataset.hold]));
@@ -3166,7 +3174,7 @@
         box.innerHTML = `
           <span class="eyebrow">${t('cockpit.cards.oscarMayaEyebrow')}</span>
           <h4>${t('cockpit.cards.oscarMayaTitle')}</h4>
-          <div class="docking-readout"><span>${flight.docked ? t('cockpit.cards.latchedReadout') : t('cockpit.cards.alignmentReadout', { pct: aligned })}</span><strong>${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : t('cockpit.cards.approachTime', { sec: Math.ceil((g?.duration ?? 0) - (g?.t ?? 0)) })}</strong></div>
+          <div class="docking-readout"><span id="dock-align">${flight.docked ? t('cockpit.cards.latchedReadout') : t('cockpit.cards.alignmentReadout', { pct: aligned })}</span><strong id="dock-time">${flight.docked ? `${flight.refuelDone}/${refuelTarget()}%` : t('cockpit.cards.approachTime', { sec: Math.ceil((g?.duration ?? 0) - (g?.t ?? 0)) })}</strong></div>
           ${!flight.docked ? `<div class="kir-row">
             <div class="kir kir-2d" style="--band:${(DOCKING.band / DOCKING.limit) * 100}%"><div class="kir-band"></div><div class="kir-mark" id="kir-mark"></div></div>
             <div class="kir-ctrl kir-pad"><button class="button secondary up" type="button" data-hold="up">▲<kbd>W · ↑</kbd></button><button class="button secondary left" type="button" data-hold="left">◀<kbd>A · ←</kbd></button><button class="button secondary right" type="button" data-hold="right">▶<kbd>D · →</kbd></button><button class="button secondary down" type="button" data-hold="down">▼<kbd>S · ↓</kbd></button></div>
@@ -3630,7 +3638,7 @@
     // Flight snapshot (host → guests, ~10 Hz and on every change of step or controls). The keep-in-range games
     // travel as plain numbers and get their share()/stars() back on the guest.
     const FLIGHT_FIELDS = ['active', 'step', 'progress', 'altKm', 'velMs', 'hull', 'propellant', 'throttle', 'pitchX', 'pitchY', 'stability', 'breakers',
-      'stageSeparated', 'separationAdvancing', 'refuelDone', 'stormShielded', 'edlChuteDeployed', 'score', 'phaseElapsed', 'phaseTimedOut', 'docked',
+      'stageSeparated', 'separationAdvancing', 'refuelDone', 'stormShielded', 'edlChuteDeployed', 'edlCalm', 'score', 'phaseElapsed', 'phaseTimedOut', 'docked',
       'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold', 'brownouts'];
     const FLIGHT_SYNC_MS = 100; // game-balance: snapshot interval
     const kirOut = g => g && { t: g.t, value: g.value, rate: g.rate, inBand: g.inBand, duration: g.duration, band: g.band, limit: g.limit, error: g.error, done: g.done, axes: g.axes };

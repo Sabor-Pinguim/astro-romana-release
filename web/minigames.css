@@ -192,6 +192,15 @@ dialog > .mg-guide-pop{top:12px;right:12px}
 .mg-guide-close:hover,.mg-guide-close:focus-visible{outline:none;background:var(--starlight-cream)}
 .mg-guide-stage{position:relative;aspect-ratio:220/96;width:100%;overflow:hidden;background:#11071f;border:1px solid #3a1a62}
 .mg-guide-media{display:block;width:100%;height:100%;object-fit:cover}
+/* A clip recorded from the game (assets/minigames): its own aspect ratio, never cropped, a wider popup. */
+@media (min-width:641px) and (min-height:501px){
+  .mg-guide-pop:has(.has-clip){width:min(360px,calc(100% - 24px))}
+  #cockpit > .mg-guide-pop:has(.has-clip){width:min(380px,40vw)}
+}
+.mg-guide-stage.has-clip{aspect-ratio:var(--clip-ratio,1);max-height:min(52vh,340px)}
+.mg-guide-stage.has-clip .mg-guide-media{object-fit:contain}
+.mg-guide-play{position:absolute;inset:0;margin:auto;display:grid;place-items:center;width:56px;height:56px;padding:0 0 0 4px;border:0;font:700 1.3rem/1 var(--heading);color:var(--bg-void);background:var(--solar-amber);clip-path:var(--hex);cursor:pointer}
+.mg-guide-play:hover,.mg-guide-play:focus-visible{outline:none;background:var(--starlight-cream)}
 .mg-guide-anim,.mg-guide-svg{display:block;width:100%;height:100%}
 .mg-guide-badge{position:absolute;left:6px;bottom:6px;padding:2px 5px;font:700 .52rem/1 var(--heading);letter-spacing:.1em;color:var(--bg-void);background:var(--solar-amber);clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
 .mg-guide-desc{margin:0;font-size:.78rem;line-height:1.38;color:var(--starlight-cream)}
@@ -227,12 +236,14 @@ dialog > .mg-guide-pop{top:12px;right:12px}
   dialog > .mg-guide-pop{top:10px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 20px)}
   #cockpit > .mg-guide-pop{top:102px;bottom:auto;left:10px;right:10px;width:auto;max-height:calc(100dvh - 114px)}
   .mg-guide-stage{max-height:84px}
+  .mg-guide-stage.has-clip{max-height:min(40dvh,300px)}
 }
 @media (max-height:500px) and (orientation:landscape){
   .mg-guide-pop{padding:8px 10px;gap:5px}
   dialog > .mg-guide-pop{top:8px;right:8px;width:min(300px,calc(100vw - 16px));max-height:calc(100dvh - 16px)}
   #cockpit > .mg-guide-pop{top:auto;bottom:8px;left:max(12px,env(safe-area-inset-left,0px));right:auto;width:min(296px,46vw);max-height:calc(100dvh - 78px)}
   .mg-guide-stage{max-height:72px}
+  .mg-guide-stage.has-clip{max-height:calc(100dvh - 170px)}
   .mg-guide-desc{font-size:.72rem;line-height:1.28}
   .mg-guide-tip{font-size:.64rem;padding:4px 6px}
 }

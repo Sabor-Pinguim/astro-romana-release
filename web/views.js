@@ -32,7 +32,7 @@ function makeView(container, { fov = 30, append = false } = {}) {
   const key = new THREE.DirectionalLight(0xfce8a6, 2.4); key.position.set(-4, 6, 5); scene.add(key);
   const rim = new THREE.DirectionalLight(0xe04f26, 1.8); rim.position.set(5, 1, -4); scene.add(rim);
   container[append ? 'append' : 'prepend'](renderer.domElement);
-  const view = { renderer, scene, camera, width: 0, height: 0, onResize: null };
+  const view = { renderer, scene, camera, key, width: 0, height: 0, onResize: null };
   const syncSize = () => {
     view.width = container.clientWidth; view.height = container.clientHeight;
     if (!view.width || !view.height) return;
@@ -702,7 +702,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   view.onResize = () => {
     const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
     const hHalf = Math.atan(Math.tan(vHalf) * Math.max(0.5, camera.aspect));
-    baseZ = Math.max(1.55 / Math.tan(vHalf), 1.55 / Math.tan(hHalf));
+    baseZ = Math.max(1.85 / Math.tan(vHalf), 1.85 / Math.tan(hHalf));
     if (camZ < baseZ) camZ = baseZ;
   };
   camera.position.set(0, 0.12, baseZ);
@@ -773,15 +773,26 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     new THREE.MeshBasicMaterial({ color: 0xe04f26, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide })
   );
   globe.add(atmos);
-  const orbitRing = new THREE.LineLoop(
+  // Real-time Phobos & Deimos moons + solar terminator in Mars body-fixed frame.
+  const makeLobbyMoon = (r, col, sx, sy, sz) => {
+    const m = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(r, 0),
+      new THREE.MeshLambertMaterial({ color: col, emissive: 0x3b2f28, flatShading: true }),
+    );
+    m.scale.set(sx, sy, sz);
+    return m;
+  };
+  const phobosLobby = makeLobbyMoon(0.085, 0xc8b6a6, 1.18, 0.95, 0.80);
+  const deimosLobby = makeLobbyMoon(0.06, 0xd8c8b8, 1.20, 0.92, 0.82);
+  const makeMoonOrbit = (radius, color, opacity) => new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, (_, k) => {
-      const a = k / 48 * Math.PI * 2;
-      return new THREE.Vector3(1.28 * Math.cos(a), 0, 1.28 * Math.sin(a));
+      const a = (k / 48) * Math.PI * 2;
+      return new THREE.Vector3(radius * Math.cos(a), 0, radius * Math.sin(a));
     })),
-    new THREE.LineBasicMaterial({ color: 0x9b5de5, transparent: true, opacity: 0.35 })
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity }),
   );
-  orbitRing.rotation.set(0.32, 0, -0.22);
-  scene.add(orbitRing);
+  globe.add(makeMoonOrbit(1.36, 0xfce8a6, 0.34), makeMoonOrbit(1.70, 0xc7b8ea, 0.24), phobosLobby, deimosLobby);
+  const lobbySunVec = new THREE.Vector3();
 
   // 3D crater beacons on the exact planetocentric surface coordinates + linked HTML pins.
   const markers = [], hitTargets = [], upAxis = new THREE.Vector3(0, 1, 0);
@@ -822,7 +833,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   let rotY = -THREE.MathUtils.degToRad((ui.sites?.[ui.state.site]?.lon) ?? 77.4508);
   let rotX = THREE.MathUtils.degToRad(((ui.sites?.[ui.state.site]?.lat) ?? 18.4447));
   let targetY = null, targetX = null, holdUntil = 0, dragging = false, moved = false, hovered = false;
-  let lastX = 0, lastY = 0;
+  let lastX = 0, lastY = 0, lastLobbySky = null;
 
   function focusSite(id) {
     const s = ui.sites?.[id];
@@ -894,7 +905,20 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 
     globe.rotation.set(rotX, rotY, 0);
     globe.updateMatrixWorld(true);
-    const t = now / 1000;
+    const skyNow = window.ASTRO_MARS_SKY?.now(ui.sites?.[ui.state.site]);
+    if (skyNow) {
+      if (skyNow !== lastLobbySky) {
+        lastLobbySky = skyNow;
+        phobosLobby.position.set(...skyNow.phobos.lobbyDir).normalize().multiplyScalar(1.36);
+        deimosLobby.position.set(...skyNow.deimos.lobbyDir).normalize().multiplyScalar(1.70);
+        phobosLobby.lookAt(0, 0, 0);
+      }
+      if (view.key) {
+        lobbySunVec.set(...skyNow.sun.lobbyDir).normalize().applyQuaternion(globe.quaternion);
+        view.key.position.copy(lobbySunVec).multiplyScalar(8);
+      }
+    }
+    const tSec = now / 1000;
     const selectedId = ui.state.site;
 
     for (const m of markers) {
@@ -903,10 +927,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       m.coreMat.color.setHex(isSel ? 0xf59e0b : 0xe04f26);
       m.pulse.visible = isSel;
       if (isSel && !reduce) {
-        const p = 1 + 0.35 * Math.sin(t * 3.8);
+        const p = 1 + 0.35 * Math.sin(tSec * 3.8);
         m.pulse.scale.setScalar(p);
-        m.pulseMat.opacity = 0.7 - 0.35 * Math.sin(t * 3.8);
-        m.core.rotation.y = t * 2.2;
+        m.pulseMat.opacity = 0.7 - 0.35 * Math.sin(tSec * 3.8);
+        m.core.rotation.y = tSec * 2.2;
       }
       if (m.pin) {
         m.anchor.getWorldPosition(worldPos);
@@ -1299,21 +1323,101 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     // Daytime Mars sky (game colors): butterscotch at the horizon, darker overhead; faceted dome.
     const horizon = new THREE.Color(0xd8a07c), zenith = new THREE.Color(0x7a4c46);
     const skyGeo = new THREE.IcosahedronGeometry(900, 2), sp = skyGeo.attributes.position, colors = [];
-    for (let k = 0; k < sp.count; k++) { const c = horizon.clone().lerp(zenith, Math.pow(Math.max(0, sp.getY(k) / 900), .55)); colors.push(c.r, c.g, c.b); }
+    const skyDirs = new Float32Array(sp.count * 3), skyYF = new Float32Array(sp.count);
+    for (let k = 0; k < sp.count; k++) {
+      const vx = sp.getX(k), vy = sp.getY(k), vz = sp.getZ(k);
+      const invLen = 1 / (Math.hypot(vx, vy, vz) || 1);
+      skyDirs[k * 3] = vx * invLen; skyDirs[k * 3 + 1] = vy * invLen; skyDirs[k * 3 + 2] = vz * invLen;
+      const yF = Math.pow(Math.max(0, vy * invLen), .55);
+      skyYF[k] = yF;
+      const c = horizon.clone().lerp(zenith, yF);
+      colors.push(c.r, c.g, c.b);
+    }
     skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
-    sky.renderOrder = -1; scene.add(sky);
+    sky.renderOrder = -2; scene.add(sky);
+
+    // Sidereal starfield (420 stars on unit sphere, scaled to sky dome radius at runtime).
+    const starCount = 420, starPos = new Float32Array(starCount * 3), starCol = new Float32Array(starCount * 3);
+    let starSeed = 9187;
+    const starRnd = () => (starSeed = (starSeed * 16807) % 2147483647) / 2147483647;
+    const starPalette = [new THREE.Color(0xfff4dc), new THREE.Color(0xcce2ff), new THREE.Color(0xfce8a6), new THREE.Color(0xffbfa0)];
+    for (let i = 0; i < starCount; i++) {
+      const u = starRnd() * 2 - 1, phi = starRnd() * Math.PI * 2, rXY = Math.sqrt(Math.max(0, 1 - u * u));
+      starPos[i * 3] = rXY * Math.cos(phi);
+      starPos[i * 3 + 1] = u;
+      starPos[i * 3 + 2] = rXY * Math.sin(phi);
+      const sc = starPalette[i % starPalette.length];
+      const bright = 0.55 + starRnd() * 0.45;
+      starCol[i * 3] = sc.r * bright; starCol[i * 3 + 1] = sc.g * bright; starCol[i * 3 + 2] = sc.b * bright;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
+    const starMat = new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, fog: false, depthWrite: false });
+    const stars = new THREE.Points(starGeo, starMat);
+    stars.renderOrder = -1; stars.frustumCulled = false; scene.add(stars);
+
+    // Sun disc + halo
+    const sunMesh = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ color: 0xfff5d6, fog: false, depthWrite: false }),
+    );
+    const sunHalo = new THREE.Mesh(
+      new THREE.CircleGeometry(2.6, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfce8a6, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, fog: false, depthWrite: false }),
+    );
+    sunMesh.add(sunHalo);
+    sunMesh.frustumCulled = false; sunHalo.frustumCulled = false;
+    scene.add(sunMesh);
+
+    // Faceted irregular potato-shaped Phobos & Deimos lit by the Sun (showing real phases & lunar eclipses).
+    const makePotato = (sx, sy, sz, dent) => {
+      const g = new THREE.IcosahedronGeometry(1, 1);
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        let vx = p.getX(i) * sx, vy = p.getY(i) * sy, vz = p.getZ(i) * sz;
+        if (dent && vx > 0.35 * sx && vy > -0.2 * sy) { vx *= 0.84; }
+        p.setXYZ(i, vx, vy, vz);
+      }
+      g.computeVertexNormals();
+      return g;
+    };
+    const phobosMat = new THREE.MeshLambertMaterial({ color: 0xc8b4a0, emissive: 0x221612, flatShading: true, fog: false });
+    const deimosMat = new THREE.MeshLambertMaterial({ color: 0xd8c8b6, emissive: 0x261a14, flatShading: true, fog: false });
+    const phobosMesh = new THREE.Mesh(makePotato(1.18, 0.95, 0.80, true), phobosMat);
+    const deimosMesh = new THREE.Mesh(makePotato(1.22, 0.92, 0.82, false), deimosMat);
+    phobosMesh.frustumCulled = false; deimosMesh.frustumCulled = false;
+    scene.add(phobosMesh, deimosMesh);
+
     scene.fog = new THREE.Fog(horizon, ...EDGE_FOG);
-    scene.add(new THREE.HemisphereLight(0xf3c9a0, 0x4a2418, 1.25));
+    const hemi = new THREE.HemisphereLight(0xf3c9a0, 0x4a2418, 1.25);
+    scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xfff0dc, 2.1);
     sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.normalBias = .03;
     Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 180 });
     scene.add(sun, sun.target);
+
+    // Night EVA illumination: astronaut headlamp + warm lander work beacon (disabled during daytime for 0 PointLight shader cost).
+    const headlamp = new THREE.PointLight(0xfff4dc, 0, 28, 1.35);
+    const landerLight = new THREE.PointLight(0xffb86c, 0, 24, 1.35);
+    headlamp.visible = false;
+    landerLight.visible = false;
+    scene.add(headlamp);
+
     const skirt = new THREE.Mesh(new THREE.CircleGeometry(1500, 6).rotateX(-Math.PI / 2), flat(0x6b3b28, 1));
     scene.add(skirt);
-    const lander = makeLander(); scene.add(lander);
-    const w = { renderer, scene, camera, sky, sun, skirt, lander, sunDir: new THREE.Vector3(0, 1, 0), terrain: null, hf: null,
-      blocks: [], colliders: [], avatars: new Map(), avatar: null, width: 0, height: 0 };
+    const lander = makeLander();
+    landerLight.position.set(0, 3.8, 0);
+    lander.add(landerLight);
+    scene.add(lander);
+    const w = { renderer, scene, camera, sky, skyGeo, skyDirs, skyYF, skyTmpColor: new THREE.Color(),
+      hemi, sun, stars, starMat, sunMesh, sunHalo,
+      phobosMesh, phobosMat, deimosMesh, deimosMat, headlamp, landerLight, skirt, lander,
+      sunDir: new THREE.Vector3(0, 1, 0), phobosDir: new THREE.Vector3(0, 1, 0), deimosDir: new THREE.Vector3(0, 1, 0),
+      lastSkyState: null, rSun: 853, rPhobos: 838, rDeimos: 847, rStars: 856,
+      skyCache: { el: 999, az: 999, dayF: -1, twiF: -1 },
+      terrain: null, hf: null, blocks: [], colliders: [], avatars: new Map(), avatar: null, width: 0, height: 0 };
     new ResizeObserver(() => {
       w.width = viewEl.clientWidth; w.height = viewEl.clientHeight;
       if (!w.width || !w.height) return;
@@ -1392,6 +1496,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     g.add(plume);
     const engineLight = new THREE.PointLight(0xf59e0b, 0, 28, 1.6);
     engineLight.position.set(0, .1, 0);
+    engineLight.visible = false;
     g.add(engineLight);
     g.userData.plume = plume;
     g.userData.engineLight = engineLight;
@@ -2209,6 +2314,26 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     }
     const surf = sim()?.surf;
     $s('surface-count').textContent = t('surface.countDone', { done: surf?.completed.size ?? 0, total: tasks().length });
+    const skyApi = window.ASTRO_MARS_SKY;
+    const skyNow = skyApi?.now(ui.sites?.[s.site]);
+    const clockEl = $s('surface-mars-time');
+    if (clockEl && skyNow) {
+      clockEl.textContent = t('marsSky.marsClock', { time: skyApi.formatClock(skyNow.ltst), sol: skyNow.sol });
+    }
+    const ecEl = $s('surface-eclipse-pill');
+    if (ecEl && skyNow) {
+      if (skyNow.solarEclipse?.active) {
+        const key = skyNow.solarEclipse.body === 'deimos' ? 'marsSky.eclipseSolarDeimos' : 'marsSky.eclipseSolarPhobos';
+        ecEl.textContent = t(key, { pct: Math.round(skyNow.solarEclipse.occultation * 100) });
+        ecEl.hidden = false;
+      } else if (skyNow.lunarEclipse?.active) {
+        const key = skyNow.lunarEclipse.body === 'deimos' ? 'marsSky.eclipseLunarDeimos' : 'marsSky.eclipseLunarPhobos';
+        ecEl.textContent = t(key);
+        ecEl.hidden = false;
+      } else {
+        ecEl.hidden = true;
+      }
+    }
     const b = nearBlock(), e = b?.userData.exp, owner = e && ui.crew.find(c => c.id === e.crew);
     const state = e ? (isDone(e.id) ? 'done' : e.crew === s.crew ? 'run' : 'locked') : nearLander() ? 'board' : '';
     const key = state + (e?.id ?? '') + s.crew;
@@ -2291,6 +2416,137 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     });
   }
 
+  const SKY_COLORS = {
+    dayHorizon: new THREE.Color(0xd8a07c),
+    dayZenith: new THREE.Color(0x7a4c46),
+    twiHorizon: new THREE.Color(0x523446),
+    twiZenith: new THREE.Color(0x160d28),
+    twiBlue: new THREE.Color(0x5c9ce6),
+    nightHorizon: new THREE.Color(0x0b0618),
+    nightZenith: new THREE.Color(0x030109),
+    hemiDaySky: new THREE.Color(0xf3c9a0),
+    hemiDayGround: new THREE.Color(0x4a2418),
+    hemiNightSky: new THREE.Color(0x282144),
+    hemiNightGround: new THREE.Color(0x0e0814),
+    moonLit: new THREE.Color(0xc8b4a0),
+    moonEclipse: new THREE.Color(0x6e2016),
+    tmpH: new THREE.Color(),
+    tmpZ: new THREE.Color(),
+    tmpV: new THREE.Vector3(),
+  };
+
+  function updateSky() {
+    const api = window.ASTRO_MARS_SKY;
+    if (!api || !world) return;
+    const skyState = api.now(ui.sites?.[s.site]);
+    if (!skyState) return;
+
+    const camPos = world.camera.position;
+
+    if (skyState !== world.lastSkyState) {
+      world.lastSkyState = skyState;
+      const el = skyState.sun.elDeg;
+      const occ = skyState.solarEclipse?.active ? skyState.solarEclipse.occultation : 0;
+      const lightScale = 1 - occ * 0.85;
+
+      world.sunDir.set(...skyState.sun.dir).normalize();
+      world.phobosDir.set(...skyState.phobos.dir).normalize();
+      world.deimosDir.set(...skyState.deimos.dir).normalize();
+
+      const far = world.camera.far || NO_RING_FAR;
+      const rSky = far > 2000 ? far * 0.94 : 860;
+      world.rPhobos = rSky * 0.975;
+      world.rDeimos = rSky * 0.985;
+      world.rSun = rSky * 0.992;
+      world.rStars = rSky * 0.996;
+
+      const sunVisRad = Math.max(skyState.sun.angularRadiusRad * 2.6, 0.009);
+      world.sunMesh.scale.setScalar(world.rSun * sunVisRad);
+      world.sunMesh.visible = el > -2.5;
+
+      const updateMoon = (mesh, mat, moon, dist) => {
+        const ratio = moon.angularRadiusRad / Math.max(1e-5, skyState.sun.angularRadiusRad);
+        const rad = Math.max(sunVisRad * ratio, moon.id === 'phobos' ? 0.0045 : 0.0028);
+        mesh.scale.setScalar(dist * rad);
+        mesh.visible = moon.elDeg > -2.5;
+        const ec = moon.lunarEclipse || 0;
+        mat.color.copy(SKY_COLORS.moonLit).lerp(SKY_COLORS.moonEclipse, ec);
+        mat.emissiveIntensity = 1 - ec * 0.65;
+      };
+      updateMoon(world.phobosMesh, world.phobosMat, skyState.phobos, world.rPhobos);
+      updateMoon(world.deimosMesh, world.deimosMat, skyState.deimos, world.rDeimos);
+
+      // Stars rotate with Mars sidereal angle W and site latitude, fading in at twilight/night.
+      world.stars.scale.setScalar(world.rStars);
+      const latRad = THREE.MathUtils.degToRad((ui.sites?.[s.site]?.lat) ?? 18.4447);
+      world.stars.rotation.set(Math.PI / 2 - latRad, 0, THREE.MathUtils.degToRad(skyState.wDeg));
+      const starAlpha = clamp((-el + 4) / 12, 0, 1);
+      world.starMat.opacity = starAlpha * 0.92;
+      world.stars.visible = starAlpha > 0.02;
+
+      // Smooth day -> blue Martian twilight -> night lighting & fog.
+      const dayF = clamp((el + 2) / 14, 0, 1);
+      const twiF = clamp(1 - Math.abs(el - 1) / 9, 0, 1);
+
+      world.sun.intensity = clamp(el / 12, 0, 1) * 2.15 * lightScale;
+      world.sun.castShadow = el > 0.5;
+      world.sun.visible = el > -0.5;
+      world.hemi.intensity = (0.24 + dayF * 1.01 + twiF * 0.2) * (1 - occ * 0.55);
+      world.hemi.color.copy(SKY_COLORS.hemiNightSky).lerp(SKY_COLORS.hemiDaySky, dayF);
+      world.hemi.groundColor.copy(SKY_COLORS.hemiNightGround).lerp(SKY_COLORS.hemiDayGround, dayF);
+
+      const nightGlow = clamp((4 - el) / 10, 0, 1);
+      if (nightGlow > 0.02) { world.headlamp.visible = true; world.landerLight.visible = true; }
+      else if (nightGlow < 0.005) { world.headlamp.visible = false; world.landerLight.visible = false; }
+      world.headlamp.intensity = nightGlow * 2.2;
+      world.landerLight.intensity = nightGlow * 2.6;
+
+      SKY_COLORS.tmpH.copy(SKY_COLORS.nightHorizon).lerp(SKY_COLORS.twiHorizon, twiF).lerp(SKY_COLORS.dayHorizon, dayF);
+      SKY_COLORS.tmpZ.copy(SKY_COLORS.nightZenith).lerp(SKY_COLORS.twiZenith, twiF).lerp(SKY_COLORS.dayZenith, dayF);
+      if (world.scene.fog) world.scene.fog.color.copy(SKY_COLORS.tmpH);
+
+      // Recompute sky dome vertex colors only when sky state changes significantly.
+      const cache = world.skyCache;
+      const needsDome = Math.abs(dayF - cache.dayF) > 0.004 || Math.abs(twiF - cache.twiF) > 0.004
+        || (twiF > 0.02 && (Math.abs(el - cache.el) > 0.3 || Math.abs(skyState.sun.azDeg - cache.az) > 0.3));
+      if (needsDome) {
+        cache.el = el; cache.az = skyState.sun.azDeg; cache.dayF = dayF; cache.twiF = twiF;
+        const colAttr = world.skyGeo.attributes.color;
+        const dirs = world.skyDirs, yFs = world.skyYF, cTmp = world.skyTmpColor;
+        const sx = world.sunDir.x, sy = world.sunDir.y, sz = world.sunDir.z;
+        const hasTwi = twiF > 0.02;
+        for (let k = 0; k < yFs.length; k++) {
+          const yF = yFs[k];
+          cTmp.copy(SKY_COLORS.tmpH).lerp(SKY_COLORS.tmpZ, yF);
+          if (hasTwi) {
+            const j = k * 3;
+            const sunAlign = Math.max(0, dirs[j] * sx + dirs[j + 1] * sy + dirs[j + 2] * sz);
+            const blueGlow = twiF * Math.pow(sunAlign, 2.4) * (1 - yF * 0.6) * 0.88;
+            cTmp.lerp(SKY_COLORS.twiBlue, blueGlow);
+          }
+          colAttr.setXYZ(k, cTmp.r, cTmp.g, cTmp.b);
+        }
+        colAttr.needsUpdate = true;
+      }
+    }
+
+    // Per-frame camera-relative sky anchoring (cheap vector copies only).
+    if (world.sunMesh.visible) {
+      world.sunMesh.position.copy(camPos).addScaledVector(world.sunDir, world.rSun);
+      world.sunMesh.lookAt(camPos);
+    }
+    if (world.phobosMesh.visible) {
+      world.phobosMesh.position.copy(camPos).addScaledVector(world.phobosDir, world.rPhobos);
+      world.phobosMesh.lookAt(camPos);
+    }
+    if (world.deimosMesh.visible) {
+      world.deimosMesh.position.copy(camPos).addScaledVector(world.deimosDir, world.rDeimos);
+      world.deimosMesh.lookAt(camPos);
+    }
+    if (world.stars.visible) world.stars.position.copy(camPos);
+    if (world.headlamp.visible) world.headlamp.position.set(s.pos.x, s.pos.y + 1.65, s.pos.z);
+  }
+
   let last = performance.now(), hudClock = 0;
   function frame(now) {
     requestAnimationFrame(frame);
@@ -2298,6 +2554,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     // Leaving the surface (timer, results) must give the mouse back.
     if (world && document.pointerLockElement === world.renderer.domElement && !isActive('surface')) document.exitPointerLock();
     if (!world || !s.ready || !world.avatar || !isActive('surface') || !world.width) return;
+    updateSky();
     if (s.departing) {
       const d = s.departing;
       d.t += dt;
@@ -2312,7 +2569,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         const flicker = .88 + Math.sin(now * .06) * .18;
         plume.scale.set(flicker, .85 + Math.cos(now * .08) * .25, flicker);
       }
-      if (engineLight) engineLight.intensity = 22 + Math.sin(now * .05) * 6;
+      if (engineLight) { engineLight.visible = true; engineLight.intensity = 22 + Math.sin(now * .05) * 6; }
       let fx = 0, fy = d.groundY, fz = 7.5;
       if (d.stranded.length) {
         let sx = 0, sy = 0, sz = 0;
@@ -2365,7 +2622,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         const done = d.resolve;
         s.departing = null;
         if (plume) plume.visible = false;
-        if (engineLight) engineLight.intensity = 0;
+        if (engineLight) { engineLight.intensity = 0; engineLight.visible = false; }
         world.lander.userData.setGear?.(0);
         camera.fov = 72; camera.updateProjectionMatrix();
         for (const a of world.avatars.values()) a.body.visible = true;
@@ -2387,6 +2644,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   window.ASTRO_SURFACE = { state: s, world: () => world, emote: kind => playEmote(kind), wheel: open => (open ? openWheel(false) : closeWheel(false)),
     running: () => !!(s.ready && startEl.hidden && !dlg.open && !s.departing), loaded: () => !!(s.ready && startEl.hidden),
     boardReach: BOARD_REACH, boardSafeReach: BOARD_SAFE_R, playDeparture,
+    sky: () => window.ASTRO_MARS_SKY?.now(ui.sites?.[s.site]),
     distanceToLander(id) { const a = world?.avatars.get(id); if (!a) return 0; const p = a === world.avatar ? s.pos : a.pos; return Math.hypot(p.x, p.z); },
     goTo(id) { const b = world?.blocks.find(x => x.userData.exp.id === id); if (b) { s.pos.x = b.position.x + 2.2; s.pos.z = b.position.z + 1.2; s.yaw = Math.atan2(-(b.position.x - s.pos.x), -(b.position.z - s.pos.z)); s.grounded = false; } } };
   // index.html#surface or #surface-gale opens the surface directly (quick testing).

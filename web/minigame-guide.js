@@ -1,10 +1,14 @@
 // "How to solve" tutorial popup for all 21 science experiments and 4 cockpit flight stages.
 // Auto-opens once per minigame (persisted in localStorage), toggles via "?", and pauses task/mission timers while open.
-// Supports drop-in GIF/WebP clips in assets/minigames/<id>.{gif,webp} with an animated SVG/CSS fallback.
+// Shows the clip recorded from the real game in the player's language, assets/minigames/<lang>/<id>.gif (npm run
+// web:clips; English when that language has none), at its own aspect
+// ratio; with reduced motion it waits on its first frame behind a play button. Without a clip: an animated SVG of
+// the mechanic.
 (() => {
   'use strict';
 
   const STORAGE_KEY = 'astro-romana-minigame-guides-seen';
+  const CLIP_LANGS = ['en', 'pt', 'es']; // folders of assets/minigames/
   const COCKPIT_GUIDES = {
     'cockpit-ascent': { fileId: 'cockpit-ascent', key: 'ascent', mechanic: 'piloting' },
     'cockpit-cabin-dock': { fileId: 'cockpit-cabin-dock', key: 'cabinDock', mechanic: 'piloting' },
@@ -214,10 +218,20 @@
     const img = el('img', 'mg-guide-media');
     img.hidden = true;
     img.decoding = 'async';
+    // Reduced motion: the clip's first frame, still, until the player presses play.
+    const still = el('canvas', 'mg-guide-media mg-guide-still');
+    still.hidden = true;
+    const playBtn = el('button', 'mg-guide-play', '▶');
+    playBtn.type = 'button';
+    playBtn.hidden = true;
+    playBtn.addEventListener('click', () => {
+      still.hidden = true; playBtn.hidden = true; img.hidden = false;
+      const src = img.src; img.src = ''; img.src = src; // from the first frame
+    });
     const anim = el('div', 'mg-guide-anim');
     const previewTag = el('span', 'mg-guide-badge');
     previewTag.hidden = true;
-    stage.append(img, anim, previewTag);
+    stage.append(img, still, playBtn, anim, previewTag);
 
     const desc = el('p', 'mg-guide-desc');
     const tip = el('p', 'mg-guide-tip');
@@ -229,7 +243,7 @@
     foot.append(okBtn);
 
     pop.append(head, stage, desc, tip, foot);
-    pop._refs = { eyebrow, title, mechBadge, closeBtn, img, anim, previewTag, desc, tip, okBtn };
+    pop._refs = { eyebrow, title, mechBadge, closeBtn, stage, img, still, playBtn, anim, previewTag, desc, tip, okBtn };
     return pop;
   }
 
@@ -245,9 +259,11 @@
     }
 
     const r = pop._refs;
-    const prevFileId = pop.dataset.guideFileId;
+    // The clip in the player's language (assets/minigames/<lang>/<id>.gif), else the English one.
+    const lang = CLIP_LANGS.includes(window.ASTRO_I18N?.language) ? window.ASTRO_I18N.language : 'en';
+    const clipKey = `${lang}/${data.fileId}`, prevClipKey = pop.dataset.guideClip;
     pop.dataset.guideId = data.id;
-    pop.dataset.guideFileId = data.fileId;
+    pop.dataset.guideClip = clipKey;
     pop.dataset.mech = data.mechanic;
     pop.setAttribute('aria-label', `${t('guide.eyebrow')}: ${data.title}`);
 
@@ -266,29 +282,37 @@
       r.anim.replaceChildren(buildDemoSvg(data.mechanic));
     }
 
-    if (prevFileId !== data.fileId) {
-      const targetId = data.id;
-      const sources = [`assets/minigames/${data.fileId}.gif`, `assets/minigames/${data.fileId}.webp`];
+    r.playBtn.setAttribute('aria-label', `${t('menu.play')}: ${t('guide.previewTag')}`);
+    r.playBtn.title = r.playBtn.getAttribute('aria-label');
+    if (prevClipKey !== clipKey) {
+      const targetKey = clipKey;
+      const sources = [...new Set([`assets/minigames/${lang}/${data.fileId}.gif`, `assets/minigames/en/${data.fileId}.gif`])];
       let idx = 0;
-      r.img.hidden = true;
-      r.anim.hidden = false;
-      r.previewTag.hidden = true;
+      const noClip = () => {
+        r.img.hidden = true; r.still.hidden = true; r.playBtn.hidden = true;
+        r.anim.hidden = false;
+        r.previewTag.hidden = true;
+        r.stage.classList.remove('has-clip');
+      };
+      noClip();
       r.img.alt = data.title;
       r.img.onload = () => {
-        if (pop.dataset.guideId !== targetId || !r.img.naturalWidth) return;
-        r.img.hidden = false;
+        if (pop.dataset.guideClip !== targetKey || !r.img.naturalWidth) return;
+        r.stage.classList.add('has-clip');
+        r.stage.style.setProperty('--clip-ratio', String(r.img.naturalWidth / r.img.naturalHeight));
         r.anim.hidden = true;
         r.previewTag.hidden = false;
+        if (r.img.dataset.played !== targetKey && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          r.img.dataset.played = targetKey;
+          r.still.width = r.img.naturalWidth; r.still.height = r.img.naturalHeight;
+          r.still.getContext('2d')?.drawImage(r.img, 0, 0);
+          r.img.hidden = true; r.still.hidden = false; r.playBtn.hidden = false;
+        } else if (r.still.hidden) r.img.hidden = false;
       };
       r.img.onerror = () => {
-        if (pop.dataset.guideId !== targetId) return;
-        idx += 1;
-        if (idx < sources.length) r.img.src = sources[idx];
-        else {
-          r.img.hidden = true;
-          r.anim.hidden = false;
-          r.previewTag.hidden = true;
-        }
+        if (pop.dataset.guideClip !== targetKey) return;
+        if (++idx < sources.length) r.img.src = sources[idx];
+        else noClip();
       };
       r.img.src = sources[0];
     } else {

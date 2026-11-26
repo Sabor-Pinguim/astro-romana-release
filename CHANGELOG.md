@@ -11,6 +11,28 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.0] - 2026-11-26
+
+### Added
+- "How to solve" clips recorded from the real game: every one of the 21 experiments and the 4 cockpit stages played the right way (3 stars, or a clean docking and landing), as looping GIFs in English, Portuguese and Spanish (`assets/minigames/{en,pt,es}/`, 75 clips, ~18 MB). The guide shows the clip in the player's language (English when one is missing) at its own aspect ratio in a wider popup; with reduced motion it waits on its first frame behind a ▶ button. They replace the generic SVG animation per mechanic, which stays as the fallback.
+- `npm run web:clips` (`tools/web/minigame-clips.mjs`) records them: it opens each experiment in the minigame lab (the cockpit stages in `index.html`) in headless Edge/Chrome, runs its autopilot (`tools/web/minigame-clips/<id>.mjs`, one per clip, playing through real browser input with a visible cursor and key caps and reading the seeded layout to make the right moves) and encodes the GIF with a dependency-free encoder (`tools/web/lib/gif.mjs`). `--only <id>`, `--lang pt`, `--sheet <dir>` for contact sheets.
+- Mars sky on the surface, from real ephemerides (`web/mars-sky.js`): the Sun from the NASA GISS Mars24 algorithm (Allison & McEwen 2000), Phobos and Deimos from the JPL satellite elements (Jacobson 2010) with their real phases, the IAU Mars rotation, solar transits and lunar eclipses of both moons, a day → blue Martian twilight → night cycle with a sidereal starfield, a headlamp and a lander beacon at night, and the local Mars time (LMST, sol) on the surface HUD with an eclipse badge. Dev Mode gains sky controls (real UTC, dawn, noon, blue sunset, night, the next Phobos eclipses, speed).
+- The 3D solar system moves the planets on real 3D Keplerian ellipses (JPL SSD J2000.0 elements at the current UTC, compressed radial scale), with the main asteroid belt and a Hohmann-style transfer arc from Earth's real position to Mars's orbit.
+- New sources in `references/README.md`: Mars24, the JPL satellite elements, the IAU WGCCRE report and the J2000.0 planetary elements.
+
+### Fixed
+- Cockpit: the EDL parachute button now matters. Once out, the parachute damps the gusts of the landing burn (×0.7 deployed by the crew with Terrain Relative Navigation or LOFTID, ×0.85 by the crew without them, ×0.92 by the automatic trigger); before, its stability bonus was overwritten on the next tick.
+- Cockpit: the orbital docking card's alignment and approach countdown update during the approach instead of staying at their first values.
+- Cockpit: on phones the header and the active stage label stay on one line, so the panel no longer jumps 20 px when the stage changes (the long stage-1 title pushed the audio button to a second row).
+- Cockpit: the cabin docking guide describes the stage as it is (centre the port, hold Close In, brake; Lucas resets a tripped breaker), in the three languages; the booster separates on its own.
+- M-O1 and M-S5: the shutter and the Shelter buttons stay in place while the result chips change (the chip numbers have a fixed width).
+- O-S2: the first frame keeps the intro text instead of "Lock lost". M-S3: the hour ticks read 07:00, not 06:59. M-S6: no LED button stays enabled after the run ends.
+- Removed a stale comment saying the landing controls are mirrored (they never were).
+
+### Changed
+- `tools/web/lib/browser.mjs`: the headless browser, static server and DevTools client shared by the page audit, the smoke test and the clip recorder. The minigame lab also loads the Spanish texts.
+- README, AGENTS.md, `assets/minigames/README.md` and the visual identity describe the clips and when to re-record them.
+
 ## [1.9.20] - 2026-11-26
 
 Technical debt from `AUDITORIA.md` (revision 2 marks what each finding's status is now).

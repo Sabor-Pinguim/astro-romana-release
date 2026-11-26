@@ -1,7 +1,7 @@
 /* M-O1 · High-resolution photo */
 .mo1-shots{display:flex;flex-wrap:wrap;gap:4px}
 .mo1-chip{display:inline-flex;align-items:center;gap:4px;padding:.3rem .65rem .3rem .75rem;font:600 .64rem/1.1 var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--f1);clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
-.mo1-chip b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--starlight-cream)}
+.mo1-chip b{min-width:4ch;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;color:var(--starlight-cream)} /* fixed width: "◇" → "95%" must not rewrap the row and move the shutter */
 .mo1-chip.is-ok{background:#1e6357;color:var(--starlight-cream)}
 .mo1-chip.is-ok b{color:var(--safe)}
 .mo1-chip.is-hazy{background:#66391b;color:var(--starlight-cream)}

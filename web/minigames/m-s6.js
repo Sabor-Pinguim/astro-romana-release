@@ -296,15 +296,16 @@
     }
 
     function finishRun() {
-      waterBtn.disabled = ledDown.disabled = ledUp.disabled = true;
+      // After render(): it still sees the run active and would turn the LED buttons back on.
+      const off = () => { waterBtn.disabled = ledDown.disabled = ledUp.disabled = true; };
       const sc = scoreOf();
       if (sc < P.stars[0]) {
-        render();
+        render(); off();
         host.fail(t('failSprout'));
         return;
       }
       const stars = max(1, MG.lib.starsFrom(sc, P.stars) - (s.health < HEALTH_STAR ? 1 : 0));
-      render(t('statusDone', { stage: t(`stage.${stageOf(sc)}`) }));
+      render(t('statusDone', { stage: t(`stage.${stageOf(sc)}`) })); off();
       host.finish({
         stars,
         summary: t('summary', { stage: t(`stage.${stageOf(sc)}`), pct: Math.round(sc * 100), health: Math.round(s.health) }),

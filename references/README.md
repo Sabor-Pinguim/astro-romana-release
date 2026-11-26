@@ -74,7 +74,10 @@ Details: [datasets/earth/](datasets/earth/).
 | NASA NSSDC Earth Fact Sheet | https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html | Earth mean radius | NASA |
 | JPL Solar System Dynamics: Astrodynamic Parameters | https://ssd.jpl.nasa.gov/astro_par.html | Gravitational parameters for the Δv budget (DE440 values) | NASA/JPL |
 | JPL Solar System Dynamics: Planetary Physical Parameters | https://ssd.jpl.nasa.gov/planets/phys_par.html | Earth and Mars radius, Mars gravity (3.71 m/s², also used by the particle presets) | NASA/JPL |
-| JPL Solar System Dynamics: Approximate Positions of the Planets | https://ssd.jpl.nasa.gov/planets/approx_pos.html | Earth and Mars semi-major axes for the Δv budget | NASA/JPL |
+| JPL Solar System Dynamics: Approximate Positions of the Planets | https://ssd.jpl.nasa.gov/planets/approx_pos.html | Earth and Mars semi-major axes for the Δv budget, plus J2000.0 Keplerian orbital elements (Standish 1992) for all 8 planets in the destination map (`web/orbit.js`) | NASA/JPL |
+| NASA GISS Mars24 Algorithm (Allison & McEwen 2000) | https://www.giss.nasa.gov/tools/mars24/help/algorithm.html | Real-time Mars Sol Date (MSD), MTC, LMST, LTST, solar longitude (L_s), and Sun position in the sky | NASA/GISS |
+| JPL Solar System Dynamics: Planetary Satellite Mean Elements & Physical Parameters (Jacobson 2010) | https://ssd.jpl.nasa.gov/sats/elem/ | Phobos and Deimos orbital elements, radii, and precession rates for live sky positions, lobby globe orbits, and eclipses | NASA/JPL |
+| IAU WGCCRE Report (Archinal et al. 2018) | https://astrogeology.usgs.gov/search/map/Docs/WGCCRE | Mars prime meridian rotation rate (W) and equatorial radius (3396.19 km) | IAU/USGS |
 
 ---
 

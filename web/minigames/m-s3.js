@@ -157,7 +157,8 @@
       const padL = 4, padR = 4, padT = 18, padB = 14;
       return { padL, padT, pw: Math.max(1, cv.w - padL - padR), ph: Math.max(1, cv.h - padT - padB) };
     };
-    const clock = tt => { const h = hourAt(tt, D), hh = Math.floor(h), mm = Math.floor((h - hh) * 60); return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
+    // Whole minutes first, with a hair of slack: 7.0 h computed as 6.99999 h must read 07:00, not 06:59.
+    const clock = tt => { const min = Math.floor(hourAt(tt, D) * 60 + 1e-6), hh = Math.floor(min / 60), mm = min % 60; return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
     const periodOf = h => (isNight(h) ? 'night' : windiness(h, false) >= 0.6 ? 'day' : 'dusk');
 
     // ------------------------------------------------------------------ drawing

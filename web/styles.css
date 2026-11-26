@@ -1421,12 +1421,18 @@
       .meter-info-btn[aria-expanded="true"]{background:none;color:var(--bg-void)}
       .meter-info-btn[aria-expanded="true"]::before{background:var(--mars-orange)}
       #cockpit{height:100vh;height:100dvh;min-height:0;overflow:hidden}
-      #cockpit .app-header{min-height:42px;padding:4px 10px;gap:6px}
+      #cockpit .app-header{min-height:42px;padding:4px 10px;gap:6px;flex-wrap:nowrap}
       #cockpit .app-header .eyebrow{display:none}
       #cockpit .app-header h2{font-size:.98rem}
+      /* One row on every stage: a long stage title ("Liftoff & Max-Q Corridor") shrinks with an ellipsis instead of
+         pushing the audio button to a second row, which moved the whole deck 20 px when the stage changed. */
+      #cockpit .header-title,#cockpit .header-title>div{min-width:0;flex:1 1 auto}
+      #cockpit .app-header h2{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+      #cockpit .header-side{flex:none}
       #cockpit .flight-stepper{grid-template-columns:repeat(4,minmax(0,1fr));margin:3px auto 0;padding:0 10px;gap:3px}
       #cockpit .flight-phase{min-height:28px;padding:.2rem .45rem;font-size:.5rem}
       #cockpit .flight-phase:not(.active) .flight-phase-copy{display:none}
+      #cockpit .flight-phase.active .flight-phase-copy{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis} /* one line on every stage: no jump when it changes */
       #cockpit .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
       .cockpit-layout{flex:1;min-height:0;display:flex;flex-direction:column;padding:5px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:5px}
       .cockpit-viewport.slab{flex:0 0 28dvh;min-height:150px;height:28dvh}
@@ -1828,3 +1834,11 @@
     html[data-ui-scale="100"]{font-size:16px}
     html[data-ui-scale="115"]{font-size:18.4px}
     @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}.mode-grid,.mode-grid [data-mode-card="solo"]{transition:none!important}}
+
+    /* Surface Mars astronomical clock, eclipse pill & Dev Mode sky controls */
+    .surface-sky-meta{margin-top:2px;font:600 .62rem/1.1 var(--heading);letter-spacing:.1em;text-transform:uppercase;color:var(--solar-amber);font-variant-numeric:tabular-nums}
+    .surface-eclipse-pill{margin-top:4px;display:inline-block;padding:2px 6px;font:700 .58rem/1.1 var(--heading);letter-spacing:.08em;text-transform:uppercase;color:var(--bg-void);background:var(--solar-amber);clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%)}
+    .surface-eclipse-pill[hidden]{display:none}
+    .dev-sky-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .dev-sky-bar .button{min-height:32px;padding:.3rem .65rem;font-size:.62rem}
+    .dev-sky-status{margin-top:4px;font:600 .68rem/1.2 var(--heading);letter-spacing:.06em;color:var(--safe);font-variant-numeric:tabular-nums}

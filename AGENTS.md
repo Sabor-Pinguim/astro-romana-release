@@ -41,6 +41,7 @@ assets/
   audio/                GERADO: WAVs + manifest.json (não editar à mão)
   terrain/              GERADO: terrenos reais de Marte (GLB com textura e horizonte + manifest.json)
   sites/                GERADO: foto real (HiRISE) de cada local de pouso para o lobby (tools/web/site-photos.mjs)
+  minigames/            GERADO: clipe GIF de cada minigame jogado do jeito certo, em en/pt/es, para o guia "?" (npm run web:clips)
 tools/
   modeling/             gerador procedural dos modelos 3D (Node + three.js); regras em tools/modeling/AGENTS.md
   model-viewer/         visualizador HTML para validar modelos (seção 6)
@@ -164,6 +165,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 - [ ] O gerador que você tocou passa sem ✘: `npm run models` (e o visualizador abre sem erros), `npm run audio`, `npm run terrain`.
 - [ ] `npm run check` passa (lint só de bugs, imports das ferramentas, versão e traduções). O CI (`.github/workflows/ci.yml`) roda o mesmo a cada push, mais os testes do servidor e o `npm run web:smoke`.
 - [ ] Se tocou na página: `npm run web:smoke` (uma missão de ponta a ponta, sem erros) e `npm run web:audit:mobile` (os tamanhos da seção 4).
+- [ ] Mudou a aparência, os textos ou os controles de um minigame ou de uma etapa do cockpit: regrave o clipe do guia nos 3 idiomas (`npm run web:clips -- --only <id>`) e ajuste o piloto dele em `tools/web/minigame-clips/` se a jogada mudou.
 - [ ] Nunca chame um local de `t` num script da página: ele esconde o helper de tradução (a regra `astro/no-shadow-t` do lint barra).
 - [ ] `npm run i18n:check` passa, se você tocou em textos vistos pelo jogador.
 - [ ] Nenhum número apresentado como real ficou sem fonte.
@@ -182,6 +184,7 @@ npm run terrain                # terrenos reais de Marte (tools/terrain/AGENTS.m
 npm run web:sites              # fotos HiRISE dos locais de pouso (assets/sites; rede: NODE_OPTIONS=--use-system-ca)
 npm run check                  # lint + imports + versão + traduções (o mesmo que o CI roda)
 npm run web:smoke              # uma missão de ponta a ponta no Chrome/Edge headless; falha com qualquer erro
+npm run web:clips              # grava os clipes do guia "?" jogando cada minigame (assets/minigames; -- --only <id>)
 npm run web:audit:mobile       # a página nos tamanhos da seção 4 (--lang pt|es, --pseudo)
 npm run i18n:check             # valida as traduções (i18n:audit: nas telas, com pseudo-localização)
 npm run version:bump -- patch  # sobe a versão em todos os lugares (version:check só confere)

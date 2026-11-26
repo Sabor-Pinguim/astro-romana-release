@@ -564,7 +564,7 @@
   <section id="surface" class="screen" aria-labelledby="surface-title">
     <div class="surface-view" id="surface-view">
       <div class="surface-hud">
-        <div class="surface-site slab"><h2 class="eyebrow" id="surface-title" data-i18n="surface.evaTitle">Mars surface EVA</h2><div class="timer-readout" id="surface-timer" aria-live="polite">03:00</div></div>
+        <div class="surface-site slab"><div><h2 class="eyebrow" id="surface-title" data-i18n="surface.evaTitle">Mars surface EVA</h2><div class="surface-sky-meta" id="surface-mars-time" data-i18n-dynamic></div><div class="surface-eclipse-pill" id="surface-eclipse-pill" role="status" aria-live="polite" hidden></div></div><div class="timer-readout" id="surface-timer" aria-live="polite">03:00</div></div>
         <div class="surface-compass" aria-hidden="true"><div class="compass-strip" id="surface-compass-strip"></div><span class="compass-needle"></span><span class="compass-readout" id="surface-compass-readout">HDG 000°</span></div>
         <div class="surface-goals slab" id="surface-goals-box"><button type="button" class="block-label surface-goals-toggle" id="surface-goals-toggle" aria-expanded="true"><span class="micro" data-i18n="surface.experiments">Experiments</span><span class="tag" id="surface-count">0/4 DONE</span><span class="surface-goals-caret" aria-hidden="true">▾</span></button><ol id="surface-goals"></ol></div>
       </div>
@@ -752,6 +752,25 @@
         </div>
         <div class="dev-exp-grid" id="dev-exp-grid"></div>
       </section>
+      <section class="dev-section">
+        <h4 class="micro" data-i18n="marsSky.dev.heading">Mars Sky &amp; Eclipses</h4>
+        <div class="dev-sky-status" id="dev-sky-status" data-i18n-dynamic></div>
+        <div class="dev-sky-bar">
+          <button class="button secondary" type="button" data-sky-preset="live" data-i18n="marsSky.dev.live">Real UTC</button>
+          <button class="button secondary" type="button" data-sky-preset="dawn" data-i18n="marsSky.dev.dawn">Dawn</button>
+          <button class="button secondary" type="button" data-sky-preset="noon" data-i18n="marsSky.dev.noon">Noon</button>
+          <button class="button secondary" type="button" data-sky-preset="sunset" data-i18n="marsSky.dev.sunset">Blue sunset</button>
+          <button class="button secondary" type="button" data-sky-preset="night" data-i18n="marsSky.dev.night">Night</button>
+          <button class="button amber" type="button" data-sky-preset="solar-phobos" data-i18n="marsSky.dev.solarEclipse">Phobos solar eclipse</button>
+          <button class="button amber" type="button" data-sky-preset="lunar-phobos" data-i18n="marsSky.dev.lunarEclipse">Phobos lunar eclipse</button>
+        </div>
+        <div class="dev-sky-bar">
+          <span class="micro" data-i18n="marsSky.dev.speed">Speed</span>
+          <button class="button quiet" type="button" data-sky-rate="1">1×</button>
+          <button class="button quiet" type="button" data-sky-rate="60">60×</button>
+          <button class="button quiet" type="button" data-sky-rate="600">600×</button>
+        </div>
+      </section>
     </div>
   </dialog>
   <dialog id="dev-exp-dialog" aria-labelledby="dev-exp-title">
@@ -848,6 +867,7 @@
 <script src="multiplayer/client/room-client.js"></script>
 <script src="web/net.js"></script>
 <script src="web/settings.js"></script>
+<script src="web/mars-sky.js"></script>
 <script src="web/app.js"></script>
 <script src="web/chat.js"></script>
 <script src="web/dev.js"></script>
