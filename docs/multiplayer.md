@@ -87,10 +87,11 @@ Players can only **join** the room up to the `planner`. After the launch, only s
   |---|---|
   | 0 · Liftoff & Max-Q | Helena |
   | 1 · Cabin docking | Helena |
-  | 2 · Orbital docking and transfer | Oscar or Maya |
+  | 2 · Orbital docking and transfer | Helena during manual docking; otherwise automatic cutscene |
   | 3 · Mars landing | Helena |
 
   Exceptions (`ACTION_CREW`): `breaker` and `stage_sep` belong to Lucas; `shield_storm`, to Maya. An AI character counts as the host's (`owns`).
+  An orbital emergency snapshot includes the warning, typed message and zoom stages. Every client then frames Helena's seated 3D avatar while her owner sends the six-direction docking input.
 - **Actions:** `handleCockpitAction` is still the single entry point (buttons, keys and 3D clicks). Someone who is not the owner sees a toast ("Helena does that."). A guest who is the owner sends `act('cockpit', action, arg)`, and the host checks the stamped seat and applies it (`applyCockpitAction`).
 - **Piloting:** the guest who owns the stage sends the piloting keys and the on-screen d-pad (`act('input', keys, hold)`) when they change. The host merges its own with those of whoever flies the stage (`inputOf`).
 - **Those who are not flying** see the controls disabled and the message "Helena flies this phase: watch the crew work.".

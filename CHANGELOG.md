@@ -11,6 +11,21 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.0] - 2026-11-26
+
+### Added
+- Add full-screen orbital docking and refuelling with the assembled rocket, a cryogenic tanker and Earth below.
+- Add localized docking telemetry and source references for docking and orbital propellant transfer.
+
+### Changed
+- Show the exterior approach before automatic capture or a construction-triggered pilot intervention.
+- Limit cockpit flight to one manual intervention. Helena sees a triangular warning and enters the cockpit while the rest of the crew watches her live motion from outside.
+- Show soft and hard capture, propellant transfer into the receiving stage and departure from the tanker.
+- Show a 15-second arrival at Mars with Phobos and Deimos, and automate landing when no manual intervention is required.
+
+### Fixed
+- Resolve splashdown aborts before orbital minigames and refuelling.
+
 ## [1.9.21] - 2026-11-26
 
 ### Changed

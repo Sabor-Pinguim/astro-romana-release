@@ -750,6 +750,47 @@
     .cockpit-viewport.slab{position:relative;min-height:0;overflow:hidden;background:linear-gradient(180deg,#090616 0 46%,#17183B 46% 100%);touch-action:none;user-select:none;-webkit-user-select:none}
     .cockpit-viewport canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
     .cockpit-viewport.is-3d .cockpit-fallback{display:none}
+    .orbital-dock-scene{position:fixed;inset:0;z-index:900;overflow:hidden;pointer-events:none;background:radial-gradient(ellipse at 50% 105%,#1a3d70 0%,#130c2a 44%,#070512 100%)}
+    .orbital-dock-scene[hidden]{display:none}
+    .orbital-dock-scene.in-refuel-cutscene{position:absolute;z-index:1}
+    .cutscene-stage:has(.in-refuel-cutscene.has-docking-model:not([hidden])) + .cutscene-refuel-art{background:transparent;justify-content:flex-end;padding-bottom:clamp(110px,20vh,180px)}
+    .cutscene-stage:has(.in-refuel-cutscene.has-docking-model:not([hidden])) + .cutscene-refuel-art :is(.cutscene-dock-pair,.cutscene-earth-arc,.cutscene-space-stars){display:none}
+    .orbital-dock-scene .orbital-dock-canvas{position:absolute;inset:0;width:100%;height:100%}
+    .orbital-dock-status{position:absolute;z-index:1;right:16px;bottom:18px;padding:7px 10px;color:var(--safe);background:#11071fdd;font:700 .66rem var(--heading);letter-spacing:.1em}
+    .orbital-emergency{position:absolute;z-index:3;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;background:#09041499;text-align:center}
+    .orbital-emergency[hidden]{display:none}
+    .orbital-emergency-icon{display:grid;place-items:center;box-sizing:border-box;width:108px;height:94px;padding-top:26px;clip-path:polygon(50% 0,100% 100%,0 100%);background:#d7263d;color:#fff;font:800 3.2rem/1 var(--heading);animation:orbital-warning-flash .55s steps(2,end) infinite}
+    .orbital-emergency-message{max-width:min(740px,90vw);min-height:2.8em;font:700 clamp(1rem,3vw,1.65rem)/1.4 var(--heading);letter-spacing:.055em;text-transform:uppercase;color:#fff0e6;text-shadow:0 2px 8px #000}
+    .orbital-dock-scene.is-zooming{animation:orbital-cockpit-reveal .35s ease-in 1.45s both}
+    @keyframes orbital-cockpit-reveal{from{opacity:1}to{opacity:0}}
+    .orbital-dock-scene.is-zooming .orbital-emergency{opacity:0;transition:opacity .35s}
+    @keyframes orbital-warning-flash{50%{opacity:.2}}
+    @media(prefers-reduced-motion:reduce){.orbital-emergency-icon,.orbital-dock-scene.is-zooming{animation:none}.orbital-dock-scene.is-zooming .orbital-emergency{transition:none}}
+    .flight-cutscene{position:fixed;inset:0;z-index:1000;overflow:hidden;background:radial-gradient(circle at 22% 76%,#33164d 0%,#120822 48%,#06040f 100%)}
+    .flight-cutscene[hidden]{display:none}
+    .cutscene-stage{position:absolute;inset:0;z-index:1}
+    .cutscene-stage:not(.is-3d){background:radial-gradient(circle at 78% 56%,#d96638 0 22%,#8e3a22 22% 28%,transparent 29%),radial-gradient(circle at 72% 36%,#1fa2ff44 0 6%,transparent 16%),radial-gradient(circle at 60% 28%,#ffffff33 1px,transparent 2px),radial-gradient(circle at 30% 20%,#fce8a644 1px,transparent 2px);background-size:100% 100%,100% 100%,90px 90px,130px 130px}
+    .cutscene-refuel-art{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;background:radial-gradient(circle at 50% 120%,#1b3c7a 0%,#120b28 46%,#070512 100%)}
+    .cutscene-stage.is-3d + .cutscene-refuel-art{background:transparent}
+    .cutscene-stage.is-3d + .cutscene-refuel-art .cutscene-space-stars,
+    .cutscene-stage.is-3d + .cutscene-refuel-art .cutscene-earth-arc{display:none}
+    .cutscene-refuel-art[hidden]{display:none}
+    .cutscene-space-stars{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(#fce8a6 1px,transparent 1.5px),radial-gradient(#9ec5ff 1px,transparent 1.5px);background-size:110px 110px,170px 170px;background-position:0 0,40px 60px;opacity:.55}
+    .cutscene-earth-arc{position:absolute;left:-15%;right:-15%;bottom:-42%;height:62%;border-radius:50%;background:radial-gradient(circle at 50% 12%,#4ec6ff 0%,#1b5eb8 28%,#0e224e 68%,transparent 75%);box-shadow:0 0 60px #38b6ff55;pointer-events:none}
+    .cutscene-dock-pair{position:relative;z-index:1;display:flex;align-items:center;gap:10px}
+    .cutscene-tanker,.cutscene-ship{position:relative;height:28px;background:linear-gradient(135deg,#d9d4e7,#8d85a8);clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%,0 50%)}
+    .cutscene-tanker{width:96px;background:linear-gradient(135deg,#f2a900,#b86f00)}
+    .cutscene-ship{width:76px}
+    .cutscene-transfer-beam{width:54px;height:8px;background:linear-gradient(#aebdc5 0 25%,#394c5b 25% 75%,#7b929e 75%);box-shadow:0 1px 0 #0b1622}
+    .cutscene-prop-meter{position:relative;z-index:1;width:min(320px,82%);padding:10px 14px;background:#120822cc;border:1px solid #ffffff22;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+    .cutscene-prop-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;font:700 .64rem var(--heading);letter-spacing:.12em;color:var(--starlight-cream)}
+    .cutscene-prop-head strong{font-size:.82rem;color:#7edac2}
+    .cutscene-prop-track{height:8px;background:#ffffff1a;overflow:hidden}
+    .cutscene-prop-fill{height:100%;width:18%;background:linear-gradient(90deg,#f2a900,#7edac2);transition:width .12s linear}
+    .cutscene-caption{position:absolute;left:18px;bottom:18px;z-index:4;max-width:min(440px,calc(100% - 140px));padding:12px 16px;background:#120822dd;border-left:3px solid var(--solar-amber)}
+    .cutscene-caption h3{margin:2px 0 4px;font:700 1rem var(--heading);letter-spacing:.05em;color:var(--starlight-cream)}
+    .cutscene-caption p{margin:0;font-size:.78rem;line-height:1.4;color:var(--muted)}
+    .cutscene-skip{position:absolute;right:16px;bottom:18px;z-index:4}
     .cockpit-fallback{position:absolute;inset:14% 8% 12%;display:grid;place-items:center;padding:24px;text-align:center;background:linear-gradient(145deg,#1d1128 0 45%,#281147 45%);clip-path:var(--chamfer)}
     .cockpit-hud-top{position:absolute;top:14px;left:16px;right:16px;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
     .cockpit-hud-bottom{position:absolute;left:16px;right:16px;bottom:14px;z-index:3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;pointer-events:none}

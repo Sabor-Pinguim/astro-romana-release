@@ -104,8 +104,7 @@
     return {ok:true,twr:m.twr,seconds:ascentSeconds(m.twr),accel:(m.twr-1)/(ASCENT.refTwr-1)};
   }
   const ORBIT = { altKm: 400, velMs: 7670 }; // game: ISS-like orbit; 7,670 m/s ≈ √(GM/r) at 400 km (derived)
-  // Δv (rule): stages that run dry before orbit abort the flight after the ascent; a rocket that cannot make the Mars
-  // transfer even refuelled aborts after the orbital refuel. Either way the capsule splashes down and the mission fails.
+  // Check both Δv limits after ascent, before opening any orbital activities.
   // warn: the launch review (future); detail: the debrief (past).
   function abortOf(m){
     if(!m.ready||!LV().failures)return null;
@@ -2224,7 +2223,7 @@
         // Share of the refuelling stage's tank to pump in orbit (metrics); a full tank when Mars is out of reach. A low
         // TWR adds the gravity losses of the slow climb.
         refuelTarget: m.marsOk ? Math.min(100, Math.ceil(m.refuelPct + (overweight ? CONSEQUENCE.lowTwrRefuelExtra : 0))) : 100,
-        refuelTank: m.marsOk && m.refuelStage ? stageName(m.refuelStage.key) : null,
+        refuelTank: m.refuelStage ? stageName(m.refuelStage.key) : null,
         lowTwr: !m.ready || m.twr < TWR_MIN(), // facts for the debrief; the flags below are the in-flight trouble
         overweight,
         dataCapped: false,
@@ -2245,7 +2244,7 @@
       };
     }
 
-    function startFlight() {
+    function startFlight({ preview = false } = {}) {
       flight.design = captureDesign();
       flight.missionId = 'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
       flightLog.length = 0; remoteInput.clear();
@@ -2280,12 +2279,16 @@
       flight.sparksUntil = flight.design.powerDeficit || flight.design.overweight ? performance.now() + 2800 : 0;
       flight.phaseElapsed = 0;
       flight.phaseTimedOut = false;
+      flight.orbitalDeparting = false;
+      flight.orbitalEmergency = null;
       flight.completedPhases = new Set();
       flight.docking = null;
       flight.docked = false;
       flight.marsBurn = null;
       flight.orbit = null;
+      flight.cutscene = null;
       flight.descentHold = false;
+      flight.emergencyStep = pickEmergencyStep(flight.design);
       // The experiments of this run (docs/experiments-implementation.md §3): 8 drawn now, 1 orbit + 1 ground per
       // crew member, each revealed only when it comes into play (Mars orbit, descent, surface).
       state.run = window.ASTRO_RUN ? window.ASTRO_RUN.create({ difficulty: state.difficulty, ...runConsequences(flight.design) }) : null;
@@ -2301,11 +2304,117 @@
       if (state.run?.consequences?.dropped.length) logFlight(t('cockpit.logs.budgetCut'));
       lastCockpitGuideId = null;
       showScreen('cockpit');
-      renderFlightUI();
+      hideFlightCutscene();
+      if (flight.emergencyStep === 0) {
+        renderFlightUI();
+      } else if (!preview && abortBeforeOrbitalActivities()) {
+        return;
+      } else if (flight.emergencyStep === 1) {
+        setFlightStep(1);
+      } else if (flight.emergencyStep === 2) {
+        setFlightStep(2);
+      } else {
+        startRefuelCutscene();
+      }
       cancelAnimationFrame(flight.raf);
       flight.lastTime = performance.now();
       flight.raf = requestAnimationFrame(flightTick);
     }
+
+    function pickEmergencyStep(d) {
+      if (!LV().penalties) return null; // Easy mode: the cockpit steps use automatic sequences.
+      if (!d.ready || d.overweight || !state.rocket.booster.fins) return 0; // Liftoff manual
+      if (d.powerDeficit) return 1; // Cabin/cruise manual
+      if (!d.marsOk || d.refuelTarget > 65) return 2; // Orbital refuel manual
+      if (!d.hasTrn && !d.hasLoftid) return 3; // Landing manual without either landing aid
+      return null;
+    }
+
+    function hideFlightCutscene() {
+      const box = $('#flight-cutscene');
+      if (box) { box.hidden = true; box.classList.remove('is-refuel', 'is-mars'); }
+      const refArt = $('#cutscene-refuel-art');
+      if (refArt) refArt.hidden = true;
+      window.dispatchEvent(new CustomEvent('astro:mars-cutscene', { detail: { active: false } }));
+    }
+
+    function showFlightCutscene(c) {
+      const box = $('#flight-cutscene'), refArt = $('#cutscene-refuel-art');
+      if (box) {
+        if (box.parentElement !== document.body) document.body.append(box);
+        box.hidden = false;
+        box.classList.toggle('is-refuel', c.kind === 'refuel');
+        box.classList.toggle('is-mars', c.kind !== 'refuel');
+      }
+      if (refArt) refArt.hidden = c.kind !== 'refuel';
+      const prefix = `cockpit.cutscene.${c.kind === 'refuel' ? 'refuel' : c.kind === 'mars' ? 'mars' : 'landing'}`;
+      const ey = $('#cutscene-eyebrow'), ti = $('#cutscene-title'), bo = $('#cutscene-body');
+      if (ey) ey.textContent = t(`${prefix}Eyebrow`);
+      if (ti) ti.textContent = t(`${prefix}Title`);
+      if (bo) bo.textContent = t(`${prefix}Body`);
+      if (c.kind === 'refuel') {
+        const eased = 1 - (1 - refuelProgress(c)) ** 2;
+        const pct = Math.round(c.fromPct + (c.toPct - c.fromPct) * eased);
+        const pctEl = $('#cutscene-prop-pct'), fillEl = $('#cutscene-prop-fill');
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+      }
+      window.dispatchEvent(new CustomEvent('astro:mars-cutscene', { detail: { active: c.kind !== 'refuel', kind: c.kind, duration: c.duration } }));
+    }
+
+    function startRefuelCutscene() {
+      flight.completedPhases.add(0);
+      flight.completedPhases.add(1);
+      flight.step = 2;
+      const approach = flight.portDock?.status === 'success' && isOrbitalPortDock() ? 0 : 4;
+      flight.docked = approach === 0;
+      flight.refuelDone = 0;
+      const fromPct = Math.max(8, Math.min(48, Math.round(flight.ascent?.topLeftPct ?? 18)));
+      const transferStart = approach + 1.1;
+      flight.cutscene = { kind: 'refuel', t: 0, duration: transferStart + 5, approach, transferStart, fromPct, toPct: 100 };
+      showFlightCutscene(flight.cutscene);
+      logFlight(t('cockpit.logs.orbitAchieved', { target: refuelTarget() }));
+      radAudio.tone(660, 0.12, 'triangle', 0.05);
+      renderFlightUI();
+    }
+
+    function refuelProgress(c) {
+      const start = c.transferStart ?? 0;
+      return Math.max(0, Math.min(1, (c.t - start) / (c.duration - start)));
+    }
+
+    function startMarsArrivalCutscene() {
+      flight.cutscene = { kind: 'mars', t: 0, duration: 15.0 };
+      showFlightCutscene(flight.cutscene);
+      radAudio.tone(520, 0.16, 'triangle', 0.05);
+      renderFlightUI();
+    }
+
+    function startLandingCutscene() {
+      if (!flight.active || flight.cutscene || flight.emergencyStep === 3) return;
+      flight.cutscene = { kind: 'landing', t: 0, duration: 5.5 };
+      flight.landingShare = 100;
+      showFlightCutscene(flight.cutscene);
+      renderFlightUI();
+    }
+
+    function finishFlightCutscene() {
+      if (net.isGuest) return;
+      const c = flight.cutscene;
+      if (!c) return;
+      flight.cutscene = null;
+      hideFlightCutscene();
+      if (c.kind === 'refuel') {
+        flight.docked = true;
+        flight.refuelDone = refuelTarget();
+        toMars();
+      } else if (c.kind === 'mars') {
+        startMarsOrbit();
+      } else if (c.kind === 'landing') {
+        finishFlightAndLand();
+      }
+    }
+    $('#cutscene-skip')?.addEventListener('click', finishFlightCutscene);
 
     // Reusable mechanic "keep in range" (docs/minigames.md): a value drifts on its own and the player pushes it
     // back (input −1…1) to keep it inside the green band. The value has inertia, so corrections overshoot.
@@ -2339,6 +2448,7 @@
     // The climb lasts phaseDuration(0), set by the liftoff TWR; maxQ is the share of it where the gusts peak.
     const LIFTOFF = { band: 3, limit: 12, authority: 8, maxQ: [0.4, 0.67], throttle: 0.7 };
     const PORT_DOCK = { band: 0.18, scope: 1.0, zStart: 5.0, zLatch: 0.36 }; // game-balance: cabin docking capture radius (m), 2D scope half-range (m), initial and latch distances (m)
+    const isOrbitalPortDock = () => flight.step === 2 && flight.emergencyStep === 2;
     function startLiftoff() {
       const d = flight.design, s1 = Math.random() * 100, s2 = Math.random() * 100, duration = phaseDuration(0);
       const gust = (d.overweight ? 1.6 : 1) * (d.finsDrift ?? 1); // low TWR: the stack wallows more
@@ -2360,17 +2470,20 @@
       const starStr = starsText(stars);
       logFlight(t('cockpit.logs.meco', { pct: share, stars: starStr }));
       crewToast(t('cockpit.toasts.liftoffResult', { stars: starStr, pct: share }));
-      const abort = flight.design.orbit ? null : abortOf(flight.design); // the stages ran dry short of orbit (not on Easy)
-      if (abort) { abortMission(abort); return; }
-      setFlightStep(1);
+      if (abortBeforeOrbitalActivities()) return;
+      startRefuelCutscene();
     }
 
-    // After the orbital refuel: the transfer burn either reaches Mars or the crew comes home (abortOf).
-    function toMars() {
+    function abortBeforeOrbitalActivities() {
       const abort = abortOf(flight.design);
-      if (abort) { abortMission(abort); return; }
+      if (!abort) return false;
+      abortMission(abort);
+      return true;
+    }
+
+    function toMars() {
       solarStorm();
-      if (orbitExperiments().length) startMarsOrbit(); else enterDescent();
+      if (orbitExperiments().length) startMarsArrivalCutscene(); else enterDescent();
     }
     // Solar storm on the cruise (game event; the sound is the real storm the Curiosity RAD measured on 2024-05-20). With
     // a storm shelter the crew rides it out; without one, one crew member (picked by the seed) takes a dose and moves
@@ -2398,8 +2511,8 @@
     const BOT_START_S = [1.5, 4]; // game-balance: a bot starts its experiment a moment after the stage begins
     let orbitBots = null;
     const RUN = () => window.ASTRO_RUN;
-    const starsText = k => (RUN() ? RUN().stars(k) : `★ ${k}/3`);
-    const starsHtml = k => (RUN() ? RUN().starsHtml(k) : `★ ${k}/3`);
+    const starsText = k => { const of = RUN()?.maxStarsOf(state.run) ?? 3; return RUN() ? RUN().stars(k, of) : `★ ${k}/${of}`; };
+    const starsHtml = k => { const of = RUN()?.maxStarsOf(state.run) ?? 3; return RUN() ? RUN().starsHtml(k, of) : `★ ${k}/${of}`; };
     const orbitExperiments = () => (RUN() && state.run ? RUN().ofPlace(state.run, 'orbit') : []);
     const soloCrewId = () => (state.detail?.kind === 'crew' ? state.detail.id : 'helena');
     const humanSeat = id => (net.mode === 'solo' ? id === soloCrewId() : !!net.peerOf(id));
@@ -2515,7 +2628,10 @@
     function enterDescent() {
       setFlightStep(3);
       const id = 'H-S2';
-      if (!RUN() || !state.run?.experiments.includes(id) || state.run.results[id] || net.isGuest) return;
+      if (!RUN() || !state.run?.experiments.includes(id) || state.run.results[id] || net.isGuest) {
+        if (!net.isGuest) startLandingCutscene();
+        return;
+      }
       const done = (stars, by, bot) => {
         if (!RUN().record(state.run, id, { stars, by, bot })) return;
         logFlight(t(bot ? 'experiments.common.botDone' : 'experiments.common.done', { name: crewNameOf('helena'), title: expTitle(id), stars: RUN().stars(stars) }));
@@ -2530,11 +2646,13 @@
             if (!finished) { done(0, null, false); logFlight(t('experiments.descent.skipped')); }
             flight.descentHold = false;
             renderFlightUI();
+            startLandingCutscene();
           },
         });
       } else {
         const plan = window.ASTRO_MINIGAMES.botResult(id, state.run.seed, state.run.level);
         done(plan.stars, 'bot', true);
+        startLandingCutscene();
       }
       renderFlightUI();
     }
@@ -2632,13 +2750,20 @@
         logFlight(t(roughAscent ? 'cockpit.logs.roughAscent' : 'cockpit.logs.boosterSep'));
         radAudio.tone(520, 0.14, 'triangle', 0.05);
       } else if (nextStep === 2) {
-        flight.docking = startDocking();
+        flight.docking = flight.emergencyStep === 2 ? null : startDocking();
         flight.docked = false;
         flight.refuelDone = 0;
+        if (flight.emergencyStep === 2) {
+          flight.portDock = { x: .45, y: -.3, z: PORT_DOCK.zStart, fuel: 100, status: 'approach' };
+          flight.orbitalEmergency = {
+            stage: 'approach', elapsed: 0,
+            reason: flight.design.marsOk ? 'highDemand' : 'shortfall',
+          };
+        }
         logFlight(t('cockpit.logs.orbitAchieved', { target: refuelTarget() }));
         radAudio.tone(660, 0.12, 'triangle', 0.05);
       } else if (nextStep === 3) {
-        flight.marsBurn = startMarsBurn();
+        flight.marsBurn = flight.emergencyStep === 3 ? startMarsBurn() : null;
         logFlight(t('cockpit.logs.tmiComplete', { alt: U.altitudeKm(125), vel: U.speedKmh(19500) }));
         radAudio.tone(520, 0.15, 'triangle', 0.05);
       }
@@ -2649,13 +2774,14 @@
     // action may do it (crewFor); a guest sends it to the host, which checks the seat the server stamped.
     function handleCockpitAction(actionId, arg) {
       if (flight.orbit?.active || flight.descentHold) return; // Mars orbit experiments or H-S2: no flight controls
+      if (flight.orbitalEmergency && flight.orbitalEmergency.stage !== 'control') return;
       const seats = crewFor(actionId);
       if (!canAct(seats)) { if (flight.active) toast(t('cockpit.toasts.onlyOwner', { names: crewNames(seats), verb: seats.length > 1 ? t('cockpit.toasts.doPlural') : t('cockpit.toasts.doSingular') })); return; }
       if (net.isGuest) { net.act('cockpit', actionId, arg); return; }
       applyCockpitAction(actionId, arg);
     }
     function applyCockpitAction(actionId, arg) {
-      if (!flight.active) return;
+      if (!flight.active || flight.cutscene || (flight.orbitalEmergency && flight.orbitalEmergency.stage !== 'control')) return;
       if (actionId === 'throttle_up') {
         flight.throttle = Math.min(1, flight.throttle + 0.35);
         radAudio.tone(240 + flight.throttle * 180, 0.09, 'triangle', 0.05);
@@ -2670,7 +2796,7 @@
           g.rate[1] *= 0.45;
           g.rate[0] *= 0.45;
           g.error = Math.hypot(...g.value);
-        } else if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+        } else if ((flight.step === 1 || isOrbitalPortDock()) && flight.portDock?.status === 'approach') {
           const d = flight.portDock;
           d.x = Math.max(-2, Math.min(2, d.x + dx * 0.28));
           d.y = Math.max(-2, Math.min(2, d.y + dy * 0.28));
@@ -2692,7 +2818,7 @@
           renderFlightUI();
           return;
         }
-        if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+        if ((flight.step === 1 || isOrbitalPortDock()) && flight.portDock?.status === 'approach') {
           const d = flight.portDock;
           d.x *= 0.72;
           d.y *= 0.72;
@@ -2714,7 +2840,7 @@
           radAudio.tone(780, 0.07, 'triangle', 0.05);
         }
       } else if (actionId === 'stage_sep') {
-        if (flight.step === 1 && flight.portDock && flight.portDock.status === 'approach') {
+        if ((flight.step === 1 || isOrbitalPortDock()) && flight.portDock?.status === 'approach') {
           const d = flight.portDock;
           d.x *= 0.65;
           d.y *= 0.65;
@@ -2731,7 +2857,7 @@
           radAudio.tone(880, 0.14, 'triangle', 0.06);
           renderFlightUI();
           window.setTimeout(() => {
-            if (flight.active && flight.step === 1 && flight.separationAdvancing) setFlightStep(2);
+            if (flight.active && flight.step === 1 && flight.separationAdvancing) startRefuelCutscene();
           }, 1800);
           return;
         }
@@ -2761,7 +2887,15 @@
         }
       } else if (actionId === 'complete_step') {
         if (flight.step === 2 && flight.docked && flight.refuelDone >= refuelTarget()) {
-          toMars();
+          if (flight.orbitalDeparting) return;
+          flight.orbitalDeparting = true;
+          window.dispatchEvent(new Event('astro:orbital-departure'));
+          window.setTimeout(() => {
+            if (flight.active && flight.step === 2 && flight.orbitalDeparting) {
+              flight.orbitalDeparting = false;
+              toMars();
+            }
+          }, 1300);
           return;
         }
       }
@@ -2791,13 +2925,16 @@
         flight.hull = Math.max(55, flight.hull - 12);
         flight.stageSeparated = true;
         logFlight(t('cockpit.logs.sepTimeout'));
-        setFlightStep(2);
+        startRefuelCutscene();
       } else if (flight.step === 2) {
         flight.score -= flight.docked ? 4 : 12;
         flight.docked = true;
         flight.refuelDone = refuelTarget();
         logFlight(t('cockpit.logs.dockTimeout'));
-        toMars();
+        if (isOrbitalPortDock()) {
+          if (flight.portDock) flight.portDock.status = 'failed';
+          startRefuelCutscene();
+        } else toMars();
       }
     }
 
@@ -2837,6 +2974,47 @@
         if (keys.has('ArrowRight') || keys.has('KeyD')) flight.pitchX = Math.min(1, flight.pitchX + dt * 1.4);
         if (keys.has('ArrowUp') || keys.has('KeyW')) flight.pitchY = Math.max(-1, flight.pitchY - dt * 1.4);
         if (keys.has('ArrowDown') || keys.has('KeyS')) flight.pitchY = Math.min(1, flight.pitchY + dt * 1.4);
+      }
+
+      if (flight.cutscene) {
+        const c = flight.cutscene;
+        c.t += dt;
+        const p = Math.min(1, c.t / c.duration);
+        if (c.kind === 'refuel') {
+          flight.docked = c.t >= (c.approach ?? 0);
+          const transfer = refuelProgress(c);
+          flight.refuelDone = refuelTarget() * transfer;
+          const eased = 1 - Math.pow(1 - transfer, 2);
+          const pct = Math.round(c.fromPct + (c.toPct - c.fromPct) * eased);
+          const pctEl = $('#cutscene-prop-pct'), fillEl = $('#cutscene-prop-fill');
+          if (pctEl) pctEl.textContent = `${pct}%`;
+          if (fillEl) fillEl.style.width = `${pct}%`;
+        }
+        window.dispatchEvent(new CustomEvent('astro:cockpit', { detail: flight }));
+        if (keys.has('Escape') || p >= 1) {
+          finishFlightCutscene();
+        }
+        syncFlight();
+        flight.raf = requestAnimationFrame(flightTick);
+        return;
+      }
+
+      if (flight.orbitalEmergency && flight.orbitalEmergency.stage !== 'control') {
+        const emergency = flight.orbitalEmergency;
+        emergency.elapsed += dt;
+        if (emergency.stage === 'approach' && emergency.elapsed >= 2.4) {
+          emergency.stage = 'warning'; emergency.elapsed = 0;
+        } else if (emergency.stage === 'warning' && emergency.elapsed >= 3.2) {
+          emergency.stage = 'zoom'; emergency.elapsed = 0;
+        } else if (emergency.stage === 'zoom' && emergency.elapsed >= 1.8) {
+          emergency.stage = 'control'; emergency.elapsed = 0;
+          renderFlightUI();
+        }
+        window.dispatchEvent(new CustomEvent('astro:cockpit', { detail: flight }));
+        updateCockpitHUD();
+        syncFlight();
+        flight.raf = requestAnimationFrame(flightTick);
+        return;
       }
 
       if (flight.orbit?.active) {
@@ -2886,17 +3064,46 @@
             logFlight(t('cockpit.logs.hatchLatched'));
             radAudio.tone(880, 0.14, 'triangle', 0.06);
             crewToast(t('cockpit.toasts.dockingComplete')); renderFlightUI();
-            window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'success') setFlightStep(2); }, 1400);
+            window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'success') startRefuelCutscene(); }, 1400);
           } else if (d.fuel <= 0 || flight.phaseElapsed >= phaseDuration(1)) {
             d.status = 'failed'; flight.score -= 5;
             logFlight(t(d.fuel <= 0 ? 'cockpit.logs.rcsDepleted' : 'cockpit.logs.approachExpired'));
             radAudio.tone(240, 0.16, 'sawtooth', 0.06);
             crewToast(t('cockpit.toasts.dockingFailed')); renderFlightUI();
-            window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'failed') setFlightStep(2); }, 1400);
+            window.setTimeout(() => { if (flight.active && flight.step === 1 && d.status === 'failed') startRefuelCutscene(); }, 1400);
           }
         }
       } else if (flight.step === 2) {
         flight.phaseElapsed += dt;
+        const d = flight.portDock;
+        if (isOrbitalPortDock() && d?.status === 'approach') {
+          const { keys: k, hold } = inputOf(), h = hold || {};
+          const pressed = (...codes) => codes.some(c => k.has(c));
+          const x = (pressed('ArrowRight', 'KeyD') || h.right ? 1 : 0) - (pressed('ArrowLeft', 'KeyA') || h.left ? 1 : 0);
+          const y = (pressed('ArrowUp') || h.up ? 1 : 0) - (pressed('ArrowDown') || h.down ? 1 : 0);
+          const z = (pressed('KeyE', 'KeyW') || h.forward ? 1 : 0) - (pressed('KeyQ', 'KeyS') || h.back ? 1 : 0);
+          d.input = { left: x < 0, right: x > 0, up: y > 0, down: y < 0, forward: z > 0, back: z < 0 };
+          flight.input = d.input;
+          const speed = .55; // game-balance: relative RCS translation (m/s)
+          d.x = Math.max(-2, Math.min(2, d.x + x * speed * dt));
+          d.y = Math.max(-2, Math.min(2, d.y + y * speed * dt));
+          d.z = Math.max(PORT_DOCK.zLatch, Math.min(7, d.z - z * speed * dt));
+          d.fuel = Math.max(0, d.fuel - (Math.abs(x) + Math.abs(y) + Math.abs(z)) * 3 * dt);
+          flight.pitchX = Math.max(-1, Math.min(1, d.x));
+          flight.pitchY = Math.max(-1, Math.min(1, -d.y));
+          flight.stability = Math.round(Math.max(0, 100 - Math.hypot(d.x, d.y) * 100));
+          flight.progress = Math.min(65, (PORT_DOCK.zStart - d.z) / (PORT_DOCK.zStart - PORT_DOCK.zLatch) * 65);
+          if (d.z <= PORT_DOCK.zLatch && Math.hypot(d.x, d.y) < PORT_DOCK.band) {
+            d.status = 'success'; flight.docked = true; flight.score += 10;
+            logFlight(t('cockpit.logs.hardDock', { pct: flight.stability }));
+            renderFlightUI();
+            window.setTimeout(() => { if (flight.active && flight.step === 2 && d.status === 'success') startRefuelCutscene(); }, 900);
+          } else if (d.fuel <= 0) {
+            timeOutFlightPhase();
+          }
+        } else if (isOrbitalPortDock()) {
+          flight.progress = 65;
+        } else {
         const g = flight.docking;
         if (g && !flight.docked) {
           const [pitch, yaw] = pilotInput();
@@ -2910,7 +3117,8 @@
         } else if (flight.docked) {
           flight.progress = 65 + (refuelTarget() ? flight.refuelDone / refuelTarget() : 1) * 35;
         }
-        if (flight.phaseElapsed >= phaseDuration(2)) { timeOutFlightPhase(); }
+        }
+        if (flight.phaseElapsed >= phaseDuration(2) && (!isOrbitalPortDock() || d?.status === 'approach')) { timeOutFlightPhase(); }
       } else if (flight.step === 3 && !flight.descentHold) { // descentHold: H-S2 picks the landing spot first
         const g = flight.marsBurn;
         if (g) {
@@ -2987,7 +3195,7 @@
             : t('cockpit.cards.dockOffset', { dist: U.distanceM(err, 2) });
         }
         const dockMark = $('#kir-mark');
-        if (dockMark && flight.step === 1) {
+        if (dockMark && (flight.step === 1 || isOrbitalPortDock())) {
           const nx = Math.max(-1, Math.min(1, d.x / PORT_DOCK.scope));
           const ny = Math.max(-1, Math.min(1, d.y / PORT_DOCK.scope));
           dockMark.style.left = `${50 + nx * 50}%`;
@@ -3012,7 +3220,7 @@
       $('#flight-hull-val').textContent = `${Math.round(flight.propellant)}% / ${Math.round(flight.hull)}%`;
       $('#flight-hull-val').previousElementSibling.textContent = `${tankLabel()}${t('cockpit.hullSuffix')}`;
       const goalLabels = t('cockpit.goalLabels');
-      const goal = flight.step === 1
+      const goal = flight.step === 1 || isOrbitalPortDock()
         ? Math.round(Math.max(0, 100 - Math.hypot(flight.portDock?.x ?? 0, flight.portDock?.y ?? 0) * 100))
         : flight.step === 2 && flight.docking && !flight.docked
           ? Math.round(flight.docking.share() * 100)
@@ -3035,7 +3243,7 @@
         mark.style.top = `${50 - (flight.docking.value[0] / flight.docking.limit) * 50}%`;
         mark.classList.toggle('out', flight.docking.error > flight.docking.band);
       }
-      const activeInput = flight.step === 1 ? flight.portDock?.input : flight.input;
+      const activeInput = flight.step === 1 || isOrbitalPortDock() ? flight.portDock?.input : flight.input;
       $$('[data-hold]').forEach(b => b.classList.toggle('on', !!activeInput?.[b.dataset.hold]));
       const pip = $('#cockpit-pip');
       if (pip) {
@@ -3077,7 +3285,7 @@
 
       const outcome = $('#port-dock-outcome');
       if (outcome) {
-        const st = flight.step === 1 ? flight.portDock?.status : null;
+        const st = flight.step === 1 || isOrbitalPortDock() ? flight.portDock?.status : null;
         const done = st === 'success' || st === 'failed';
         outcome.hidden = !done;
         outcome.className = `dock-outcome${st === 'success' ? ' is-success' : st === 'failed' ? ' is-failed' : ''}`;
@@ -3089,7 +3297,7 @@
       }
 
       const guideBtn = $('#cockpit-guide-toggle');
-      const guideId = state.screen === 'cockpit' && !orbitOn && (flight.active || guestFlight)
+      const guideId = state.screen === 'cockpit' && !orbitOn && !flight.cutscene && (!flight.orbitalEmergency || flight.orbitalEmergency.stage === 'control') && flight.step === flight.emergencyStep && (flight.active || guestFlight)
         ? (['cockpit-ascent', 'cockpit-cabin-dock', 'cockpit-orbital-dock', 'cockpit-landing'][flight.step] || null)
         : null;
       if (guideBtn) guideBtn.hidden = !guideId;
@@ -3108,6 +3316,12 @@
 
       const box = $('#cockpit-minigame');
       if (orbitOn) { renderOrbitCard(box); updateCockpitHUD(); syncFlight(true); return; }
+      if (flight.cutscene || (flight.orbitalEmergency && flight.orbitalEmergency.stage !== 'control') || (flight.step === 3 && flight.emergencyStep !== 3)) {
+        box.textContent = '';
+        updateCockpitHUD();
+        syncFlight(true);
+        return;
+      }
       if (flight.step === 0) {
         const g = flight.liftoff;
         box.innerHTML = `
@@ -3120,11 +3334,11 @@
               : `<button class="button primary" type="button" data-act="throttle_up">${t('cockpit.cards.throttleBtn', { pct: Math.round(flight.throttle * 100) })}</button>`}</div>
           </div>
           <div class="kir-stats"><span id="kir-time">${t('cockpit.cards.timeToMeco', { sec: phaseDuration(0) })}</span><span id="kir-share">—</span><span id="kir-stars">${starsHtml(0)}</span></div>`;
-      } else if (flight.step === 1) {
+      } else if (flight.step === 1 || isOrbitalPortDock()) {
         const dockActive = flight.portDock?.status === 'approach';
         box.innerHTML = `
-          <span class="eyebrow">${t('cockpit.cards.helenaDockEyebrow')}</span>
-          <h4>${t('cockpit.cards.helenaDockTitle')}</h4>
+          <span class="eyebrow">${t(isOrbitalPortDock() ? 'cockpit.emergency.orbitalEyebrow' : 'cockpit.cards.helenaDockEyebrow')}</span>
+          <h4>${t(isOrbitalPortDock() ? 'cockpit.emergency.orbitalTitle' : 'cockpit.cards.helenaDockTitle')}</h4>
           <div class="meter"><div class="meter-head"><span class="meter-label">${t('cockpit.cards.dockFuelLabel')}</span><strong id="port-dock-fuel-value">100%</strong></div><div class="meter-track"><div class="meter-fill" id="port-dock-fuel" style="width:100%"></div></div></div>
           <div class="docking-readout"><span id="port-dock-offset">${t('cockpit.cards.dockOffset', { dist: U.distanceM(0.54, 2) })}</span><strong id="port-dock-distance">${U.distanceM(PORT_DOCK.zStart, 1)}</strong></div>
           <div class="kir-row">
@@ -3181,7 +3395,7 @@
       const kirPad = $('.kir-2d', box);
       if (kirPad) {
         let kirDragging = false;
-        const canDragKir = () => (flight.step !== 1 || flight.portDock?.status === 'approach') && (net.mode === 'solo' || canAct(STEP_CREW[flight.step] || []));
+        const canDragKir = () => ((flight.step !== 1 && !isOrbitalPortDock()) || flight.portDock?.status === 'approach') && (net.mode === 'solo' || canAct(stepCrew()));
         const steerFromKir = e => {
           if (!canDragKir()) return;
           const r = kirPad.getBoundingClientRect();
@@ -3210,7 +3424,7 @@
         handleCockpitAction(btn.dataset.act, idx);
       }));
       // In a room, the crew member who flies this step has the controls; the others watch.
-      const seats = STEP_CREW[flight.step] || [];
+      const seats = stepCrew();
       if (net.mode !== 'solo' && !canAct(seats)) {
         $$('[data-act],[data-hold]', box).forEach(b => { b.disabled = true; });
         box.insertAdjacentHTML('beforeend', `<p class="mp-watch">${t('cockpit.cards.watchCrew', { names: crewNames(seats), verb: seats.length > 1 ? t('cockpit.cards.flyPlural') : t('cockpit.cards.flySingular') })}</p>`);
@@ -3566,7 +3780,8 @@
     // actions and their steering. Who flies each step (acts and steers); a few switches belong to one specialist.
     const STEP_CREW = [['helena'], ['helena'], ['oscar', 'maya'], ['helena']];
     const ACTION_CREW = { breaker: ['lucas'], stage_sep: ['lucas'], shield_storm: ['maya'] };
-    const crewFor = actionId => ACTION_CREW[actionId] || STEP_CREW[flight.step] || [];
+    const stepCrew = () => isOrbitalPortDock() ? ['helena'] : STEP_CREW[flight.step] || [];
+    const crewFor = actionId => ACTION_CREW[actionId] || stepCrew();
     const canAct = seats => seats.some(seat => net.owns(seat)); // mine, or AI crew while I host (solo: everyone)
     const crewNames = seats => seats.map(id => crew.find(c => c.id === id)?.name ?? id).join(` ${t('common.and')} `);
     function crewToast(text) { toast(text); net.emit({ k: 'toast', text }); }
@@ -3585,7 +3800,7 @@
       sendInput();
     }
     function inputOf() {
-      const seats = STEP_CREW[flight.step] || [], mine = canAct(seats);
+      const seats = stepCrew(), mine = canAct(seats);
       const keys = new Set(mine ? flight.keys : []);
       let hold = mine ? flight.hold : null;
       for (const [seat, input] of remoteInput) if (seats.includes(seat)) { input.keys.forEach(k => keys.add(k)); hold ||= input.hold; }
@@ -3607,7 +3822,7 @@
     // travel as plain numbers and get their share()/stars() back on the guest.
     const FLIGHT_FIELDS = ['active', 'step', 'progress', 'altKm', 'velMs', 'hull', 'propellant', 'throttle', 'pitchX', 'pitchY', 'stability', 'breakers',
       'stageSeparated', 'separationAdvancing', 'refuelDone', 'stormShielded', 'edlChuteDeployed', 'score', 'phaseElapsed', 'phaseTimedOut', 'docked',
-      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold', 'brownouts'];
+      'liftoffStars', 'landingShare', 'liftoffSeconds', 'input', 'portDock', 'orbit', 'descentHold', 'brownouts', 'emergencyStep', 'orbitalEmergency', 'cutscene'];
     const FLIGHT_SYNC_MS = 100; // game-balance: snapshot interval
     const kirOut = g => g && { t: g.t, value: g.value, rate: g.rate, inBand: g.inBand, duration: g.duration, band: g.band, limit: g.limit, error: g.error, done: g.done, axes: g.axes };
     const kirIn = o => o && { ...o, share() { return this.t ? this.inBand / this.t : 1; }, stars() { const k = this.share(); return k >= 0.85 ? 3 : k >= 0.65 ? 2 : k >= 0.4 ? 1 : 0; }, tick() { return this; } };
@@ -3626,7 +3841,7 @@
       net.setState('flight', flightSnapshot());
     }
     let guestFlight = false, shownLog = '';
-    const flightUiKey = () => JSON.stringify([flight.orbit?.active, flight.descentHold, Object.keys(state.run?.results || {}).length, flight.step, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.edlChuteDeployed, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
+    const flightUiKey = () => JSON.stringify([flight.orbit?.active, flight.descentHold, Object.keys(state.run?.results || {}).length, flight.step, flight.cutscene?.kind, flight.emergencyStep, flight.orbitalEmergency?.stage, !!flight.liftoff, flight.docked, flight.refuelDone, flight.stageSeparated, flight.edlChuteDeployed, flight.portDock?.status, flight.breakers, Math.round(flight.throttle * 100)]);
     function applyFlight(o) {
       if (!net.isGuest || !o) return;
       const first = !guestFlight;
@@ -3637,7 +3852,18 @@
         showScreen('cockpit');
       }
       const before = first ? '' : flightUiKey();
+      const previousCutscene = flight.cutscene?.kind;
       for (const k of FLIGHT_FIELDS) flight[k] = o[k];
+      if (flight.cutscene?.kind !== previousCutscene) {
+        if (flight.cutscene) showFlightCutscene(flight.cutscene);
+        else hideFlightCutscene();
+      } else if (flight.cutscene?.kind === 'refuel') {
+        const c = flight.cutscene, eased = 1 - (1 - refuelProgress(c)) ** 2;
+        const pct = Math.round(c.fromPct + (c.toPct - c.fromPct) * eased);
+        const pctEl = $('#cutscene-prop-pct'), fillEl = $('#cutscene-prop-fill');
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+      }
       flight.liftoff = kirIn(o.liftoff); flight.docking = kirIn(o.docking); flight.marsBurn = kirIn(o.marsBurn);
       flight.completedPhases = new Set(o.completedPhases || []);
       if (o.run) state.run = o.run; // the host's experiment draw and results
@@ -3825,12 +4051,12 @@
         const playing = RUN()?.playing, exp = playing ? window.ASTRO_EXPERIMENTS?.byId(playing) : null;
         if (flight.orbit?.active) return exp?.crew || null;
         if (flight.breakers?.some(Boolean)) return ACTION_CREW.breaker[0];
-        const seats = STEP_CREW[flight.step] || [];
+        const seats = stepCrew();
         return seats[seats.length > 1 && flight.docked ? 1 : 0] || null;
       },
-      jumpCockpit: step => { startFlight(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); },
+      jumpCockpit: step => { startFlight({ preview: true }); flight.cutscene = null; hideFlightCutscene(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); else { flight.step = 0; renderFlightUI(); } },
       // Dev Mode: straight to the Mars orbit experiments (after the refuelling step), with a fresh draw.
-      jumpMarsOrbit: seed => { startFlight(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty, ...runConsequences(flight.design) }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
+      jumpMarsOrbit: seed => { startFlight({ preview: true }); flight.cutscene = null; hideFlightCutscene(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty, ...runConsequences(flight.design) }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
       jumpResults: () => { flight.active = false; cancelAnimationFrame(flight.raf); if (!flight.design) flight.design = captureDesign(); surf.tasks = surf.tasks?.length ? surf.tasks : SURFACE_TASKS(); showResults(false); },
       refreshUI: () => { if (flight.active) renderFlightUI(); },
       get isMuted() { return radAudio.muted; },

@@ -75,6 +75,7 @@ Details: [datasets/earth/](datasets/earth/).
 | JPL Solar System Dynamics: Astrodynamic Parameters | https://ssd.jpl.nasa.gov/astro_par.html | Gravitational parameters for the Δv budget (DE440 values) | NASA/JPL |
 | JPL Solar System Dynamics: Planetary Physical Parameters | https://ssd.jpl.nasa.gov/planets/phys_par.html | Earth and Mars radius, Mars gravity (3.71 m/s², also used by the particle presets) | NASA/JPL |
 | JPL Solar System Dynamics: Approximate Positions of the Planets | https://ssd.jpl.nasa.gov/planets/approx_pos.html | Earth and Mars semi-major axes for the Δv budget | NASA/JPL |
+| NASA Science: Mars Moons Facts | https://science.nasa.gov/mars/moons/facts/ | Phobos and Deimos in the Mars arrival cutscene: Phobos is larger and closer, and its orbital period is about one quarter of Deimos's. Visual orbit spacing and animation speed are cinematic, not to scale. | NASA, public domain |
 
 ---
 
@@ -98,6 +99,10 @@ The main documents behind the game's numbers. Every other citation is in the fil
 | SLS Core Stage Fact Sheet | https://www.nasa.gov/wp-content/uploads/2020/02/sls_core_stage_fact_sheet_04262021_508.pdf | Core stage tank part |
 | Recommended Figures of Merit for Green Monopropellants (NASA Glenn, NTRS) | https://ntrs.nasa.gov/citations/20140009573 | Propellant density |
 | NASA Image and Video Library | https://images.nasa.gov | Reference photos for the 3D models (section 5) |
+| International Docking System Standard, Rev. F | https://ntrs.nasa.gov/api/citations/20220011643/downloads/IDSS%20IDD%20Rev%20F%20Final_07262022.pdf | Orbital docking sequence: soft capture, attenuation, retraction and structural hard capture |
+| Dragon cargo craft approaches the ISS | https://www.nasa.gov/image-article/the-spacex-dragon-cargo-craft-approaches-the-station-for-docking-2/ | Earth-horizon framing and relative spacecraft scale for the orbital docking scene |
+| Orbital Express autonomous servicing | https://ntrs.nasa.gov/search.jsp?R=20150014716 | Historical reference for spacecraft docking and propellant transfer; the game tanker and cryogenic transfer are fictional |
+| Cryogenic fluid management | https://www.nasa.gov/directorates/stmd/tech-demo-missions-program/cryogenic-fluid-management-cfm/stay-cool-nasa-tests-innovative-technique-for-super-cold-fuel-storage/ | Reference for insulated propellant tanks and the challenges of storing and transferring cryogenic fluids in orbit |
 
 ---
 
