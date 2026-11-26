@@ -115,7 +115,7 @@ Arquivos (implementados; scripts clássicos, que funcionam em `file://`):
 | `web/minigames/core.js` | Núcleo: registro dos minigames, layout com semente e novas tentativas, recomeço, teto de estrelas, bots, ajudantes de interface e solucionadores (mochila, ruído) |
 | `web/minigames/<id>.js` | Um minigame: níveis, modificadores, gerador, solucionador e interface |
 | `web/minigames/<id>.css`, `web/minigames.css` | Estilos de cada minigame e os componentes compartilhados |
-| `web/locales/experiments/<id>.js`, `_common.js` | Textos de cada experimento, em inglês e português no mesmo arquivo |
+| `web/locales/experiments/<id>.js`, `common.js` | Textos de cada experimento, em inglês e português no mesmo arquivo |
 | `web/experiment-run.js` | Ligação com o jogo: partida (`run`), diálogo, bots e pontos |
 | `tools/minigame-lab/index.html` | Laboratório: abre qualquer experimento por nível, semente e idioma |
 | `tools/web/check-experiments.mjs` | Validador em Node |
@@ -231,7 +231,7 @@ Os 21 experimentos usam só 7 mecânicas. O núcleo oferece as peças comuns (ru
 ### 4.9 Textos (i18n)
 
 - Cada experimento tem o seu arquivo `web/locales/experiments/<id>.js`, com inglês e português lado a lado. Ele entra em `translation.experiments.<id>` e carrega depois de `en.js`/`pt.js` e antes de `i18n.js`. Assim os dois idiomas ficam juntos e vários experimentos podem ser feitos ao mesmo tempo sem conflito.
-- Textos comuns (níveis, recomeçar, etapa de órbita, resultados): `web/locales/experiments/_common.js`.
+- Textos comuns (níveis, recomeçar, etapa de órbita, resultados): `web/locales/experiments/common.js`.
 - As chaves antigas `surface.tasks.<id>` e `minigames.scout|moxie|relay|bio` saem de `en.js`/`pt.js` na integração.
 
 ### 4.10 Teste e validação

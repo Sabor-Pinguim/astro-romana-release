@@ -3003,9 +3003,11 @@
       renderFlightUI();
     }
 
+    const hostOffline = () => net.mode !== 'solo' && net.isHost && net.status !== 'open';
+
     function flightTick(now) {
       if (!flight.active || state.screen !== 'cockpit') return;
-      if (window.ASTRO_MINIGAME_GUIDE?.isOpen?.('cockpit')) {
+      if (window.ASTRO_MINIGAME_GUIDE?.isOpen?.('cockpit') || hostOffline()) {
         flight.lastTime = now;
         flight.raf = requestAnimationFrame(flightTick);
         return;
@@ -3591,7 +3593,7 @@
       const dt = Math.min(0.1, (now - surf.lastTick) / 1000);
       surf.lastTick = now;
       if (surfaceClockRuns()) surf.timerSec = Math.max(0, surf.timerSec - dt);
-      updateSurfaceBots(dt);
+      if (!hostOffline()) updateSurfaceBots(dt);
       if (surf.timerSec <= 10 && surf.timerSec > 0 && !surf.rushWarned) {
         surf.rushWarned = true;
         radAudio.tone(680, 0.22, 'sawtooth', 0.06);
@@ -3941,6 +3943,7 @@
     // The return window counts down while the crew can play: solo pauses it in minigames; in a room it never
     // pauses for one player's minigame, only until everyone has loaded the terrain (or LOAD_WAIT_MS).
     function surfaceClockRuns() {
+      if (hostOffline()) return false;
       const view = window.ASTRO_SURFACE;
       if (net.mode === 'solo') return view?.running?.() ?? true;
       if (!(view?.loaded?.() ?? true)) return false;

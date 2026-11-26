@@ -40,7 +40,7 @@ const EXP = context.ASTRO_EXPERIMENTS;
 if (EXP.list.length === 21) ok('21 experiments'); else bad(`${EXP.list.length} experiments (expected 21)`);
 for (const crew of EXP.CREW) for (const side of ['orbit', 'ground']) if (!EXP.pool(crew, side).length) bad(`${crew} has no ${side} experiment`);
 
-load('web/locales/experiments/_common.js');
+load('web/locales/experiments/common.js');
 const built = [];
 for (const e of EXP.list) load(`web/locales/experiments/${e.file}.js`);
 load('web/minigames/core.js');

@@ -1220,6 +1220,7 @@
           replaced: 'Este puesto se abrió en otra pestaña.',
           'too-many-rooms': 'El servidor de salas está lleno. Inténtalo más tarde.',
           kicked: 'El anfitrión te expulsó de la sala.',
+          'host-offline': 'El anfitrión está temporalmente desconectado — esperando reconexión.',
           generic: 'Error de sala: {{code}}.',
         },
       },

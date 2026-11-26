@@ -1220,6 +1220,7 @@
           replaced: 'Esta vaga foi aberta em outra aba.',
           'too-many-rooms': 'O servidor de salas está lotado. Tente mais tarde.',
           kicked: 'O anfitrião removeu você da sala.',
+          'host-offline': 'O anfitrião está temporariamente offline — aguardando reconexão.',
           generic: 'Erro de sala: {{code}}.',
         },
       },

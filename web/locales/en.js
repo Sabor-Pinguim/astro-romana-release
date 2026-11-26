@@ -1220,6 +1220,7 @@
           replaced: 'This seat was opened in another tab.',
           'too-many-rooms': 'The room server is full. Try again later.',
           kicked: 'The host removed you from the room.',
+          'host-offline': 'The host is temporarily offline — waiting to reconnect.',
           generic: 'Room error: {{code}}.',
         },
       },

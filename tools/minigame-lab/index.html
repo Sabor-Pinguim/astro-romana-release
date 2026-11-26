@@ -81,7 +81,7 @@
   window.LAB = { state, ready: null, open, built };
 
   window.LAB.ready = (async () => {
-    await loadScript(WEB + 'locales/experiments/_common.js');
+    await loadScript(WEB + 'locales/experiments/common.js');
     for (const e of EXP.list) await loadScript(`${WEB}locales/experiments/${e.file}.js`);
     await loadScript(WEB + 'i18n.js');
     await loadScript(WEB + 'units.js');

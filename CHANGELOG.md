@@ -11,6 +11,13 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.6] - 2026-11-26
+
+### Fixed
+- Pause host cockpit, Mars-orbit, and surface timers/bots while the host WebSocket is disconnected.
+- Rename `web/locales/experiments/_common.js` to `common.js` and add `.nojekyll` so GitHub Pages does not 404 it and leak raw `experiments.orbit.*` keys.
+- Localize the `host-offline` room error message in English, Portuguese, and Spanish.
+
 ## [1.10.5] - 2026-11-26
 
 ### Added

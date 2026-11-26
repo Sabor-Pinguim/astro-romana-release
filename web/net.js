@@ -105,6 +105,7 @@
     'connection-lost': 'Lost the connection to the room server.', 'host-left': 'The host left: the room closed.',
     expired: 'The room expired.', server: 'The room server restarted.', replaced: 'This seat was opened in another tab.',
     'too-many-rooms': 'The room server is full. Try again later.', kicked: 'The host removed you from the room.',
+    'host-offline': 'The host is temporarily offline — waiting to reconnect.',
   };
   const listeners = new Map();
   const fire = (type, ...args) => (listeners.get(type) || []).forEach(fn => { try { fn(...args); } catch (err) { console.error('ASTRO_NET listener failed:', err); } });
