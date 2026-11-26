@@ -1,5 +1,7 @@
 // Astro Romana room server: HTTP (/health, the test page and the JSON API) and the WebSocket relay at /ws.
 // Run: npm start (PORT, ALLOWED_ORIGINS, DB_PATH and the limits in config.mjs come from the environment).
+// Abuse limits (config.mjs): message size, nesting and rate per socket; connections and rooms per client IP; a
+// byte budget for what each room keeps; a slow reader is dropped. One bad message closes only its own socket.
 //
 // HTTP API (CORS follows ALLOWED_ORIGINS):
 //   GET  /api/rooms             public rooms that are still open to new players
@@ -49,6 +51,8 @@ export async function startServer(config = loadConfig(), { log = console.log, on
   const started = Date.now();
   const allowed = new Set(config.ALLOWED_ORIGINS);
   const posts = new Map(); // ip → { count, resetAt } for POST rate limiting
+  const proxies = new Set(config.TRUSTED_PROXIES);
+  const ipOf = req => clientIp(req, proxies);
 
   // The admin token, kept only as a hash and compared in constant time.
   const sha = text => createHash('sha256').update(String(text)).digest();
@@ -73,7 +77,7 @@ export async function startServer(config = loadConfig(), { log = console.log, on
   }
   const originAllowed = req => !allowed.size || req.headers.origin === undefined || allowed.has(req.headers.origin);
   function rateLimited(req) {
-    const ip = req.socket.remoteAddress || '?', now = Date.now();
+    const ip = ipOf(req), now = Date.now();
     let entry = posts.get(ip);
     if (!entry || now >= entry.resetAt) { entry = { count: 0, resetAt: now + 60_000 }; posts.set(ip, entry); }
     return ++entry.count > config.API_RATE_PER_MIN;
@@ -169,6 +173,8 @@ export async function startServer(config = loadConfig(), { log = console.log, on
   // maxPayload is a hard stop (the socket closes); messages above MAX_MESSAGE_BYTES but below it get a
   // polite `too-large` error instead.
   const wss = new WebSocketServer({ noServer: true, maxPayload: config.MAX_MESSAGE_BYTES * 4 });
+  const connsByIp = new Map(); // ip → open sockets (counted from the upgrade until the socket closes)
+  let sockets = 0;
   http.on('upgrade', (req, socket, head) => {
     const path = new URL(req.url, 'http://localhost').pathname;
     const origin = req.headers.origin; // browsers always send it ("null" from file://); other clients may not
@@ -176,11 +182,45 @@ export async function startServer(config = loadConfig(), { log = console.log, on
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
       return;
     }
-    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+    const ip = ipOf(req), fromIp = connsByIp.get(ip) ?? 0, perIp = config.MAX_CONNECTIONS_PER_IP;
+    if (sockets >= config.MAX_CONNECTIONS || (perIp > 0 && fromIp >= perIp)) {
+      socket.end('HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n');
+      return;
+    }
+    sockets++;
+    connsByIp.set(ip, fromIp + 1);
+    socket.once('close', () => {
+      sockets--;
+      const left = (connsByIp.get(ip) ?? 1) - 1;
+      if (left > 0) connsByIp.set(ip, left); else connsByIp.delete(ip);
+    });
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req, ip));
   });
 
-  wss.on('connection', ws => {
-    const conn = { send: message => { if (ws.readyState === OPEN) ws.send(JSON.stringify(message)); } };
+  wss.on('connection', (ws, req, ip) => {
+    // Every send goes through here: a socket that cannot keep up (MAX_BUFFERED_BYTES queued) or fails is dropped
+    // alone. Its peer goes offline and may resume, like any dropped connection.
+    let dropped = false;
+    const drop = why => {
+      if (dropped) return;
+      dropped = true;
+      log(`ws ${ip}: dropped (${why})`);
+      ws.terminate();
+    };
+    const sendText = text => {
+      if (dropped || ws.readyState !== OPEN) return;
+      if (ws.bufferedAmount > config.MAX_BUFFERED_BYTES) return drop('slow reader');
+      try { ws.send(text); } catch (err) { drop(`send failed: ${err?.message}`); }
+    };
+    const conn = {
+      ip,
+      sendText,
+      send: message => {
+        let text;
+        try { text = JSON.stringify(message); } catch (err) { log(`ws ${ip}: could not serialize a ${message?.t} message: ${err?.message}`); return; }
+        sendText(text);
+      },
+    };
     const bucket = { tokens: config.RATE_BURST, at: Date.now(), warnedAt: 0 };
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
@@ -197,9 +237,17 @@ export async function startServer(config = loadConfig(), { log = console.log, on
       if (raw.length > config.MAX_MESSAGE_BYTES) return conn.send({ t: 'error', code: 'too-large' });
       let msg;
       try { msg = JSON.parse(raw); } catch { return conn.send({ t: 'error', code: 'bad-message' }); }
-      hub.handle(conn, msg);
+      if (tooDeep(msg, config.MAX_JSON_DEPTH)) return conn.send({ t: 'error', code: 'bad-message' });
+      // One message that makes the hub throw closes that socket only; the other rooms and players carry on.
+      try { hub.handle(conn, msg); }
+      catch (err) {
+        log(`ws ${ip}: a ${typeof msg?.t === 'string' ? msg.t.slice(0, 32) : '?'} message failed: ${err?.message}`);
+        if (!dropped) { dropped = true; ws.close(1011, 'server error'); }
+      }
     });
-    ws.on('close', () => hub.disconnect(conn));
+    ws.on('close', () => {
+      try { hub.disconnect(conn); } catch (err) { log(`ws ${ip}: disconnect failed: ${err?.message}`); }
+    });
     ws.on('error', () => {}); // 'close' follows
   });
 
@@ -212,7 +260,7 @@ export async function startServer(config = loadConfig(), { log = console.log, on
     }
   }, config.PING_INTERVAL_MS);
   const sweep = setInterval(() => {
-    hub.sweep();
+    try { hub.sweep(); } catch (err) { log(`sweep failed: ${err?.message}`); }
     const now = Date.now();
     for (const [ip, entry] of posts) if (now >= entry.resetAt) posts.delete(ip);
   }, config.SWEEP_INTERVAL_MS);
@@ -236,6 +284,29 @@ export async function startServer(config = loadConfig(), { log = console.log, on
 }
 
 const isInt = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
+
+// The client's address. Behind Caddy on the same machine every connection comes from loopback, so there the
+// rightmost X-Forwarded-For entry (the address Caddy saw) is the client; from any other peer the header is ignored.
+// `trusted`: the TRUSTED_PROXIES set ('*' = every peer).
+export function clientIp(req, trusted) {
+  const peer = req.socket?.remoteAddress || '?';
+  if (!trusted.has('*') && !trusted.has(peer)) return peer;
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  return forwarded.at(-1)?.slice(0, 64) || peer;
+}
+
+// True when a parsed JSON value nests objects/arrays deeper than `max`. Iterative: a 6000-level message must not
+// overflow the stack here (nor later in JSON.stringify, which is why it is refused).
+export function tooDeep(value, max) {
+  const stack = [[value, 1]];
+  while (stack.length) {
+    const [v, depth] = stack.pop();
+    if (v === null || typeof v !== 'object') continue;
+    if (depth > max) return true;
+    for (const child of Object.values(v)) if (child !== null && typeof child === 'object') stack.push([child, depth + 1]);
+  }
+  return false;
+}
 
 // A submitted mission, cleaned up; null when anything is out of range.
 export function validateMission(body) {

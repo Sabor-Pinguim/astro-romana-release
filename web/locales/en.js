@@ -45,7 +45,6 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.9.19',
         contact: 'Contact us',
         emailCopied: 'Email copied: {{email}}',
         quitEyebrow: 'Quit mission',

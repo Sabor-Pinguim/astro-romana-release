@@ -310,3 +310,66 @@ test('Leaderboard keeps the drawn experiments, run seed and score multiplier; re
   assert.equal(entries[1].experiments, null);
   assert.equal(entries[1].scoreMultiplier, null);
 }));
+
+test('one client cannot crash the server: prototype names and deep nesting get bad-message (NET-01, NET-02)', () => withServer({}, async (server, client) => {
+  const c = raw(server.url);
+  await c.open();
+  c.send({ v: 1, t: 'create' });
+  assert.equal((await c.next()).t, 'created');
+  for (const t of ['__proto__', 'constructor', 'toString']) {
+    c.send({ v: 1, t });
+    assert.deepEqual(await c.next(), { t: 'error', code: 'bad-message', ref: t });
+  }
+  const nest = n => '['.repeat(n) + ']'.repeat(n);
+  c.send(`{"v":1,"t":"pose","data":${nest(6000)}}`); // 12 KiB, under the size limit
+  assert.deepEqual(await c.next(), { t: 'error', code: 'bad-message' });
+  const d = raw(server.url);
+  await d.open();
+  d.send(`{"v":1,"t":"create","meta":{"a":${nest(6000)}}}`);
+  assert.deepEqual(await d.next(), { t: 'error', code: 'bad-message' });
+  d.send(`{"v":1,"t":"create","meta":{"a":${nest(31)}}}`); // message + meta + 31 arrays = 33 levels
+  assert.deepEqual(await d.next(), { t: 'error', code: 'bad-message' });
+  d.send(`{"v":1,"t":"create","meta":{"a":${nest(30)}}}`); // 32 levels (MAX_JSON_DEPTH): allowed
+  assert.equal((await d.next()).t, 'created');
+  // Still serving: a normal room works and /health answers.
+  const host = client(), guest = client();
+  const created = await host.create();
+  await guest.join(created.code);
+  assert.equal((await (await fetch(`${server.http}/health`)).json()).ok, true);
+  c.ws.close(); d.ws.close();
+}));
+
+test('per-IP limits behind the proxy: connections and open rooms (NET-04)', () => withServer({ MAX_CONNECTIONS_PER_IP: 2, MAX_ROOMS_PER_IP: 1 }, async server => {
+  const from = ip => raw(server.url, { 'X-Forwarded-For': `198.51.100.99, ${ip}` }); // the rightmost entry counts
+  const a1 = from('203.0.113.7'), a2 = from('203.0.113.7');
+  await a1.open(); await a2.open();
+  await assert.rejects(from('203.0.113.7').open(), /429/);
+  const b = from('203.0.113.8');
+  await b.open(); // another IP is not affected
+  a1.send({ v: 1, t: 'create' });
+  assert.equal((await a1.next()).t, 'created');
+  a2.send({ v: 1, t: 'create' });
+  assert.deepEqual(await a2.next(), { t: 'error', code: 'too-many-rooms', ref: 'create' });
+  b.send({ v: 1, t: 'create' });
+  assert.equal((await b.next()).t, 'created');
+  const closed = new Promise(resolve => a2.ws.once('close', resolve));
+  a2.ws.close();
+  await closed;
+  await new Promise(resolve => setTimeout(resolve, 50)); // the server side of the socket closes too
+  const a3 = from('203.0.113.7');
+  await a3.open(); // a freed connection slot can be used again
+  for (const c of [a1, a3, b]) c.ws.close();
+}));
+
+test('client IP and nesting helpers', async () => {
+  const { clientIp, tooDeep } = await import('../server.mjs');
+  const req = (remoteAddress, xff) => ({ socket: { remoteAddress }, headers: xff ? { 'x-forwarded-for': xff } : {} });
+  const proxies = new Set(loadConfig({}).TRUSTED_PROXIES), any = new Set(['*']);
+  assert.equal(clientIp(req('198.51.100.7', '1.2.3.4'), proxies), '198.51.100.7'); // not from the proxy: the header is ignored
+  assert.equal(clientIp(req('127.0.0.1', '1.2.3.4, 5.6.7.8'), proxies), '5.6.7.8');
+  assert.equal(clientIp(req('::ffff:127.0.0.1'), proxies), '::ffff:127.0.0.1');
+  assert.equal(clientIp(req('169.254.8.1', '203.0.113.9'), any), '203.0.113.9'); // Cloud Run: TRUSTED_PROXIES=*
+  assert.equal(tooDeep({ a: [{ b: 1 }] }, 3), false);
+  assert.equal(tooDeep({ a: [{ b: {} }] }, 3), true);
+  assert.equal(tooDeep(JSON.parse('['.repeat(10000) + ']'.repeat(10000)), 32), true);
+});

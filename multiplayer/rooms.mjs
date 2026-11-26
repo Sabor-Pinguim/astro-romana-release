@@ -4,6 +4,11 @@
 // The hub knows rooms, seats, presence and the room phase. It never reads game data: `state`, `event`, `act`,
 // `pose` and `send` payloads are relayed as they are. It stamps the sender ({id, seat}) on what it relays, so a
 // host can check who may do an action without trusting the client.
+//
+// Memory: what a room keeps (the last `state` of each key, the last pose of each peer) is kept as JSON text, which
+// costs what the client sent; parsed objects can take 20× more. The server checks size and nesting before `handle`.
+// A connection may carry `ip` (the server sets it) for the per-IP room limits, and `sendText(json)` so a broadcast
+// is serialized once.
 
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 
@@ -27,6 +32,8 @@ export class RoomHub {
     this.log = log;
     this.rooms = new Map(); // code → room
     this.links = new Map(); // connection → { room, peer }
+    this.roomsByIp = new Map(); // ip → rooms created from it that are still open
+    this.createsByIp = new Map(); // ip → { count, resetAt }: rooms created in the current minute
   }
 
   stats() {
@@ -44,8 +51,9 @@ export class RoomHub {
       if (link) return fail(conn, 'already-in-room', t);
       return this[`on_${t}`](conn, msg);
     }
-    const handler = IN_ROOM[t];
-    if (!handler) return fail(conn, 'bad-message', t);
+    // Own handlers only: `__proto__`, `constructor` or `toString` must not reach Object.prototype.
+    const handler = Object.hasOwn(IN_ROOM, t) ? IN_ROOM[t] : null;
+    if (!handler) return fail(conn, 'bad-message', t.slice(0, 32));
     if (!link) return fail(conn, 'not-in-room', t);
     return handler.call(this, link.room, link.peer, msg, conn);
   }
@@ -72,6 +80,7 @@ export class RoomHub {
         }
       }
     }
+    for (const [ip, entry] of this.createsByIp) if (now >= entry.resetAt) this.createsByIp.delete(ip);
   }
 
   closeAll(reason) {
@@ -83,6 +92,12 @@ export class RoomHub {
   on_create(conn, msg) {
     const c = this.config;
     if (this.rooms.size >= c.MAX_ROOMS) return fail(conn, 'too-many-rooms', 'create');
+    // Per IP: rooms still open and rooms created this minute. Same code as a full server, which the game shows.
+    const ip = conn.ip ?? null, now = this.now();
+    let creates = ip ? this.createsByIp.get(ip) : null;
+    if (ip && (!creates || now >= creates.resetAt)) this.createsByIp.set(ip, creates = { count: 0, resetAt: now + 60_000 });
+    const over = (n, max) => max > 0 && n >= max; // 0 = no limit
+    if (ip && (over(this.roomsByIp.get(ip) ?? 0, c.MAX_ROOMS_PER_IP) || over(creates.count, c.ROOM_CREATES_PER_IP_PER_MIN))) return fail(conn, 'too-many-rooms', 'create');
     const seats = msg.seats ?? c.DEFAULT_SEATS, joinable = msg.joinable ?? c.DEFAULT_JOINABLE, phase = msg.phase ?? c.DEFAULT_PHASE;
     if (!isNameList(seats, c.MAX_PEERS)) return fail(conn, 'bad-seat', 'create');
     if (!isNameList(joinable, c.MAX_PHASES) || !isName(phase)) return fail(conn, 'bad-message', 'create');
@@ -93,15 +108,19 @@ export class RoomHub {
     if (msg.password != null && typeof msg.password !== 'string') return fail(conn, 'bad-message', 'create');
     const code = this.newCode(), hostName = sanitizeText(meta?.name, 20);
     const room = {
-      code, createdAt: this.now(), seats: [...seats], joinable: [...joinable], phase,
+      code, createdAt: now, ip, seats: [...seats], joinable: [...joinable], phase,
       name: sanitizeText(msg.name, c.MAX_ROOM_NAME_LEN) || (hostName ? `${hostName}'s Crew` : `Mission ${code}`),
       isPrivate: msg.isPrivate === true,
       passwordHash: msg.password ? hashPassword(msg.password.slice(0, c.MAX_PASSWORD_LEN)) : null,
-      hostId: null, peers: new Map(), state: new Map(), poses: new Map(),
+      hostId: null, peers: new Map(),
+      state: new Map(), stateBytes: 0, // key → JSON text
+      poses: new Map(), // peer id → JSON text
+      setup: null, // { site, difficulty } from the `setup` state, for the room browser
     };
     const host = this.addPeer(room, conn, seat, meta);
     room.hostId = host.id;
     this.rooms.set(room.code, room);
+    if (ip) { creates.count++; this.roomsByIp.set(ip, (this.roomsByIp.get(ip) ?? 0) + 1); }
     this.log(`room ${room.code} created (${this.rooms.size} open)`);
     conn.send(this.welcome('created', room, host));
   }
@@ -176,6 +195,10 @@ export class RoomHub {
       peer.conn.send({ t: 'closed', reason });
     }
     this.rooms.delete(room.code);
+    if (room.ip) {
+      const left = (this.roomsByIp.get(room.ip) ?? 1) - 1;
+      if (left > 0) this.roomsByIp.set(room.ip, left); else this.roomsByIp.delete(room.ip);
+    }
     this.log(`room ${room.code} closed: ${reason} (${this.rooms.size} open)`);
   }
 
@@ -200,11 +223,11 @@ export class RoomHub {
   }
 
   summary(room) {
-    const setup = room.state.get('setup'), host = room.peers.get(room.hostId);
+    const host = room.peers.get(room.hostId);
     return {
       code: room.code, name: room.name, hostName: sanitizeText(host?.meta?.name, 20),
       players: room.peers.size, maxPlayers: room.seats.length, phase: room.phase,
-      site: typeof setup?.site === 'string' ? setup.site : null, difficulty: typeof setup?.difficulty === 'string' ? setup.difficulty : null,
+      site: room.setup?.site ?? null, difficulty: room.setup?.difficulty ?? null,
       hasPassword: !!room.passwordHash, createdAt: room.createdAt,
     };
   }
@@ -227,8 +250,9 @@ export class RoomHub {
       roomName: room.name, isPrivate: room.isPrivate, hasPassword: !!room.passwordHash,
       host: room.hostId, seats: room.seats, joinable: room.joinable, phase: room.phase,
       peers: this.peerList(room),
-      state: Object.fromEntries(room.state),
-      poses: [...room.poses].filter(([id]) => id !== peer.id).map(([id, data]) => ({ from: stamp(room.peers.get(id)), data })),
+      // Parsed only for this message: the room keeps the text.
+      state: Object.fromEntries([...room.state].map(([key, text]) => [key, JSON.parse(text)])),
+      poses: [...room.poses].filter(([id]) => id !== peer.id).map(([id, text]) => ({ from: stamp(room.peers.get(id)), data: JSON.parse(text) })),
     };
   }
 
@@ -236,8 +260,14 @@ export class RoomHub {
     this.sendTo(room, p => p !== except, { t: 'peers', host: room.hostId, seats: room.seats, peers: this.peerList(room) });
   }
 
+  // Serialized once for every connection that takes text (the server's); the tests' connections take objects.
   sendTo(room, filter, message) {
-    for (const peer of room.peers.values()) if (peer.conn && filter(peer)) peer.conn.send(message);
+    let text = null;
+    for (const peer of room.peers.values()) {
+      if (!peer.conn || !filter(peer)) continue;
+      if (peer.conn.sendText) peer.conn.sendText(text ??= JSON.stringify(message));
+      else peer.conn.send(message);
+    }
   }
 }
 
@@ -286,10 +316,22 @@ const IN_ROOM = {
   // Host → guests. The last value of each key is kept and handed to whoever joins or resumes; null deletes it.
   state(room, peer, msg, conn) {
     if (peer.id !== room.hostId) return fail(conn, 'not-host', 'state');
-    if (!isName(msg.key) || !('data' in msg)) return fail(conn, 'bad-message', 'state');
-    if (msg.data === null) room.state.delete(msg.key);
-    else if (!room.state.has(msg.key) && room.state.size >= this.config.MAX_STATE_KEYS) return fail(conn, 'too-many-keys', 'state');
-    else room.state.set(msg.key, msg.data);
+    if (!isName(msg.key) || msg.data === undefined) return fail(conn, 'bad-message', 'state');
+    const old = room.state.get(msg.key);
+    if (msg.data === null) {
+      room.state.delete(msg.key);
+      room.stateBytes -= old?.length ?? 0;
+    } else {
+      if (old === undefined && room.state.size >= this.config.MAX_STATE_KEYS) return fail(conn, 'too-many-keys', 'state');
+      const text = JSON.stringify(msg.data), bytes = room.stateBytes - (old?.length ?? 0) + text.length;
+      if (bytes > this.config.MAX_ROOM_STATE_BYTES) return fail(conn, 'too-large', 'state');
+      room.state.set(msg.key, text);
+      room.stateBytes = bytes;
+    }
+    if (msg.key === 'setup') {
+      const s = msg.data, str = v => (typeof v === 'string' ? v.slice(0, 32) : null);
+      room.setup = isPlainObject(s) ? { site: str(s.site), difficulty: str(s.difficulty) } : null;
+    }
     this.sendTo(room, p => p !== peer, { t: 'state', key: msg.key, data: msg.data });
   },
 
@@ -309,7 +351,7 @@ const IN_ROOM = {
 
   // Anyone → the others. The last pose of each peer is kept for whoever joins or resumes.
   pose(room, peer, msg) {
-    room.poses.set(peer.id, msg.data);
+    room.poses.set(peer.id, JSON.stringify(msg.data ?? null));
     this.sendTo(room, p => p !== peer, { t: 'pose', from: stamp(peer), data: msg.data });
   },
 

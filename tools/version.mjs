@@ -23,12 +23,13 @@ const npmPlaces = dir => [
   [`${dir}package-lock.json`, `^( {2}"version":\\s*")${V}(")`, 'm'], // the package itself
   [`${dir}package-lock.json`, `(\\n {4}"":\\s*\\{\\s*"name":\\s*"[^"]*",\\s*"version":\\s*")${V}(")`, ''], // its packages[""] entry
 ];
+// The game: package.json and its lock, plus web/version.js, which the page reads (the menu label). Keep it to these
+// small files: a version inside index.html or the locales made every pair of parallel commits collide there.
 const GAME = {
   name: 'version',
   places: [
     ...npmPlaces(''),
-    ['index.html', `(data-i18n="menu\\.version">v)${V}(<)`, ''],
-    ...['en', 'pt', 'es'].map(lang => [`web/locales/${lang}.js`, `(\\bversion:\\s*'v)${V}(')`, '']),
+    ['web/version.js', `^(window\\.ASTRO_VERSION\\s*=\\s*')${V}(')`, 'm'],
   ],
 };
 const SERVER = { name: 'room server version', places: npmPlaces('multiplayer/') };

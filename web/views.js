@@ -979,9 +979,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       for (const [x, z] of at) { const e = await loadGLB(parts[r.booster.engine].file); fitWidth(e, w); e.position.set(x, engineY, z); g.add(e); }
     } else { const m = mountPoint(.24, { module, tab: 'engine' }); m.position.y = engineY - .03; g.add(m); }
     if (r.booster.tank && parts[r.booster.tank]?.file) {
-      const t = await loadGLB(parts[r.booster.tank].file), size = new THREE.Box3().setFromObject(t).getSize(new THREE.Vector3());
+      const tank = await loadGLB(parts[r.booster.tank].file), size = new THREE.Box3().setFromObject(tank).getSize(new THREE.Vector3());
       const s = .96 / Math.max(size.x, size.z), h = size.y * s, capped = softCap(h);
-      t.scale.set(s, s * capped / h, s); t.position.y = tankY; g.add(t);
+      tank.scale.set(s, s * capped / h, s); tank.position.y = tankY; g.add(tank);
       top = tankY + capped;
     } else { const m = mountPoint(.32, { module, tab: 'tank' }); m.position.y = tankY + .02; g.add(m); }
     g.userData.top = top;
@@ -1113,9 +1113,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function frame(now) {
     requestAnimationFrame(frame);
     if (!isActive('planner') || !view.width || !layout.length) return;
-    const t = reduce ? 0 : now / 1000;
-    stack.rotation.y = Math.sin(t * .35) * .75; // swing, but keep the open side of the cutaways in view
-    stack.traverse(o => { if (o.userData.pulse) o.scale.setScalar(1 + Math.sin(t * 4) * .12); });
+    const time = reduce ? 0 : now / 1000;
+    stack.rotation.y = Math.sin(time * .35) * .75; // swing, but keep the open side of the cutaways in view
+    stack.traverse(o => { if (o.userData.pulse) o.scale.setScalar(1 + Math.sin(time * 4) * .12); });
     const focused = layout.find(item => item.key === focusKey);
     const targetCenter = focused ? new THREE.Vector3(0, focused.mid, 0) : center;
     const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
@@ -1587,34 +1587,34 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   }
   function setMode(mode) { s.mode = mode; applyMode(); }
 
-  function setTerrain(t) {
-    const { info, hf } = t;
+  function setTerrain(terrain) {
+    const { info, hf } = terrain;
     if (world.terrain) world.scene.remove(world.terrain);
-    world.terrain = t.scene; world.hf = hf; world.scene.add(t.scene);
+    world.terrain = terrain.scene; world.hf = hf; world.scene.add(terrain.scene);
     const az = info.sun.azimuthDeg * Math.PI / 180, el = info.sun.elevationDeg * Math.PI / 180; // sun of the photo (HiRISE label)
     world.sunDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
     world.skirt.position.y = info.elevation.minM - info.elevation.centerM - .4;
     world.skirt.material.color.setRGB(info.tint[0] * .2, info.tint[1] * .2, info.tint[2] * .2);
     // With a horizon ring the real land continues past the edge: no skirt, haze out to the ring's far edge.
-    const reach = t.ring ? info.horizon.radiusM : 0;
-    world.skirt.visible = !t.ring;
+    const reach = terrain.ring ? info.horizon.radiusM : 0;
+    world.skirt.visible = !terrain.ring;
     const haze = world.scene.fog.color;
-    world.scene.fog = t.ring ? new THREE.FogExp2(haze, Math.sqrt(-Math.log(1 - HAZE_AT_EDGE)) / reach) : new THREE.Fog(haze, ...EDGE_FOG);
-    world.camera.far = t.ring ? reach * 1.05 : NO_RING_FAR; world.camera.updateProjectionMatrix();
+    world.scene.fog = terrain.ring ? new THREE.FogExp2(haze, Math.sqrt(-Math.log(1 - HAZE_AT_EDGE)) / reach) : new THREE.Fog(haze, ...EDGE_FOG);
+    world.camera.far = terrain.ring ? reach * 1.05 : NO_RING_FAR; world.camera.updateProjectionMatrix();
   }
 
   // The spots come from a seed (the host's, in a room), so every screen puts the blocks in the same places.
-  const seeded = seed => () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const seeded = seed => () => { seed = (seed + 0x6D2B79F5) | 0; let mix = Math.imul(seed ^ (seed >>> 15), 1 | seed); mix = (mix + Math.imul(mix ^ (mix >>> 7), 61 | mix)) ^ mix; return ((mix ^ (mix >>> 14)) >>> 0) / 4294967296; };
   function placeBlocks(seed) {
     const { hf, scene } = world, tags = $s('surface-tags'), spots = [], lim = hf.half - 24, rand = seeded(seed ?? Math.floor(Math.random() * 2 ** 31));
     for (const b of world.blocks) scene.remove(b);
     tags.innerHTML = ''; world.blocks = []; world.colliders = [{ x: 0, z: 0, r: 2.9 }];
     for (const exp of tasks()) {
       let spot = null;
-      for (let t = 0; t < 300 && !spot; t++) {
+      for (let attempt = 0; attempt < 300 && !spot; attempt++) {
         const r = SPOT_MIN + rand() * (SPOT_MAX - SPOT_MIN), a = rand() * Math.PI * 2, x = Math.sin(a) * r, z = Math.cos(a) * r;
         const ok = Math.abs(x) < lim && Math.abs(z) < lim && hf.slope(x, z) < .2 && spots.every(p => Math.hypot(p.x - x, p.z - z) > SPOT_GAP);
-        if (ok || t === 299) spot = { x, z };
+        if (ok || attempt === 299) spot = { x, z };
       }
       spots.push(spot);
       const owner = ui.crew.find(c => c.id === exp.crew), block = makeBlock(exp, owner.color);
@@ -2139,12 +2139,12 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   // Glide toward the last pose; a jump of more than SNAP_M (a teleport) lands at once.
   function followRemote(o, dt) {
     if (!o.wasRemote) { o.wasRemote = true; o.net = null; } // just handed to another screen: wait for its poses
-    const t = o.net;
-    if (t) {
-      const far = Math.hypot(t.x - o.pos.x, t.z - o.pos.z) > SNAP_M, f = far ? 1 : 1 - Math.exp(-dt * FOLLOW_RATE);
-      o.pos.x += (t.x - o.pos.x) * f; o.pos.y += (t.y - o.pos.y) * f; o.pos.z += (t.z - o.pos.z) * f;
-      o.bodyYaw = far ? t.yaw : stepYaw(o.bodyYaw, t.yaw, dt * 10);
-      const anim = ['idle', 'walk', 'wave', 'salute', 'action'].includes(t.anim) ? t.anim : 'idle';
+    const target = o.net;
+    if (target) {
+      const far = Math.hypot(target.x - o.pos.x, target.z - o.pos.z) > SNAP_M, f = far ? 1 : 1 - Math.exp(-dt * FOLLOW_RATE);
+      o.pos.x += (target.x - o.pos.x) * f; o.pos.y += (target.y - o.pos.y) * f; o.pos.z += (target.z - o.pos.z) * f;
+      o.bodyYaw = far ? target.yaw : stepYaw(o.bodyYaw, target.yaw, dt * 10);
+      const anim = ['idle', 'walk', 'wave', 'salute', 'action'].includes(target.anim) ? target.anim : 'idle';
       if (anim !== o.ai.state) {
         if (anim === 'wave') { o.action.stop(); o.salute.stop(); o.wave.reset().play(); } else o.wave.stop();
         if (anim === 'salute') { o.action.stop(); o.wave.stop(); o.salute.reset().play(); } else o.salute.stop();
@@ -2158,7 +2158,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     if (o.ai.state !== 'action' && o.actW < .02) { o.action.stop(); o.actW = 0; }
     o.walk.setEffectiveWeight(o.walkW * (1 - o.actW) * rest); o.idle.setEffectiveWeight((1 - o.walkW) * (1 - o.actW) * rest);
     o.action.setEffectiveWeight(o.actW * rest); o.wave.setEffectiveWeight(waveW); o.salute.setEffectiveWeight(saluteW);
-    o.walk.timeScale = clamp((t?.spd || STRIDE) / STRIDE, .6, 2.6);
+    o.walk.timeScale = clamp((target?.spd || STRIDE) / STRIDE, .6, 2.6);
   }
   const r2 = v => Math.round(v * 100) / 100;
   let poseClock = 0, poseText = '', poseSentAt = 0;

@@ -24,7 +24,7 @@ Four quiet sols (1 to 5 May 2024) compressed into 40 s, that is, one sol every 1
 
 ### Solar storm: `rad_storm_2024_05_20.wav` (32 s, plays once)
 
-Forty-eight real hours (20 and 21 May 2024) in 32 s, that is, 1 s = 1.5 h. It is the largest radiation event Curiosity has recorded: the dose rose ~79-fold in under an hour.
+Forty-eight real hours (20 and 21 May 2024) in 32 s, that is, 1 s = 1.5 h. It is the largest radiation event Curiosity has recorded: the dose rose ~79-fold in a little over an hour (~70 min from the last normal reading to the peak).
 
 | Data | Sound |
 |---|---|
@@ -58,9 +58,9 @@ The game fires the clicks:
 
 ## "Real fact" card (ready to use)
 
-> "On 20 May 2024, a solar storm made the radiation measured by the Curiosity rover, on the surface of Mars, rise about 79-fold in under an hour."
+> "On 20 May 2024, a solar storm made the radiation measured by the Curiosity rover, on the surface of Mars, rise about 79-fold in a little over an hour."
 
-**Source:** RAD detector, `MSL_RAD_OBS-L2` data (NASA SPDF). Calculated in [references/datasets/msl-rad/](../references/datasets/msl-rad/README.md): from 92.8 to 7,295.7 µGy/day; last normal reading at 05:22 UTC and peak at 06:15 UTC.
+**Source:** RAD detector, `MSL_RAD_OBS-L2` data (NASA SPDF). Calculated in [references/datasets/msl-rad/](../references/datasets/msl-rad/README.md): from a median of 92.8 µGy/day before the storm to 7,295.7 µGy/day at the peak (06:15 UTC); the last normal reading is at 05:05 UTC, ~70 min before the peak. The 05:22 UTC reading is already far above normal (the storm had begun), so it is not the "last normal reading".
 
 The press figures ("8,100 micrograys") do not match the data. Check the ⚠ marks in the README before using them.
 
@@ -68,6 +68,6 @@ The press figures ("8,100 micrograys") do not match the data. Check the ⚠ mark
 
 ## What is missing
 
-- **Game integration:** `index.html` plays the ambience and the clicks on the surface (`radAudio`), and the storm once at the solar storm event on the way to Mars (`radAudio.storm`, [rocket-consequences.md](rocket-consequences.md)). The dose meter is not synced to `stems[1].envelope` yet.
+- **Game integration:** `web/app.js` plays the ambience and the Geiger clicks on the surface (`radAudio`; the click numbers are copied from the manifest into `GEIGER`, because `file://` cannot fetch it, and the surface uses the quiet dose, ~0.5 clicks/s), and the storm once at the solar storm event on the way to Mars (`radAudio.storm`, [rocket-consequences.md](rocket-consequences.md)). The dose meter is not synced to `stems[1].envelope` yet.
 - **Trip to Mars:** CDAWeb has no RAD data from the cruise (2011–2012). If the game wants a cruise sound, the data has to come from the PDS archive.
 - **Listen and tune:** validation checks format, volume and the loop seam, not whether it sounds good. The volumes and the key are `game-balance` and can change freely.

@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { SITES, STAC_API } from '../terrain/sites.mjs';
-import { borderPoints, fillHoles, openCog, pickLevel, readRegion, sampleGrid } from '../terrain/lib/raster.mjs';
+import { borderPoints, fillHoles, openCog, pickLevel, readWindow, regionFromWindow, sampleGrid } from '../terrain/lib/raster.mjs';
 import { createSiteFrame, projectionFromProjjson } from '../terrain/lib/mars.mjs';
 import { encodePng } from '../terrain/lib/png.mjs';
 
@@ -35,7 +35,7 @@ async function photo(site) {
   if (!ortho) throw new Error(`${site.id}: orthoimage ${site.ortho} not found`);
   const cog = await openCog(ortho.href);
   const texelM = PHOTO.sizeM / PHOTO.pixels;
-  const region = await readRegion(cog, pickLevel(cog, texelM / 2), borderPoints(frame, PHOTO.sizeM));
+  const region = regionFromWindow(await readWindow(cog, pickLevel(cog, texelM / 2), borderPoints(frame, PHOTO.sizeM)));
   const grid = sampleGrid(region, frame, PHOTO.pixels, PHOTO.sizeM, true); // row 0 = north edge
   const holes = grid.invalid / grid.values.length;
   if (holes > PHOTO.maxHoleFraction) throw new Error(`${site.id}: ${(holes * 100).toFixed(1)}% of the photo has no data`);

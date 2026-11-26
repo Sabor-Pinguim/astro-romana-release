@@ -3,7 +3,8 @@
 // when to send the crew to the shelter (too early loses work, too late adds dose) and when it is safe enough to go
 // back out and finish the tasks before the sol ends. The storm replays the real 20 May 2024 event measured by RAD.
 // Real data (references/datasets/msl-rad/): detector B dose rate, quiet median 92.8 µGy/day before the storm, peak
-// 7,295.7 µGy/day; the rise from the last normal reading to the peak took 53 min. RAD: 1.56 kg, 4.2 W (PH1).
+// 7,295.7 µGy/day; the rise from the last normal reading (05:05 UTC) to the peak (06:15 UTC) took about 70 min.
+// RAD: 1.56 kg, 4.2 W (PH1).
 // Each run draws the alert, the forecast window, the onset inside it, the tasks and, with modifiers, a second wave
 // or a late alert. Stars compare the player with the best plan for that layout (an exact search over the timeline).
 (() => {

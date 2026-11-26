@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T02:15:17.995Z",
+  "generatedAt": "2026-11-26T13:13:52.202Z",
   "generator": "tools/modeling/build-avatars.mjs",
   "conventions": {
     "units": "meters",
@@ -2303,7 +2303,7 @@
         ],
         "sources": {
           "massDryKg": "real/derived (references/experiments/mars-experiments.md EN3b/EN3c: 45 kg MMRTG + 26.5 kg Li-ion)",
-          "powerW": "real (references/experiments/mars-experiments.md EN3b/EN3c: 110 W continuous / 900 W peak buffer)",
+          "powerW": "game-balance ⚠ (continuous in the game; real MMRTG ~110 W continuous + Li-ion for ~900 W peaks, references/experiments/mars-experiments.md EN3b/EN3d; Kilopower 1–10 kW electric design, EN3c)",
           "costM": "game-balance (Tier 3 nuclear power & Li-ion peak buffer)"
         }
       },

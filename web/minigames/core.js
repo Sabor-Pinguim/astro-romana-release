@@ -60,7 +60,7 @@
       a: 1 / (i + 1),
     }));
     const norm = parts.reduce((s, x) => s + x.a, 0);
-    return t => (amp * parts.reduce((s, x) => s + x.a * Math.sin(2 * Math.PI * x.f * t + x.p), 0)) / norm;
+    return time => (amp * parts.reduce((s, x) => s + x.a * Math.sin(2 * Math.PI * x.f * time + x.p), 0)) / norm;
   }
 
   // 0/1 knapsack, exact: the best total value of items { size, value } within capacity. size is discretised in

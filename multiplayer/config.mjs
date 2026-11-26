@@ -20,9 +20,23 @@ const DEFAULTS = {
   MAX_PHASES: 32, // entries in a room's joinable list
   MAX_STATE_KEYS: 16, // cached `state` channels per room
   MAX_MESSAGE_BYTES: 16 * 1024,
+  MAX_JSON_DEPTH: 32, // nesting of objects/arrays in one message (game messages use under 8); deeper = bad-message
   MAX_META_BYTES: 512, // a peer's free-form meta (sent with every peer list)
+  // Cached `state` per room, as JSON text (the game keeps 4 keys of a few KiB). Above it a `state` gets too-large.
+  MAX_ROOM_STATE_BYTES: 128 * 1024,
+  MAX_BUFFERED_BYTES: 1024 * 1024, // unsent bytes queued for one socket; above it the socket is dropped (slow reader)
   RATE_PER_SEC: 60, // sustained messages per connection (poses ~10 Hz + flight state ~10 Hz fit easily)
   RATE_BURST: 120,
+
+  // Per client IP. Generous, because Space Apps local events put a whole room of players behind one school or
+  // venue NAT. 0 turns a per-IP limit off.
+  MAX_CONNECTIONS: 2500, // open WebSockets on the whole server (MAX_ROOMS × MAX_PEERS fits)
+  // Peers whose X-Forwarded-For names the client (its rightmost entry): Caddy on the same machine. '*' = any peer
+  // (Cloud Run, where Google's front end is the only way in).
+  TRUSTED_PROXIES: ['127.0.0.1', '::1', '::ffff:127.0.0.1'],
+  MAX_CONNECTIONS_PER_IP: 32,
+  MAX_ROOMS_PER_IP: 8, // rooms created from one IP that are still open (a dropped host's room counts during its grace)
+  ROOM_CREATES_PER_IP_PER_MIN: 12,
 
   RESUME_GRACE_MS: 30_000, // a dropped peer keeps its seat this long; a dropped host keeps the room this long
   ROOM_TTL_MS: 4 * 60 * 60 * 1000,
@@ -35,7 +49,7 @@ const DEFAULTS = {
   // Server leaderboard (SQLite file; ':memory:' in tests) and the HTTP API limits.
   DB_PATH: './data/astro.sqlite',
   MAX_API_BYTES: 8 * 1024,
-  API_RATE_PER_MIN: 30, // POSTs per IP per minute
+  API_RATE_PER_MIN: 30, // leaderboard POSTs per client IP per minute
   MAX_ROOM_NAME_LEN: 32,
   MAX_PASSWORD_LEN: 32,
 
