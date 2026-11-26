@@ -1179,6 +1179,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const shipTarget = new THREE.Vector3();
     let lastFrame = 0;
     const pilotView = () => {
+      if (state?.orbitalPreview === 'spectator') return false;
       const net = window.ASTRO_NET;
       return !net || net.mode === 'solo' || net.seat === 'helena';
     };

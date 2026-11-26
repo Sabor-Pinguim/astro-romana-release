@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.2] - 2026-11-26
+
+### Added
+- Add Dev Mode shortcuts for automatic docking, the manual emergency sequence, the six-direction controls, the live exterior view, and Mars arrival.
+
 ## [1.10.1] - 2026-11-26
 
 ### Changed

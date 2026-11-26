@@ -341,7 +341,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const actingCrew = () => (window.ASTRO_SIM?.flight?.active && window.ASTRO_SIM.cockpitCrew?.()) || null;
     const orbitalManual = f => {
       const net = window.ASTRO_NET;
-      return (!net || net.mode === 'solo' || net.seat === 'helena')
+      return f?.orbitalPreview !== 'spectator' && (!net || net.mode === 'solo' || net.seat === 'helena')
         && f?.step === 2 && f.emergencyStep === 2 && f.orbitalEmergency?.stage === 'control';
     };
     const viewCrew = () => {

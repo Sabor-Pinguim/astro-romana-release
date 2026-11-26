@@ -2244,7 +2244,7 @@
       };
     }
 
-    function startFlight({ preview = false } = {}) {
+    function startFlight({ preview = false, orbitalPreview = null } = {}) {
       flight.design = captureDesign();
       flight.missionId = 'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
       flightLog.length = 0; remoteInput.clear();
@@ -2288,7 +2288,10 @@
       flight.orbit = null;
       flight.cutscene = null;
       flight.descentHold = false;
-      flight.emergencyStep = pickEmergencyStep(flight.design);
+      flight.orbitalPreview = orbitalPreview;
+      flight.emergencyStep = orbitalPreview
+        ? (['manual', 'controls', 'spectator'].includes(orbitalPreview) ? 2 : null)
+        : pickEmergencyStep(flight.design);
       // The experiments of this run (docs/experiments-implementation.md §3): 8 drawn now, 1 orbit + 1 ground per
       // crew member, each revealed only when it comes into play (Mars orbit, descent, surface).
       state.run = window.ASTRO_RUN ? window.ASTRO_RUN.create({ difficulty: state.difficulty, ...runConsequences(flight.design) }) : null;
@@ -2305,7 +2308,12 @@
       lastCockpitGuideId = null;
       showScreen('cockpit');
       hideFlightCutscene();
-      if (flight.emergencyStep === 0) {
+      if (orbitalPreview === 'arrival') {
+        flight.step = 2;
+        flight.docked = true;
+        flight.refuelDone = refuelTarget();
+        startMarsArrivalCutscene();
+      } else if (flight.emergencyStep === 0) {
         renderFlightUI();
       } else if (!preview && abortBeforeOrbitalActivities()) {
         return;
@@ -2756,7 +2764,7 @@
         if (flight.emergencyStep === 2) {
           flight.portDock = { x: .45, y: -.3, z: PORT_DOCK.zStart, fuel: 100, status: 'approach' };
           flight.orbitalEmergency = {
-            stage: 'approach', elapsed: 0,
+            stage: ['controls', 'spectator'].includes(flight.orbitalPreview) ? 'control' : 'approach', elapsed: 0,
             reason: flight.design.marsOk ? 'highDemand' : 'shortfall',
           };
         }
@@ -3297,7 +3305,7 @@
       }
 
       const guideBtn = $('#cockpit-guide-toggle');
-      const guideId = state.screen === 'cockpit' && !orbitOn && !flight.cutscene && (!flight.orbitalEmergency || flight.orbitalEmergency.stage === 'control') && flight.step === flight.emergencyStep && (flight.active || guestFlight)
+      const guideId = state.screen === 'cockpit' && flight.orbitalPreview !== 'spectator' && !orbitOn && !flight.cutscene && (!flight.orbitalEmergency || flight.orbitalEmergency.stage === 'control') && flight.step === flight.emergencyStep && (flight.active || guestFlight)
         ? (['cockpit-ascent', 'cockpit-cabin-dock', 'cockpit-orbital-dock', 'cockpit-landing'][flight.step] || null)
         : null;
       if (guideBtn) guideBtn.hidden = !guideId;
@@ -4055,6 +4063,7 @@
         return seats[seats.length > 1 && flight.docked ? 1 : 0] || null;
       },
       jumpCockpit: step => { startFlight({ preview: true }); flight.cutscene = null; hideFlightCutscene(); if (step === 3) enterDescent(); else if (step > 0) setFlightStep(step); else { flight.step = 0; renderFlightUI(); } },
+      previewOrbital: mode => { if (net.mode === 'solo') startFlight({ preview: true, orbitalPreview: mode }); },
       // Dev Mode: straight to the Mars orbit experiments (after the refuelling step), with a fresh draw.
       jumpMarsOrbit: seed => { startFlight({ preview: true }); flight.cutscene = null; hideFlightCutscene(); if (Number.isFinite(seed) && RUN()) state.run = RUN().create({ seed, difficulty: state.difficulty, ...runConsequences(flight.design) }); setFlightStep(2); flight.docked = true; flight.refuelDone = refuelTarget(); startMarsOrbit(); },
       jumpResults: () => { flight.active = false; cancelAnimationFrame(flight.raf); if (!flight.design) flight.design = captureDesign(); surf.tasks = surf.tasks?.length ? surf.tasks : SURFACE_TASKS(); showResults(false); },
