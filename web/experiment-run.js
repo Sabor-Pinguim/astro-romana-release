@@ -44,7 +44,7 @@
       }
     }
     return { seed, level: EXP.levelOf(difficulty), experiments, results: {}, attempts: {},
-      consequences: { maxStars: Math.max(1, Math.min(3, maxStars)), dropped, irradiated: null } };
+      consequences: { maxStars: Math.max(1, Math.min(4, maxStars)), dropped, irradiated: null } };
   }
   const maxStarsOf = run => run?.consequences?.maxStars ?? 3;
   const ofPlace = (run, place) => (run?.experiments || []).map(EXP.byId).filter(e => e && (place === 'ground' ? e.place !== 'orbit' : e.place === place));
@@ -141,12 +141,14 @@
       onFinish(raw) {
         current = { ...current, finished: true };
         window.ASTRO_MINIGAME_GUIDE?.close('dialog');
-        // No antenna on board: the result keeps at most maxStars (the rest of the data never reaches home).
-        const cap = maxStarsOf(run), result = raw.stars > cap ? { ...raw, stars: cap } : raw;
+        // High-gain antenna on board (maxStars === 4): a 3-star result earns a 4th bonus star!
+        const cap = maxStarsOf(run);
+        const earned = cap >= 4 && raw.stars >= 3 ? 4 : Math.min(cap, raw.stars);
+        const result = earned !== raw.stars ? { ...raw, stars: earned } : raw;
         if (done) {
           const set = (sel, text) => { const node = done.querySelector(sel); if (node) node.textContent = text; };
           const starsNode = done.querySelector('[data-stars]');
-          if (starsNode) starsNode.innerHTML = starsHtml(result.stars);
+          if (starsNode) starsNode.innerHTML = starsHtml(result.stars, Math.max(3, cap));
           set('[data-line]', raw.stars > cap ? `${raw.summary} · ${t('experiments.common.partialData', { from: stars(raw.stars), to: stars(cap) })}` : raw.summary);
           set('[data-fact]', info.fact);
         }

@@ -60,7 +60,7 @@
   // Consequences of a badly built rocket (docs/rocket-consequences.md): the mission goes on, harder. All game-balance;
   // on Easy (no penalties) they stay warnings.
   const CONSEQUENCE = {
-    noDishMaxStars: 2, // no antenna: experiment results keep at most this many stars (the data comes home in part)
+    noDishMaxStars: 3, // without antenna: normal max 3★; with Oscar's telecom dish: unlocks 4★ bonus star
     budgetCut: 1, // over budget: surface experiments the program review cancels
     lowTwrRefuelExtra: 15, // low TWR: extra share (%) of the tank to refuel in orbit (gravity losses of the slow climb)
     pogo: { amp: 1.6, rate: 5.2, from: 0.5 }, // low TWR: pogo in the liftoff (degrees, rad/s, share of the climb it starts at)
@@ -1494,7 +1494,7 @@
   let launchReviewPages = [], launchReviewPage = 0;
   function showLaunchReviewRange(start, end) {
     const risks = $('#launch-summary .launch-risks');
-    const metrics = $$('#launch-metrics > div');
+    const metrics = $$('#launch-metrics .launch-bonus-item, #launch-metrics .launch-bonuses > p');
     const warnings = $$('.launch-risks > :not(h4)');
     [...metrics, ...warnings].forEach((item, i) => { item.hidden = i < start || i >= end; });
     $('#launch-metrics').hidden = start >= metrics.length;
@@ -1510,7 +1510,7 @@
   function paginateLaunchReview() {
     if (!$('#launch-dialog').open) return;
     const summary = $('#launch-summary'), pager = $('#launch-pager');
-    const count = $$('#launch-metrics > div, .launch-risks > :not(h4)').length;
+    const count = $$('#launch-metrics .launch-bonus-item, #launch-metrics .launch-bonuses > p, .launch-risks > :not(h4)').length;
     if (!count) return;
     const pageStart = launchReviewPages[launchReviewPage]?.[0] ?? 0;
     const fits = () => summary.scrollHeight <= summary.clientHeight + 1;
@@ -1569,9 +1569,6 @@
       else addWarning(text);
     }
     const inst=installedParts();
-    if (LV().penalties && !DISH_PARTS.some(id => inst.has(id))) {
-      addWarning(t('launch.risks.noDish', { max: CONSEQUENCE.noDishMaxStars }), 'cabin', 'oscar', '[data-part="cabin-scan-console"]');
-    }
     if (LV().penalties && !SHELTER_PARTS.some(id => inst.has(id))) {
       addWarning(t('launch.risks.noShelter'), 'cabin', 'maya', '[data-part="cabin-storm-shelter"]');
     }
@@ -1582,22 +1579,35 @@
     }
     $('#launch-title').textContent=!lift.ok?t('launch.titleNoPad'):abort?(abort.reason==='no-orbit'?t('launch.titleNoOrbit'):t('launch.titleNoMars')):warnings.length?t('launch.titleRisks'):t('launch.titleReady');
     $('#launch-message').textContent=!lift.ok?t('launch.msgNoPad',{detail:lift.detail}):abort?t('launch.msgAbort',{warn:abort.warn}):warnings.length&&!LV().failures?t('launch.msgEasy'):warnings.length?t('launch.msgRisks'):t('launch.msgReady');
-    const pc=playerCount();
     const summary = $('#launch-summary');
     summary.querySelector('.launch-risks')?.remove();
-    $('#launch-metrics').innerHTML=[
-      [t('launch.summary.crew'),t('launch.summary.crewVal',{players:pc,playerWord:pc>1?t('common.players'):t('common.player'),ai:crew.length-pc})],
-      [t('launch.summary.site'),SITES_INFO[state.site].name],
-      [t('launch.summary.difficulty'),t(`difficulty.${state.difficulty}.label`).toUpperCase()],
-      [t('launch.summary.stages'),`${state.rocket.stages.length+2}`],
-      [t('launch.summary.budgetRemaining'),money(m.budget-m.cost)],
-      [t('launch.summary.liftoffMass'),tonnes(m.mass)],
-      [t('launch.summary.twr'),m.ready?`${U.number(m.twr,{maximumFractionDigits:2})} · ${lift.ok?t('launch.summary.ascentTime',{sec:lift.seconds}):t('launch.summary.twrNoLiftoff')}`:t('launch.summary.twrNoIgnition')],
-      [t('launch.summary.dvOrbit'),m.ready?`${U.velocityMs(m.dv)} / ${U.velocityMs(m.leo)}`:'—'],
-      [t('launch.summary.marsTransfer'),m.orbit?`${U.velocityMs(m.marsDv)} / ${U.velocityMs(m.transfer)}`:'—'],
-      [t('launch.summary.orbitalRefuel'),m.marsOk?(m.refuelKg>0?`${Math.ceil(m.refuelPct)}% · ${tonnes(m.refuelKg)}`:t('launch.summary.notNeeded')):'—'],
-      [t('launch.summary.power'),`${number(m.gen)} / ${number(m.draw)} W`]
-    ].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
+    const instAll = installedParts();
+    const catBadge = cats => cats.map(c => `<span class="launch-cat-tag is-${c}"><svg class="part-impact-ico" viewBox="0 0 16 16" aria-hidden="true">${PART_IMPACT_SVG[c]}</svg>${esc(t(`planner.impact.${c}`))}</span>`).join('');
+    const bonuses = [];
+    if (state.rocket.booster.fins) {
+      const pct = Math.round((1 - (spec(state.rocket.booster.fins).aeroDriftFactor ?? 1)) * 100);
+      if (pct > 0) bonuses.push({ cats: ['minigame'], text: t('launch.bonuses.fins', { pct }) });
+    }
+    if (DISH_PARTS.some(id => instAll.has(id))) {
+      bonuses.push({ cats: ['minigame', 'score'], text: t('launch.bonuses.dish') });
+    }
+    if (SHELTER_PARTS.some(id => instAll.has(id))) {
+      bonuses.push({ cats: ['minigame'], text: t('launch.bonuses.shelter') });
+    }
+    if (instAll.has('cabin-orion-cockpit') || instAll.has('cabin-autonav-conjunction')) {
+      bonuses.push({ cats: ['minigame'], text: t('launch.bonuses.cockpit') });
+    }
+    if (instAll.has('edl-trn-medli2') || instAll.has('edl-aspire-loftid')) {
+      bonuses.push({ cats: ['minigame', 'score'], text: t('launch.bonuses.edl') });
+    }
+    const sciCount = ['truss-ingenuity', 'drill-corer-cryo', 'sci-hirise-sharad', 'sci-pixl-sherloc-supercam', 'sci-seis-caching', 'cabin-msg-minion'].filter(id => instAll.has(id)).length;
+    if (sciCount > 0) {
+      bonuses.push({ cats: ['score'], text: t('launch.bonuses.science', { count: sciCount }) });
+    }
+    if (m.gen >= m.draw && m.gen > 0) {
+      bonuses.push({ cats: ['engineering'], text: t('launch.bonuses.power') });
+    }
+    $('#launch-metrics').innerHTML = `<section class="launch-bonuses" aria-labelledby="launch-bonuses-heading"><h4 id="launch-bonuses-heading">${esc(t('launch.bonuses.heading'))}</h4>${bonuses.length ? bonuses.map(b => `<div class="launch-bonus-item"><div class="launch-bonus-cats">${catBadge(b.cats)}</div><strong>${esc(b.text)}</strong></div>`).join('') : `<p class="muted">${esc(t('launch.bonuses.none'))}</p>`}</section>`;
     const risks = document.createElement('section');
     risks.className = 'launch-risks';
     risks.setAttribute('aria-labelledby', 'launch-risks-heading');
@@ -2202,7 +2212,7 @@
     }
 
     const IRRADIATED_TOAST_DELAY_MS = 4200; // after the landing hint toast (3.5 s)
-    const runConsequences = d => ({ maxStars: d.dataCapped ? CONSEQUENCE.noDishMaxStars : 3, cut: d.budgetPenalty ? CONSEQUENCE.budgetCut : 0 });
+    const runConsequences = d => ({ maxStars: d.hasDish ? 4 : CONSEQUENCE.noDishMaxStars, cut: d.budgetPenalty ? CONSEQUENCE.budgetCut : 0 });
     function captureDesign() {
       const r = state.rocket;
       const installed = new Set([r.booster.engine, r.booster.tank, ...r.stages.map(s => s.item), ...r.cabin].filter(Boolean));
@@ -2217,7 +2227,7 @@
         refuelTank: m.marsOk && m.refuelStage ? stageName(m.refuelStage.key) : null,
         lowTwr: !m.ready || m.twr < TWR_MIN(), // facts for the debrief; the flags below are the in-flight trouble
         overweight,
-        dataCapped: LV().penalties && !hasDish,
+        dataCapped: false,
         budgetPenalty: LV().penalties && m.cost > m.budget,
         finsDrift: r.booster.fins ? (spec(r.booster.fins).aeroDriftFactor ?? 1) : 1, // aerodynamic minigames: gust scale
         overBudget: m.cost > m.budget,

@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.9.20] - 2026-11-26
+
+### Added
+- Show installed mission bonuses on the launch review and award a fourth experiment star with telecom equipment.
+
 ## [1.9.19] - 2026-11-25
 
 ### Added
