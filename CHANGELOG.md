@@ -11,6 +11,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.5] - 2026-11-26
+
+### Added
+- Mobile landscape preference: set `manifest.webmanifest` `"orientation": "landscape"`, request fullscreen + `'landscape'` orientation lock on mobile Play/fullscreen tap, and show a localized dismissible `#rotate-overlay` prompt on portrait touch screens (EN/PT/ES).
+
+### Changed
+- Browser default language: support both `-` and `_` locale tags in `detectBrowserLang()`, avoid persisting `language` in `localStorage` unless explicitly chosen by the player, and restore the browser default on settings reset.
+
 ## [1.10.4] - 2026-11-26
 
 ### Added

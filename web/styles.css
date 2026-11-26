@@ -1892,3 +1892,16 @@
     .dev-sky-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
     .dev-sky-bar .button{min-height:32px;padding:.3rem .65rem;font-size:.62rem}
     .dev-sky-status{margin-top:4px;font:600 .68rem/1.2 var(--heading);letter-spacing:.06em;color:var(--safe);font-variant-numeric:tabular-nums}
+
+    /* Mobile portrait -> landscape prompt overlay */
+    .rotate-overlay{display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center;padding:20px;background:rgba(17,7,31,.92);backdrop-filter:blur(6px)}
+    .rotate-card{max-width:320px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+    .rotate-card h3{margin:0;font:700 1.05rem/1.2 var(--heading);letter-spacing:.06em;text-transform:uppercase;color:var(--text-primary)}
+    .rotate-card p{margin:0;font-size:.88rem;line-height:1.4;color:var(--text-muted)}
+    .rotate-icon{color:var(--amethyst);margin-bottom:4px}
+    .rotate-actions{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:6px}
+    .rotate-actions .button{width:100%;min-height:44px;justify-content:center}
+    @media (pointer:coarse) and (orientation:portrait){
+      .rotate-overlay{display:flex}
+      html[data-portrait-ok] .rotate-overlay{display:none}
+    }

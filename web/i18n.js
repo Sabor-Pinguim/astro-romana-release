@@ -12,7 +12,7 @@
       navigator.language,
     ].filter(Boolean);
     for (const raw of candidates) {
-      const base = String(raw).toLowerCase().split('-')[0];
+      const base = String(raw).toLowerCase().split(/[-_]/)[0];
       if (locales[base]) return base;
     }
     return fallbackLng;
@@ -138,6 +138,7 @@
   window.ASTRO_I18N = {
     t,
     changeLanguage,
+    detectBrowserLang,
     applyDOM,
     languages,
     get language() { return currentLang; },

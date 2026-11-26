@@ -4,15 +4,17 @@
   const STORAGE_KEY = 'astro-romana-settings';
   const UI_SCALES = ['auto', '75', '85', '100', '115'];
   function defaultLanguage() {
-    return window.ASTRO_I18N?.language || 'en';
+    return window.ASTRO_I18N?.detectBrowserLang?.() || window.ASTRO_I18N?.language || 'en';
   }
   const DEFAULTS = { get language() { return defaultLanguage(); }, unitSystem: 'metric', hints: true, uiScale: 'auto', serverUrl: '' };
+  let languageExplicit = false;
 
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
       const scale = String(parsed.uiScale ?? '');
+      languageExplicit = Boolean(parsed.language);
       return {
         language: parsed.language || defaultLanguage(),
         unitSystem: parsed.unitSystem === 'imperial' ? 'imperial' : DEFAULTS.unitSystem,
@@ -21,13 +23,16 @@
         serverUrl: typeof parsed.serverUrl === 'string' ? parsed.serverUrl : DEFAULTS.serverUrl,
       };
     } catch {
+      languageExplicit = false;
       return { language: defaultLanguage(), unitSystem: 'metric', hints: true, uiScale: 'auto', serverUrl: '' };
     }
   }
 
   function saveSettings(next) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      const toStore = { ...next };
+      if (!languageExplicit) delete toStore.language;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     } catch {
       /* private mode or blocked storage */
     }
@@ -129,6 +134,31 @@
     return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
+  function isTouchDevice() {
+    return matchMedia('(pointer: coarse)').matches;
+  }
+
+  function lockLandscape() {
+    try {
+      screen.orientation?.lock?.('landscape')?.catch?.(() => {});
+    } catch {
+      /* ignore unsupported orientation lock */
+    }
+  }
+
+  async function enterLandscape() {
+    if (fullscreenSupported() && !isFullscreen()) {
+      try {
+        const el = document.documentElement;
+        await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
+      } catch {
+        /* ignore fullscreen rejection */
+      }
+    }
+    lockLandscape();
+    syncFullscreenUI();
+  }
+
   function isFullscreen() {
     return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
   }
@@ -164,16 +194,20 @@
       settingsBtn.querySelector('path')?.setAttribute('d', pathD);
     }
     if (label) label.textContent = text;
+    const rotateFsBtn = document.getElementById('rotate-landscape-btn');
+    if (rotateFsBtn) rotateFsBtn.hidden = !fullscreenSupported();
   }
 
   async function toggleFullscreen() {
     if (!fullscreenSupported()) return false;
     try {
       if (isFullscreen()) {
+        try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
         await (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.());
       } else {
         const el = document.documentElement;
         await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
+        if (isTouchDevice()) lockLandscape();
       }
       syncFullscreenUI();
       return isFullscreen();
@@ -204,6 +238,7 @@
 
   async function setLanguage(code, silent = false) {
     const target = i18n()?.languages.some(l => l.code === code) ? code : DEFAULTS.language;
+    languageExplicit = true;
     current.language = target;
     saveSettings(current);
     await i18n()?.changeLanguage(target);
@@ -272,6 +307,7 @@
   }
 
   async function resetAll() {
+    languageExplicit = false;
     current = { ...DEFAULTS };
     saveSettings(current);
     applyUiScale(current.uiScale);
@@ -295,6 +331,13 @@
     });
     document.getElementById('menu-fullscreen-btn')?.addEventListener('click', () => toggleFullscreen());
     document.getElementById('settings-fullscreen-btn')?.addEventListener('click', () => toggleFullscreen());
+    document.getElementById('play-button')?.addEventListener('click', () => {
+      if (isTouchDevice() && !isFullscreen()) enterLandscape();
+    });
+    document.getElementById('rotate-landscape-btn')?.addEventListener('click', () => enterLandscape());
+    document.getElementById('rotate-continue-btn')?.addEventListener('click', () => {
+      document.documentElement.dataset.portraitOk = '1';
+    });
     document.addEventListener('fullscreenchange', syncFullscreenUI);
     document.addEventListener('webkitfullscreenchange', syncFullscreenUI);
     window.addEventListener('astro:lang', syncFullscreenUI);
