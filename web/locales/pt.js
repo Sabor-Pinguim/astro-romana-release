@@ -36,7 +36,7 @@
         missionPrefix: 'Missão: {{name}}',
       },
       menu: {
-        subtitle: 'NASA Space Apps - Jogo de Missão Espacial',
+        subtitle: 'NASA Space Apps - Jogo de Design de Missões Espaciais',
         play: 'Jogar',
         rocketBrokenToast: 'Você quebrou nosso Saturn V de exposição! Deveríamos te dar menos 50 milhões no orçamento da sua próxima missão...',
         leaderboard: 'Placares',

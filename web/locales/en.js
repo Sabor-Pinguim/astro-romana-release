@@ -36,7 +36,7 @@
         missionPrefix: 'Mission: {{name}}',
       },
       menu: {
-        subtitle: 'NASA Space Apps - Space Mission Game',
+        subtitle: 'NASA Space Apps - Space Mission Design Game',
         play: 'Play',
         rocketBrokenToast: 'You broke our display Saturn V! We ought to take 50 million off your next mission budget...',
         leaderboard: 'Leaderboards',

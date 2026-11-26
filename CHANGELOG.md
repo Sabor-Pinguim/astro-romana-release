@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.7] - 2026-11-26
+
+### Changed
+- Update the menu subtitle to "NASA Space Apps - Space Mission Design Game" in English, Portuguese, and Spanish.
+
 ## [1.10.6] - 2026-11-26
 
 ### Fixed
