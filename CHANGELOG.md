@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.1] - 2026-11-26
+
+### Changed
+- Describe the three difficulty cards by player experience level in English, Portuguese, and Spanish.
+
 ## [1.10.0] - 2026-11-26
 
 ### Added

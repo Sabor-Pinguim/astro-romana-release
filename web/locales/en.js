@@ -45,7 +45,7 @@
         footerDesign: 'Design',
         footerLaunch: 'Launch',
         footerExplore: 'Explore',
-        version: 'v1.10.0',
+        version: 'v1.10.1',
         contact: 'Contact us',
         emailCopied: 'Email copied: {{email}}',
         quitEyebrow: 'Quit mission',
@@ -399,21 +399,21 @@
       difficulty: {
         easy: {
           label: 'Easy',
-          tagline: 'Training & exploration',
+          tagline: 'Beginner',
           rules: 'warnings only',
           rulesLong: 'Warnings only',
           about: 'Easy: every telemetry problem is only a warning and the mission always flies. Fuel types are ignored.',
         },
         normal: {
           label: 'Normal',
-          tagline: 'Balanced mission',
+          tagline: 'Experienced',
           rules: 'Δv −20%',
           rulesLong: 'Δv −20% tolerance',
           about: 'Normal: the telemetry can fail the mission, with 20% tolerance on the Δv to orbit and to Mars. Fuel types are ignored.',
         },
         hard: {
           label: 'Hard',
-          tagline: 'Full aerospace realism',
+          tagline: 'Highly experienced',
           rules: 'every rule',
           rulesLong: 'Full Δv & propellant match',
           about: 'Hard: every rule. Engine and tank must share propellants and the full Δv is needed.',

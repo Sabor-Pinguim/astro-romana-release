@@ -45,7 +45,7 @@
         footerDesign: 'Diseña',
         footerLaunch: 'Lanza',
         footerExplore: 'Explora',
-        version: 'v1.10.0',
+        version: 'v1.10.1',
         contact: 'Contáctanos',
         emailCopied: 'Correo copiado: {{email}}',
         quitEyebrow: 'Abandonar misión',
@@ -399,21 +399,21 @@
       difficulty: {
         easy: {
           label: 'Fácil',
-          tagline: 'Entrenamiento y exploración',
+          tagline: 'Principiante',
           rules: 'solo avisos',
           rulesLong: 'Solo avisos',
           about: 'Fácil: cualquier problema de telemetría es solo un aviso y la misión siempre despega. Se ignoran los tipos de combustible.',
         },
         normal: {
           label: 'Normal',
-          tagline: 'Misión equilibrada',
+          tagline: 'Con experiencia',
           rules: 'Δv −20%',
           rulesLong: 'Tolerancia Δv −20%',
           about: 'Normal: la telemetría puede hacer fracasar la misión, con un 20% de tolerancia en el Δv a órbita y a Marte. Se ignoran los tipos de combustible.',
         },
         hard: {
           label: 'Difícil',
-          tagline: 'Realismo aeroespacial total',
+          tagline: 'Con mucha experiencia',
           rules: 'todas las reglas',
           rulesLong: 'Δv completo y propelente exacto',
           about: 'Difícil: todas las reglas. Motor y tanque deben compartir propelentes y se exige el Δv completo.',

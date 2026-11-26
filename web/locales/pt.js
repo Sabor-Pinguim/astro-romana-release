@@ -45,7 +45,7 @@
         footerDesign: 'Projetar',
         footerLaunch: 'Lançar',
         footerExplore: 'Explorar',
-        version: 'v1.10.0',
+        version: 'v1.10.1',
         contact: 'Fale conosco',
         emailCopied: 'E-mail copiado: {{email}}',
         quitEyebrow: 'Encerrar missão',
@@ -399,21 +399,21 @@
       difficulty: {
         easy: {
           label: 'Fácil',
-          tagline: 'Treino e exploração',
+          tagline: 'Iniciante',
           rules: 'apenas avisos',
           rulesLong: 'Apenas avisos',
           about: 'Fácil: todo problema de telemetria é apenas um aviso e a missão sempre voa. Tipos de combustível são ignorados.',
         },
         normal: {
           label: 'Normal',
-          tagline: 'Missão equilibrada',
+          tagline: 'Experiente',
           rules: 'Δv −20%',
           rulesLong: 'Tolerância de Δv −20%',
           about: 'Normal: a telemetria pode falhar a missão, com tolerância de 20% no Δv para órbita e para Marte. Tipos de combustível são ignorados.',
         },
         hard: {
           label: 'Difícil',
-          tagline: 'Realismo aeroespacial total',
+          tagline: 'Muito experiente',
           rules: 'todas as regras',
           rulesLong: 'Δv total e propelentes compatíveis',
           about: 'Difícil: todas as regras. Motor e tanque precisam usar os mesmos propelentes e todo o Δv é exigido.',
