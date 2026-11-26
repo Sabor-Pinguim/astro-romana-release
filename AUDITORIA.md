@@ -5,6 +5,7 @@
 | Revisão | Data | Commit-base | Observação |
 |---|---|---|---|
 | 1 | 2026-11-23 | `2282c4baea5f4f0c2b5efc798346c7098efc57e0` | Primeira auditoria completa. Inclui alterações não commitadas em 7 arquivos (WIP dos fantasmas e da cena de partida). |
+| 2 | 2026-11-26 | `442f601ed496194f62a573e5abe45aee47611150` | Parcial: conferência dos 5 críticos e 10 altos na HEAD e correção dos que seguiam abertos (servidor de salas 1.0.3, dados reais, lint, smoke test e CI). Linha "Status (rev. 2)" sob cada achado conferido; os médios e baixos não foram revistos. |
 
 **Escopo:** todo o código escrito à mão (`index.html`, `web/`, `multiplayer/`, `tools/`), os docs e a estrutura do repositório. Os assets gerados foram conferidos por regeneração, não por leitura.
 
@@ -55,6 +56,17 @@
 
 **88 entradas:** 5 críticas, 10 altas, 44 médias e 29 baixas. Várias entradas baixas agrupam itens pequenos.
 
+### Situação na revisão 2 (2026-11-26)
+
+- **Críticos e altos (15):** 12 resolvidos (GAME-01, SURF-01, FLT-01, FLT-02, NET-01 a NET-04, MOD-01, MOD-02, PIPE-02, REPO-01), 2 parciais (NET-05: falta CSP e escape no i18next; PIPE-01: os efeitos de `radAudio.tone()` seguem sintetizados) e 1 não conferido (SURF-02).
+- **Débitos novos, fora da lista original:**
+  - **Versão em 7 lugares** (`index.html` numa linha de 3.436 caracteres e os 3 idiomas): todo par de commits paralelos colidia ali. Resolvido: agora fica só em `package.json`, no lock e em `web/version.js`.
+  - **`t` escondendo o helper de i18n:** 18 casos latentes em `app.js`, `views.js`, `launch.js` e `minigames/core.js`, renomeados; a regra `astro/no-shadow-t` impede novos.
+  - **Ranking sem prova:** o servidor só confere formato e frequência de `POST /api/leaderboard`; qualquer um consegue enviar uma pontuação plausível. Aberto.
+  - **Alvos de toque menores que 32 px** (o botão da plataforma no cockpit em paisagem e os planetas do lobby em retrato), vistos em 2026-11-25: resolvidos por commits seguintes; `npm run web:audit:mobile` dá 0 avisos nos 6 tamanhos.
+  - **Pacotes gerados acima de 5 MB** (`index.terrain.*.js` com 6 MB, `index.models.js` com 5,1 MB e 16 versões no histórico; pack de 94 MB): ver REPO-06. Aberto.
+- **Os médios e baixos não foram revistos** nesta revisão: valem como na revisão 1 até alguém conferir.
+
 ### Corrigir primeiro
 
 1. **A HEAD não completa uma missão.** Três sombreamentos do helper de i18n `t` entraram no commit de i18n `2282c4b`:
@@ -101,6 +113,7 @@
 ## 1. Núcleo do jogo (`web/app.js`)
 
 #### GAME-01 · [CRÍTICO na HEAD] `completeSurfaceTask` sombreia `t()`
+- **Status (rev. 2, 2026-11-26):** ✅ resolvido antes da rev. 2 (o local virou `task`). O lint novo (`astro/no-shadow-t`) e o `npm run web:smoke`, que conclui os experimentos, pegam a repetição.
 - **Onde:** `HEAD:web/app.js:1497-1507` (corrigido na working tree: `task`) · **Confiança:** confirmado
 - **Problema:** `const t = surf.tasks.find(...)` seguido de `t('surface.allDoneToast')`. Na HEAD, todo experimento concluído lança `TypeError: t is not a function` depois do `surf.completed.add`: não sai toast nem `astro:surface`, e a exceção sobe para `views.js`, que deixa o prompt sujo. É o mesmo padrão de SURF-01 e FLT-01.
 - **Sugestão:** commitar a correção mesmo que o WIP seja descartado.
@@ -178,11 +191,13 @@
 ## 2. Superfície e minigames (`web/views.js`, `web/scout.js`)
 
 #### SURF-01 · [CRÍTICO] Na HEAD, todo pouso falha: `t.hf.at` usa a função de tradução
+- **Status (rev. 2, 2026-11-26):** ✅ resolvido antes da rev. 2 (`terrain.hf.at`). O smoke test pousa em Jezero a cada push.
 - **Onde:** `HEAD:web/views.js:818` (corrigido só na working tree, `terrain.hf.at`) · **Tipo:** bug · **Confiança:** confirmado
 - **Problema:** o commit 2282c4b (i18n) renomeou `const [t] = await Promise.all(...)` para `[terrain]` mas esqueceu `a.pos.set(x, t.hf.at(x, z), z)`. Dentro de `land()`, `t` é o helper de i18n, então dá `TypeError` na primeira iteração de `CREW_START`. O `catch` mostra "Could not load the terrain", e a fase de superfície fica injogável: 0 de 4 experimentos, só resta "Embarcar e partir".
 - **Sugestão:** commitar essa linha já, separada do WIP. Renomear o helper de i18n (por exemplo `tr`) ou os `t` locais (`setTerrain(t)`, `const t = o.net`, `for (let t…)`): foi esse sombreamento que causou o bug. Ver também FLT-01 e GAME (mesmo padrão).
 
 #### SURF-02 · [ALTO] (WIP) Tripulante IA que obedece ao "rush" continua virando fantasma
+- **Status (rev. 2, 2026-11-26):** ❔ não conferido na rev. 2: a IA mudou desde então (`nearShip`), falta medir de novo.
 - **Onde:** [web/views.js](web/views.js) (`rushing = timeLeft <= 10`, `spd = rushing ? WALK : …`, alvos de passeio a `12 + Math.random()*26` m); [web/app.js](web/app.js) (`boardShipAndFinish`) · **Tipo:** bug (resultado errado) · **Confiança:** confirmado (simulação Monte Carlo)
 - **Problema:** em 10 s a 2,2 m/s a IA anda 22 m, então só embarca quem estiver a no máximo ~28 m do módulo em T−10 s. O WIP manda a IA passear até ~83 m; na HEAD eram 6 a 24 m, com corte em 35 m. Em solo, P(≥1 fantasma) fica entre 0,67 e 0,74, conforme a dificuldade. Cada fantasma custa −100 na equipe e −40 em cada membro, e o `returnBonus` vira −108. O jogador perde notas por algo que não controla, e o embarque voluntário de qualquer distância não deixa ninguém para trás.
 - **Sugestão:** iniciar o retorno de cada NPC por distância (`dist/vel + margem ≥ timeLeft`, a `RUN`) ou não deixar a IA para trás no timeout.
@@ -267,6 +282,7 @@
 ## 3. Cockpit, lançamento e órbita (`web/flight.js`, `web/launch.js`, `web/orbit.js`)
 
 #### FLT-01 · [CRÍTICO] Na HEAD, a plataforma de lançamento e o splashdown travam para sempre (TDZ de `t`)
+- **Status (rev. 2, 2026-11-26):** ✅ resolvido antes da rev. 2 (`tSec`). O lint (`no-use-before-define` no mesmo escopo) e o smoke test, que roda a plataforma de lançamento, pegam a repetição.
 - **Onde:** `HEAD:web/launch.js:199` + `:227` (`ASTRO_LAUNCHPAD`) e `:362` + `:390` (`ASTRO_SPLASHDOWN`); corrigido só na working tree (`tSec`) · **Tipo:** bug · **Confiança:** confirmado (reproduzido num sandbox Node e conferido no código)
 - **Problema:**
   - `t('common.missionPrefix', …)` é chamado antes do `let t = reduce ? COUNT : 0` declarado na mesma função. Isso dá `ReferenceError: Cannot access 't' before initialization`.
@@ -275,6 +291,7 @@
 - **Sugestão:** commitar as renomeações já e adicionar lint (`no-shadow`, `no-use-before-define`). Junto com SURF-01, a HEAD não permite completar uma missão. O `Promise.race` de 2,5 s do WIP trata um sintoma, não a causa.
 
 #### FLT-02 · [ALTO] A etapa 02 (acoplamento da cabine) só funciona com teclado e WebGL
+- **Status (rev. 2, 2026-11-26):** ✅ provável: o cockpit tem d-pad de toque (`flight.hold`) e o card não diz mais "keyboard only". Não testado num celular de verdade.
 - **Onde:** [web/flight.js:399-414](web/flight.js#L399-L414); [web/app.js](web/app.js) (a etapa 1 lê só `keys`; o card diz "keyboard only") · **Tipo:** bug / acessibilidade · **Confiança:** confirmado no código
 - **Problema:**
   - **Toque:** na etapa 1 o d-pad (`flight.hold`) é ignorado e o card não tem botões. No celular (390 px é exigido) a etapa sempre falha por tempo: −5 pts, perde +10 e deixa `stageSeparated=false`, o que torna a etapa 03 1,35× mais difícil.
@@ -410,26 +427,31 @@
 Testes: 19/19 passam. Os probes abaixo rodaram contra servidores locais em porta aleatória; a VM real não foi acessada.
 
 #### NET-01 · [CRÍTICO] Uma mensagem com JSON muito aninhado derruba o servidor
+- **Status (rev. 2, 2026-11-26):** ✅ servidor de salas 1.0.3: profundidade máxima (`MAX_JSON_DEPTH`, 32) checada de forma iterativa logo após o `JSON.parse`, e try/catch por mensagem (fecha só o socket culpado). Reproduzido antes e depois; testes em `multiplayer/test/`.
 - **Onde:** `multiplayer/rooms.mjs:174` (`checkMeta` → `JSON.stringify`); `multiplayer/server.mjs:51` e `:68` (`hub.handle` sem try/catch) · **Confiança:** confirmado (reproduzido no Node 24; o Node 22 da VM tem o mesmo stringify recursivo)
 - **Problema:** `{"v":1,"t":"create","meta":{"a":[[[…6000 níveis…]]]}}` tem 11,7 KiB, abaixo do limite de 16 KiB. O `JSON.parse` aceita, mas o `stringify` estoura a pilha (`RangeError`). A exceção vira `uncaughtException`, o processo sai, e todas as salas, que vivem só em memória, somem. O mesmo vale para `pose`, `act`, `event`, `send` e `state` com algum destinatário, e para um `state` guardado, que explode no `welcome` do próximo `join`. Não é preciso estar numa sala nem mandar Origin, e o atacante pode repetir em loop a cada restart do systemd (2 s).
 - **Sugestão:** limitar a profundidade (por exemplo, 32) logo após o `JSON.parse` e responder `bad-message`; colocar try/catch em `hub.handle` e em cada `send`, fechando só o socket culpado.
 
 #### NET-02 · [CRÍTICO] `{"t":"__proto__"}` derruba o servidor
+- **Status (rev. 2, 2026-11-26):** ✅ servidor de salas 1.0.3: `Object.hasOwn(IN_ROOM, t)`; `__proto__`, `constructor` e `toString` recebem `bad-message`. Reproduzido antes e depois.
 - **Onde:** `multiplayer/rooms.mjs:42` (`const handler = IN_ROOM[t]`) e `:201` · **Confiança:** confirmado (reproduzido)
 - **Problema:** `IN_ROOM` herda de `Object.prototype`. Depois de um `create`, `__proto__`, `__defineGetter__` ou `__defineSetter__` fazem `handler.call` lançar TypeError, e o processo sai. Já `constructor`, `toString` e `valueOf` são aceitos em silêncio. Duas mensagens (17 bytes) bastam para derrubar todas as salas.
 - **Sugestão:** `Object.hasOwn(IN_ROOM, t)` (ou um `Map`) e o try/catch do NET-01.
 
 #### NET-03 · [ALTO] Um cliente esgota a memória: ~5,6 MiB retidos por sala, OOM com ~91 salas
+- **Status (rev. 2, 2026-11-26):** ✅ servidor de salas 1.0.3: `state` e poses guardados como texto JSON, com orçamento por sala (`MAX_ROOM_STATE_BYTES`, 128 KiB); broadcast serializado uma vez; socket com mais de 1 MiB na fila é derrubado.
 - **Onde:** `multiplayer/rooms.mjs:235-256`; `multiplayer/config.mjs:19-22`; `deploy/astro-rooms.service:33` (`MemoryMax=512M`) · **Confiança:** confirmado por medição
 - **Problema:** o hub guarda o objeto já parseado: 16 `state` mais 1 `pose` de `[{},{},…]` ocupam 5,65 MiB, uma expansão de ~20×. Com ~91 conexões, cada uma criando uma sala e mandando 17 mensagens (cabem no burst), o cgroup mata o processo. Agravantes: `sendTo` não olha `bufferedAmount`, e cada relay é re-serializado para cada destinatário.
 - **Sugestão:** guardar o texto bruto com orçamento de bytes por sala (por exemplo, 256 KiB); limitar salas e conexões por IP; serializar uma vez por broadcast.
 
 #### NET-04 · [ALTO] Um cliente lota `MAX_ROOMS` em menos de 1 s, sem manter sockets
+- **Status (rev. 2, 2026-11-26):** ✅ servidor de salas 1.0.3: limites por IP (32 conexões, 8 salas abertas, 12 criações/min) e 2.500 conexões no total; o IP vem do `X-Forwarded-For` só quando o par é o Caddy (`TRUSTED_PROXIES`).
 - **Onde:** `multiplayer/rooms.mjs:80` e `:64` (grace de 30 s); `multiplayer/server.mjs:50-52` · **Confiança:** confirmado (500 salas em 816 ms)
 - **Problema:** basta repetir conectar, `create` e `terminate`. A sala do host que caiu vive 30 s, então repetindo a cada ~25 s ninguém mais cria sala (`too-many-rooms`). Não há limite por IP nem limite global de conexões.
 - **Sugestão:** limites por IP (X-Forwarded-For do Caddy só quando o peer for 127.0.0.1) e grace curto para sala sem convidados.
 
 #### NET-05 · [ALTO] XSS por link (`?server=`) e por host malicioso; sem CSP
+- **Status (rev. 2, 2026-11-26):** 🟡 parcial: o código da sala já é escapado (`esc(net.code)`). Continuam sem CSP e com `escapeValue: false` no i18next.
 - **Onde:** `web/app.js:176` (`${net.code}` em innerHTML), `:305`/`:107` (ids crus do foguete), `applySetup`, `lift.detail`, `refuelDone`; `web/net.js:21, 57, 144`; `multiplayer/client/room-client.js:255`; `web/i18n.js:41` (`escapeValue:false`) · **Confiança:** fluxo confirmado (VM com WebSocket falso); não executado em navegador
 - **Problema:**
   - **Link malicioso:** `https://sabor-pinguim.github.io/astro-romana/?server=wss://atacante/ws&room=ABCD` conecta sozinho no carregamento. O servidor do atacante devolve `code:"<img src=x onerror=…>"`, que executa no `renderRoom()` na origem `*.github.io`. O script pode gravar um `serverUrl` malicioso no localStorage e sequestrar as visitas seguintes.
@@ -536,11 +558,13 @@ Testes: 19/19 passam. Os probes abaixo rodaram contra servidores locais em porta
 ## 6. Pipeline de modelos 3D (`tools/modeling/`, `tools/web/`, `tools/model-viewer/`)
 
 #### MOD-01 · [ALTO] `npm run web:sites` está quebrado: importa uma função que não existe mais
+- **Status (rev. 2, 2026-11-26):** ✅ corrigido (`readWindow` + `regionFromWindow`); as fotos regeneradas saíram idênticas. `npm run check:imports` (também no CI) pega export renomeado.
 - **Tipo:** bug · **Onde:** [tools/web/site-photos.mjs:9](tools/web/site-photos.mjs#L9) · **Confiança:** confirmado (reproduzido: `does not provide an export named 'readRegion'`)
 - **Problema:** o commit 48c4bc9 trocou `readRegion` por `readWindow` + `regionFromWindow` em `tools/terrain/lib/raster.mjs` e só atualizou o `build-terrain.mjs`. O script falha já na carga do módulo, antes de qualquer rede. As fotos em `assets/sites/` (marcadas como GERADAS) não podem mais ser regeneradas, por exemplo para um local de pouso novo. O `node --check` não detecta erro de import.
 - **Sugestão:** `regionFromWindow(await readWindow(cog, pickLevel(...), borderPoints(...)))`, como em `build-terrain.mjs:81-83`. Um smoke test que importa cada script de `tools/` evitaria a repetição.
 
 #### MOD-02 · [ALTO] MMRTG: pico de 900 W da bateria somado como geração contínua e rotulado "real"
+- **Status (rev. 2, 2026-11-26):** ✅ os 900 W agora são `game-balance ⚠` com os valores reais na fonte (~110 W contínuos; picos de ~900 W na bateria). 110 W não alimentaria nem a cabine (300 W), por isso o número de jogo ficou.
 - **Tipo:** dado × fonte · **Onde:** [tools/modeling/parts/specs.mjs:517](tools/modeling/parts/specs.mjs#L517) (fonte em `:524`); soma em [web/app.js:231](web/app.js#L231) · **Confiança:** confirmado
 - **Problema:** `powerW: 900` tem a fonte `'real (… 110 W continuous / 900 W peak buffer)'`, e `references/parts/stage-equipment.md` dá "+110 contínuos / 900 de pico". O planner soma todo `powerW > 0` como geração contínua (`gen += s.powerW`), então o módulo vale cerca de 8 vezes o MMRTG real e aparece como "+900 W" sem ⚠. A massa (71,5 kg) é a do MMRTG com bateria, não a de um Kilopower (150 a 400 kg), que justificaria 1 kW.
 - **Sugestão:** usar 110 W como valor real, ou marcar 900 W como `game-balance` (Kilopower) e ajustar a massa.
@@ -682,11 +706,13 @@ Conferido sem problema:
 - os números de áudio do README (1,25σ, 92,8 → 7.295,7, ~79×, 115,7, 1 s = 1,5 h, 24 kHz / 44,1 kHz).
 
 #### PIPE-01 · [ALTO] O contador Geiger documentado não existe no jogo
+- **Status (rev. 2, 2026-11-26):** 🟡 o Geiger agora toca os `geiger_click_*.wav` gerados, na taxa `0.5 × dose / 115.7` (teto 30, intervalos exponenciais). Continuam sintetizados em tempo real os ~28 efeitos de `radAudio.tone()` (cockpit e superfície), contra o §7.
 - **Onde:** `web/app.js:720-726`; `README.md:139-144, 162`; `docs/audio.md:39-71`; `AGENTS.md` §7 · **Confiança:** confirmado
 - **Problema:** os docs prometem `0.5 × dose / 115.7` cliques/s, teto de 30, intervalos exponenciais e sorteio entre 4 WAVs. O jogo sintetiza uma onda quadrada em tempo real (`setInterval(…, 420)` com `Math.random() < 0.38`), a ~0,9 clique/s fixo, sem relação com a dose. Isso viola "nada de síntese em tempo real" (§7). Nada em `web/` cita `geiger_click_*` ou o `assets/audio/manifest.json`: os 4 WAVs, os parâmetros `geiger` e o envelope da tempestade não são usados.
 - **Sugestão:** tocar os WAVs com os números do manifest, ou corrigir README, docs e AGENTS.
 
 #### PIPE-02 · [ALTO] "53 min após a última leitura normal" e "79× em menos de uma hora" contradizem os dados
+- **Status (rev. 2, 2026-11-26):** ✅ conferido no CSV: última leitura normal às 05:04:45 UTC, pico de 7.295,7 µGy/dia às 06:15:19 (≈70,6 min depois, ~79× a mediana). Corrigido no README, em `docs/audio.md`, nas notas do RAD e no comentário de `m-s5.js`.
 - **Onde:** `README.md:128`; `docs/audio.md:27, 61, 63` (card "Fato real" pronto); `references/datasets/msl-rad/README.md:47` · **Confiança:** confirmado
 - **Problema:** no CSV, a leitura das 05:21:50 (178,6 / 238,9) já está 12σ acima em B e 50σ acima em E: já é tempestade. A última leitura normal é a das 05:04:45, a 70,6 min do pico. O texto vale como fato real e fere o §8 ("nunca invente fatos").
 - **Sugestão:** "~70 min desde a última leitura normal (05:05 UTC)" ou "de 179 para 7.296 µGy/dia em 53 min".
@@ -725,6 +751,7 @@ Conferido sem problema:
 ## 8. Documentação, repositório e processo
 
 #### REPO-01 · [ALTO] Sem CI, sem lint e sem testes do jogo: três regressões críticas passaram num único commit
+- **Status (rev. 2, 2026-11-26):** ✅ `npm run lint` (ESLint só com regras de bug, mais `astro/no-shadow-t`, que achou e corrigiu 18 `t` escondendo o helper), `npm run check:imports`, `npm run web:smoke` (missão de ponta a ponta no Chrome headless) e `.github/workflows/ci.yml` rodando tudo, mais os testes do servidor, a cada push.
 - **Onde:** não há `.github/workflows`, ESLint nem testes de `web/`; o único teste automatizado é o do `multiplayer/` · **Confiança:** confirmado
 - **Problema:**
   - SURF-01, FLT-01 e GAME-01 são erros que um lint (`no-shadow`, `no-use-before-define`) ou um smoke test pegaria. O smoke test carregaria a página headless e faria uma missão pelos hooks `window.ASTRO_SURFACE`/`ASTRO_LAUNCH_JUMP`, que já existem "para Playwright".

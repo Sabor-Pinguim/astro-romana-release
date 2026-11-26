@@ -7,9 +7,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
   - **Patch (`X.Y.Z`):** small changes, bug fixes, tweaks, docs, chores (`1.3.0` → `1.3.1`).
   - **Minor (`X.Y.0`):** major/significant features; resets the patch to `0` (`1.3.1` → `1.4.0`).
   - **Major (`X.0.0`):** only when explicitly requested by the user/team.
-- `npm run version:bump -- patch` (or `minor`) sets the new version in `package.json`, `package-lock.json`, `index.html` and `web/locales/{en,pt,es}.js` and opens its section here; `npm run version:check` checks they all agree.
+- `npm run version:bump -- patch` (or `minor`) sets the new version in `package.json`, `package-lock.json` and `web/version.js` and opens its section here; `npm run version:check` checks they all agree.
 
 ---
+
+## [1.10.3] - 2026-11-26
+
+### Changed
+- Integrate the upstream audit fixes and centralized version label with the orbital flight and Dev Mode updates.
 
 ## [1.10.2] - 2026-11-26
 
@@ -43,8 +48,33 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ## [1.9.20] - 2026-11-26
 
+Technical debt from `AUDITORIA.md` (revision 2 marks what each finding's status is now).
+
+### Fixed
+- Room server 1.0.3 (the VM restarts it once no room is open): one client can no longer crash it.
+  - Messages nested deeper than `MAX_JSON_DEPTH` (32) and message types such as `__proto__` or `constructor` get `bad-message`. A message that still makes the server fail closes only its own socket (NET-01, NET-02).
+  - Rooms keep their cached `state` and poses as JSON text within `MAX_ROOM_STATE_BYTES` (128 KiB; over it, `too-large`). Broadcasts are serialized once, and a socket with more than 1 MiB unsent is dropped (NET-03).
+  - Per-IP limits on connections (32), open rooms (8) and rooms created per minute (12), plus 2,500 connections in total. Behind Caddy the client IP comes from `X-Forwarded-For` (`TRUSTED_PROXIES`), and the leaderboard POST limit now uses it too; before, every player behind Caddy shared 127.0.0.1 (NET-04).
+- `npm run web:sites` works again: it imported `readRegion`, which no longer exists; the regenerated site photos are byte-identical (MOD-01).
+- The MMRTG / Kilopower part's 900 W is labelled `game-balance ⚠` instead of real: a real MMRTG gives ~110 W continuous and its batteries cover ~900 W peaks (MOD-02).
+- The surface Geiger counter plays the generated `geiger_click_*.wav` files at a rate that follows the dose (random exponential intervals, random click) instead of synthesizing a square wave live (PIPE-01).
+- The solar storm timing in the README, `docs/audio.md` and the RAD dataset notes: the last normal reading is 05:05 UTC, about 70 minutes before the 06:15 UTC peak, not 53 minutes; the ~79× rise stands (PIPE-02).
+- 18 locals named `t` that hid the i18n helper `t()` (the bug behind GAME-01, SURF-01 and FLT-01) renamed in `web/app.js`, `web/views.js`, `web/launch.js` and `web/minigames/core.js`.
+
 ### Added
 - Show installed mission bonuses on the launch review and award a fourth experiment star with telecom equipment.
+- `npm run lint`: ESLint 10 with bug rules only (undefined names, use before define in the same scope, duplicates, unreachable code) and `astro/no-shadow-t`, which flags a `t` that hides the i18n helper.
+- `npm run check:imports`: every relative import in the `.mjs` tools resolves to a file that exports the names asked for.
+- `npm run web:smoke`: a mission end to end in headless Chrome/Edge with reduced motion (menu, lobby, planner, launch pad, cockpit, surface with the player's experiments done, boarding, results); fails on any exception, `console.error` or step that never happens. The mobile audit now also reports `console.error`.
+- `npm run check` (lint, imports, versions, translations) and a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs it, the room server tests and the smoke test on every push and pull request (REPO-01).
+
+### Changed
+- The game version lives only in `package.json`, `package-lock.json` and the new `web/version.js`, which fills the menu label. It is no longer in `index.html` or the locales, where every pair of parallel commits collided.
+- README brought up to date with the game:
+  - Gameplay: the 21 experiments and the draw of 8 per mission (orbit and ground per crew member), the Mars orbit window, the solar storm and shelter, star scoring and the difficulty multiplier, the leaderboards and the AI crewmates.
+  - Facts corrected: the builder offers 46 of the 55 modelled parts; the Δv targets are game values; the Earth model is not shown yet; the cockpit roles of Oscar and Maya; the interface beeps are still synthesized live.
+  - Setup: what still needs the internet (three.js, i18next, Google Fonts, the room server), the languages and settings, the scripts load as classic scripts, the missing `web/` files, the team play features, Node 20.19/22.13, the new check commands and CI, and the repository's rule and history files.
+  - Credits: i18next, ESLint and the AI coding assistants the team used (Claude Code, OpenAI Codex, Google Antigravity).
 
 ## [1.9.19] - 2026-11-25
 

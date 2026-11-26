@@ -1,0 +1,43 @@
+# Every push to main and every pull request: the same checks as `npm run check`, the room server tests and the
+# smoke test (a mission end to end in headless Chrome). AUDITORIA.md REPO-01: three bugs that broke every mission
+# reached main in one commit because nothing ran. The VM still pulls main on its own; a red run here is the alarm.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            multiplayer/package-lock.json
+      - run: npm ci
+      - name: Lint (bugs only: undefined names, use before define, a local t hiding the i18n helper)
+        run: npm run lint
+      - run: npm run check:imports
+      - run: npm run version:check
+      - run: npm run i18n:check
+      - name: Room server tests
+        working-directory: multiplayer
+        run: npm ci && npm test
+      - name: Smoke test (menu → launch pad → cockpit → surface → results, no errors)
+        run: npm run web:smoke
+        env:
+          CHROME_BIN: /usr/bin/google-chrome # preinstalled on GitHub's Ubuntu runners

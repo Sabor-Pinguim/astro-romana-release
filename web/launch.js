@@ -320,7 +320,7 @@ const OCEAN = [0x123a6b, 0x1d5f9a, 0x2c86ba]; // ocean ramp of the 2D art (RAMPS
 const GORES = [0xe04f26, 0xfce8a6]; // parachute gores: Mars orange and starlight cream
 const CANOPY = { r: 1.25, cap: Math.PI * .4, lines: 3.4, spread: 1.1, tilt: .32 };
 let seaView = null;
-const wave = (x, z, t) => .16 * Math.sin(x * .32 + t * 1.2) + .11 * Math.sin(z * .45 - t * .9) + .06 * Math.sin((x + z) * .8 + t * 2);
+const wave = (x, z, time) => .16 * Math.sin(x * .32 + time * 1.2) + .11 * Math.sin(z * .45 - time * .9) + .06 * Math.sin((x + z) * .8 + time * 2);
 // One flat colour per triangle (non-indexed geometry), picked by pick(face index, centroid).
 function faceColors(geo, pick) {
   const p = geo.attributes.position, c = [], v = new THREE.Vector3();

@@ -521,7 +521,9 @@ export const PART_SPECS = {
     mitigatesEvents: ['E6', 'E10'],
     sources: {
       massDryKg: 'real/derived (references/experiments/mars-experiments.md EN3b/EN3c: 45 kg MMRTG + 26.5 kg Li-ion)',
-      powerW: 'real (references/experiments/mars-experiments.md EN3b/EN3c: 110 W continuous / 900 W peak buffer)',
+      // A real MMRTG gives ~110 W continuous (its batteries only cover ~900 W peaks), less than the crew cabin alone
+      // draws (300 W), and the planner counts powerW as continuous: 900 W keeps the part usable as the only generator.
+      powerW: 'game-balance ⚠ (continuous in the game; real MMRTG ~110 W continuous + Li-ion for ~900 W peaks, references/experiments/mars-experiments.md EN3b/EN3d; Kilopower 1–10 kW electric design, EN3c)',
       costM: 'game-balance (Tier 3 nuclear power & Li-ion peak buffer)',
     },
   },

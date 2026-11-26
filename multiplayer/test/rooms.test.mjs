@@ -266,3 +266,66 @@ test('protocol errors: version, shape, room state and limits', () => {
   env.hub.handle(other, { v: V, t: 'create' });
   assert.equal(other.last().code, 'too-many-rooms');
 });
+
+test('names from Object.prototype are not message types (NET-02)', () => {
+  const env = setup();
+  const { c: h, room } = host(env);
+  const g = guest(env, room.code);
+  for (const t of ['__proto__', 'constructor', 'toString', 'valueOf', 'hasOwnProperty', '__defineGetter__', '__defineSetter__']) {
+    env.hub.handle(h, { t });
+    assert.deepEqual(h.last(), { t: 'error', code: 'bad-message', ref: t }, t);
+  }
+  env.hub.handle(h, { t: 'state', key: 'k', data: 1 }); // the room still works
+  assert.deepEqual(g.last('state'), { t: 'state', key: 'k', data: 1 });
+});
+
+test('the room keeps state and poses as JSON text within a byte budget (NET-03)', () => {
+  const env = setup({ MAX_ROOM_STATE_BYTES: 100 });
+  const { c: h, room } = host(env);
+  const r = env.hub.rooms.get(room.code);
+  env.hub.handle(h, { t: 'state', key: 'a', data: 'x'.repeat(58) }); // 60 bytes as JSON
+  assert.equal(typeof r.state.get('a'), 'string');
+  assert.equal(r.stateBytes, 60);
+  env.hub.handle(h, { t: 'state', key: 'b', data: 'y'.repeat(48) }); // 50 more: over the budget
+  assert.deepEqual(h.last(), { t: 'error', code: 'too-large', ref: 'state' });
+  assert.equal(r.state.has('b'), false);
+  env.hub.handle(h, { t: 'state', key: 'a', data: 'x'.repeat(8) }); // replacing frees the old bytes
+  env.hub.handle(h, { t: 'state', key: 'b', data: 'y'.repeat(48) });
+  assert.equal(r.stateBytes, 60);
+  env.hub.handle(h, { t: 'state', key: 'a', data: null });
+  assert.equal(r.stateBytes, 50);
+  env.hub.handle(h, { t: 'state', key: 'c' }); // no data at all
+  assert.equal(h.last().code, 'bad-message');
+  env.hub.handle(h, { t: 'pose', data: { x: 1, y: [2, 3] } });
+  assert.equal(typeof r.poses.get(room.you.id), 'string');
+  const late = guest(env, room.code);
+  assert.deepEqual(late.last('joined').state, { b: 'y'.repeat(48) }); // parsed back for the newcomer
+  assert.deepEqual(late.last('joined').poses[0].data, { x: 1, y: [2, 3] });
+});
+
+test('per-IP limits: open rooms and rooms created per minute (NET-04)', () => {
+  const env = setup({ MAX_ROOMS_PER_IP: 2, ROOM_CREATES_PER_IP_PER_MIN: 3 });
+  const from = (ip, msg = {}) => { const c = env.conn(); c.ip = ip; env.hub.handle(c, { v: V, t: 'create', ...msg }); return c; };
+  const a1 = from('203.0.113.1'), a2 = from('203.0.113.1');
+  assert.ok(a1.last('created') && a2.last('created'));
+  assert.deepEqual(from('203.0.113.1').last(), { t: 'error', code: 'too-many-rooms', ref: 'create' });
+  assert.ok(from('203.0.113.2').last('created')); // another IP is not affected
+  env.hub.handle(a1, { t: 'leave' }); // the room closes, so the IP may open one more
+  const a3 = from('203.0.113.1');
+  assert.ok(a3.last('created'));
+  env.hub.handle(a3, { t: 'leave' });
+  assert.deepEqual(from('203.0.113.1').last(), { t: 'error', code: 'too-many-rooms', ref: 'create' }); // 3 created this minute
+  env.tick(60_000);
+  assert.ok(from('203.0.113.1').last('created'));
+  // A dropped host's room still counts during its grace period, then it is freed.
+  env.hub.disconnect(a2);
+  assert.equal(from('203.0.113.1').last().code, 'too-many-rooms');
+  env.tick(env.hub.config.RESUME_GRACE_MS);
+  assert.ok(from('203.0.113.1').last('created'));
+  assert.ok(from(undefined).last('created')); // connections without an IP (tests, tools) skip the per-IP limits
+});
+
+test('a per-IP room limit of 0 is off', () => {
+  const env = setup({ MAX_ROOMS_PER_IP: 0, ROOM_CREATES_PER_IP_PER_MIN: 0 });
+  for (let i = 0; i < 20; i++) { const c = env.conn(); c.ip = '203.0.113.1'; env.hub.handle(c, { v: V, t: 'create' }); assert.ok(c.last('created')); }
+});

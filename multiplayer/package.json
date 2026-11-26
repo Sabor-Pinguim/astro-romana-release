@@ -1,6 +1,6 @@
 {
   "name": "astro-romana-rooms",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Room server for Astro Romana multiplayer: rooms, seats, phase and a host-authoritative message relay (WebSocket).",
   "type": "module",

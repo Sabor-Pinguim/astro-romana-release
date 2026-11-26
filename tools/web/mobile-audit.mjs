@@ -38,6 +38,11 @@ const MIME = {
 
 const args = process.argv.slice(2);
 const strict = args.includes('--strict');
+// --smoke (npm run web:smoke, CI): one desktop viewport with reduced motion, plus a mission end to end through the
+// test hooks: the launch pad cutscene, the surface with the player's experiments done, boarding and the results.
+// Fails (exit 1) on any page exception, console.error or step that never happens; layout warnings only print.
+// It exists because FLT-01, SURF-01 and GAME-01 broke every mission in one commit (AUDITORIA.md REPO-01).
+const smoke = args.includes('--smoke');
 const saveScreenshots = args.includes('--screenshots');
 // --lang pt|es|en: audit in that language (Portuguese and Spanish run 20–30% longer than English); --pseudo: with
 // pseudo-localization (web/i18n.js), every text about a third longer, to catch text that does not fit.
@@ -112,6 +117,8 @@ function launchBrowser(bin, userDataDir) {
       '--no-default-browser-check',
       '--disable-background-timer-throttling',
       '--mute-audio',
+      // CI runners have no GPU: software WebGL (SwiftShader) keeps the 3D surface running; no sandbox inside the VM.
+      ...(process.env.CI ? ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : []),
       'about:blank',
     ], { stdio: ['ignore', 'ignore', 'pipe'] });
 
@@ -282,8 +289,13 @@ async function runViewport(cdp, baseUrl, vp) {
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem('astro-romana-settings', JSON.stringify({ language: '${auditLang}' })); } catch {}` }, sessionId);
   }
 
+  if (smoke) await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] }, sessionId);
+
   cdp.on('Runtime.exceptionThrown', p => {
     errors.push(p.exceptionDetails?.exception?.description || p.exceptionDetails?.text || 'Runtime exception');
+  }, sessionId);
+  cdp.on('Runtime.consoleAPICalled', p => {
+    if (p.type === 'error') errors.push(`console.error: ${p.args.map(a => a.value ?? a.description ?? '').join(' ').slice(0, 300)}`);
   }, sessionId);
 
   const navigate = async url => {
@@ -317,6 +329,7 @@ async function runViewport(cdp, baseUrl, vp) {
   const results = [];
   await navigate(`${baseUrl}/index.html${pseudoQuery ? `?${pseudoQuery}` : ''}`);
   await waitFor(`document.querySelector('#menu.active')`, '#menu.active');
+  if (smoke) await waitFor(`/^v\\d+\\.\\d+\\.\\d+$/.test(document.getElementById('menu-version')?.textContent) && document.getElementById('menu-version').textContent === 'v' + window.ASTRO_VERSION`, 'the menu version label (web/version.js)', 3000);
   results.push(await auditScreen(cdp, sessionId, vp, '01-menu', errors));
 
   await click('#play-button');
@@ -354,6 +367,12 @@ async function runViewport(cdp, baseUrl, vp) {
     results.push(await auditScreen(cdp, sessionId, vp, '07c-planner-telemetry', errors));
   }
 
+  if (smoke) {
+    // The launch pad cutscene, jumped to its end (FLT-01 hung it forever).
+    await cdp.send('Runtime.evaluate', { expression: `window.ASTRO_LAUNCH_JUMP = 1e6; window.ASTRO.launchPad().then(() => { window.__smokePad = true; })` }, sessionId);
+    await waitFor(`window.__smokePad === true`, 'the launch pad to finish', 15000);
+  }
+
   await cdp.send('Runtime.evaluate', { expression: `window.ASTRO?.jumpCockpit?.(0)` }, sessionId);
   await waitFor(`document.querySelector('#cockpit.active')`, '#cockpit.active');
   results.push(await auditScreen(cdp, sessionId, vp, '08-cockpit-liftoff', errors));
@@ -372,6 +391,21 @@ async function runViewport(cdp, baseUrl, vp) {
   await click('#surface-start');
   await delay(250);
   results.push(await auditScreen(cdp, sessionId, vp, '11-surface', errors));
+
+  if (smoke) {
+    // The player's experiments (GAME-01 threw on completion), then boarding and the results screen.
+    await waitFor(`window.ASTRO_SURFACE?.running?.()`, 'the surface to run', 12000);
+    const done = await cdp.send('Runtime.evaluate', {
+      expression: `(() => { const sim = window.ASTRO_SIM, mine = sim.surf.tasks.filter(task => task.crew === sim.surf.activeCrew);
+        for (const task of mine) { window.ASTRO_SURFACE.goTo(task.id); sim.completeSurfaceTask(task.id, undefined, 3); }
+        return mine.length && mine.every(task => sim.surf.completed.has(task.id)) ? mine.length : 0; })()`,
+      returnByValue: true,
+    }, sessionId);
+    if (!done.result?.value) errors.push(`Surface experiments did not complete: ${done.exceptionDetails?.exception?.description?.split('\n')[0] ?? JSON.stringify(done.result?.value)}`);
+    await cdp.send('Runtime.evaluate', { expression: `window.ASTRO_SIM.board()` }, sessionId);
+    await waitFor(`document.querySelector('#results.active')`, '#results.active after boarding', 20000);
+    results.push(await auditScreen(cdp, sessionId, vp, '12-results-after-mission', errors));
+  }
 
   await cdp.send('Target.closeTarget', { targetId });
   await cdp.send('Target.disposeBrowserContext', { browserContextId });
@@ -393,8 +427,16 @@ async function main() {
     proc = launched.proc;
     cdp = await connectCDP(launched.wsUrl);
     const all = [];
-    for (const vp of VIEWPORTS) {
+    const viewports = smoke ? VIEWPORTS.filter(vp => vp.name === '1440x900') : VIEWPORTS;
+    for (const vp of viewports) {
       all.push(...await runViewport(cdp, baseUrl, vp));
+    }
+    if (smoke) {
+      const errors = all.flatMap(r => r.errors.map(e => `[${r.stage}] ${e}`));
+      const unique = [...new Set(errors)];
+      if (unique.length) { console.error(`✘ smoke test: ${unique.length} error(s)\n${unique.map(e => `  ${e}`).join('\n')}`); process.exitCode = 1; }
+      else console.log(`✔ smoke test: menu → lobby → planner → launch pad → cockpit → surface (experiments done) → boarding → results, no errors`);
+      return;
     }
 
     let issueCount = 0;

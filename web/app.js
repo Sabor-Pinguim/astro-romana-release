@@ -892,14 +892,14 @@
     let cost=0,draw=0,gen=0,payload=0;
     const take=s=>{if(!s)return 0;cost+=s.costM||0;if(s.powerW<0)draw-=s.powerW;else gen+=s.powerW||0;return s.massDryKg||0;};
     const engineStage=(key,m,first)=>{
-      const e=m.engine?spec(m.engine):null,t=m.tank?spec(m.tank):null,n=e?(e.defaultClusterCount||1):0;
+      const e=m.engine?spec(m.engine):null,tank=m.tank?spec(m.tank):null,n=e?(e.defaultClusterCount||1):0;
       let hw=take(spec('booster-thrust-section'));
       if(e){cost+=n*(e.costM||0);hw+=n*(e.massDryKg||0);}
-      if(t){cost+=t.costM||0;hw+=t.massDryKg||0;}
+      if(tank){cost+=tank.costM||0;hw+=tank.massDryKg||0;}
       if(first&&m.fins)hw+=take(spec(m.fins));
-      const issue=!e||!t?'incomplete':!LV().fuelTypes||sameFuel(m.engine,m.tank)?null:'propellant';
+      const issue=!e||!tank?'incomplete':!LV().fuelTypes||sameFuel(m.engine,m.tank)?null:'propellant';
       const ispVac=e?.ispVacS||0,isp=first&&e?.ispSlS?(e.ispSlS+ispVac)/2:ispVac;
-      return {key,hw,prop:t?.propellantMassKg||0,isp,ispVac,thrustSl:n*(e?.thrustSlKn||0)*1000,thrustVac:n*(e?.thrustVacKn||0)*1000,issue,ready:!issue,dv:0};
+      return {key,hw,prop:tank?.propellantMassKg||0,isp,ispVac,thrustSl:n*(e?.thrustSlKn||0)*1000,thrustVac:n*(e?.thrustVacKn||0)*1000,issue,ready:!issue,dv:0};
     };
     const stack=[engineStage('booster',r.booster,true)];
     r.stages.forEach((s,i)=>{if(s.type==='booster')stack.push(engineStage(`stage-${i}`,s,false));else payload+=take(spec('stage-module'))+take(s.item?spec(s.item):null);});
@@ -1168,7 +1168,7 @@
   }
   function renderCatalog(){
     if(!DATA){$('#parts-list').innerHTML=`<div class="empty-state">${t('planner.loadingParts')}</div>`;return;}
-    const sel=state.sel,tabs=tabsFor(sel);if(!tabs.some(t=>t[0]===state.tab))state.tab=tabs[0][0];
+    const sel=state.sel,tabs=tabsFor(sel);if(!tabs.some(tab=>tab[0]===state.tab))state.tab=tabs[0][0];
     $('#category-tabs').innerHTML=tabs.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${k===state.tab}">${l}</button>`).join('');
     $$('#category-tabs [data-tab]').forEach(b=>b.addEventListener('click',()=>{state.tab=b.dataset.tab;renderCatalog();}));
     $('#selected-stage-tag').textContent=moduleLabel(moduleKey(sel))[0].toUpperCase();
@@ -1827,7 +1827,7 @@
   };
   const random = seed => { let s = (seed * 9973) % 2147483647 || 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
   const unit = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); };
-  const pick = (ramp, t) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(t * ramp.length)))];
+  const pick = (ramp, frac) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(frac * ramp.length)))];
   const poly = (pts, fill) => `<polygon points="${pts.map(p => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(' ')}" fill="${fill}" stroke="${fill}"/>`;
   // Triangle strip between two closed rings of different vertex counts.
   function zip(A, B) {
@@ -1857,13 +1857,13 @@
     const tris = loops[0].map((p, k, a) => [[0, 0], p, a[(k + 1) % a.length]]);
     for (let i = 0; i + 1 < loops.length; i++) tris.push(...zip(loops[i], loops[i + 1]));
     const lift = ([x, y]) => [x, y, Math.sqrt(Math.max(0, 1 - x * x - y * y))];
-    return `<g stroke-width=".008" stroke-linejoin="round">${tris.map(t => {
-      const [a, b, c] = t.map(lift), u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    return `<g stroke-width=".008" stroke-linejoin="round">${tris.map(tri => {
+      const [a, b, c] = tri.map(lift), u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       let n = unit([u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]);
       if (n[2] < 0) n = n.map(x => -x);
       const cx = (a[0] + b[0] + c[0]) / 3, cy = (a[1] + b[1] + c[1]) / 3;
       const region = regions.find(r => r.test(cx, cy));
-      return poly(t, pick(region ? region.ramp : ramp, Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) + (rnd() - .5) * .12));
+      return poly(tri, pick(region ? region.ramp : ramp, Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) + (rnd() - .5) * .12));
     }).join('')}</g>`;
   }
   const facetPlanet = opts => `<svg viewBox="-1.02 -1.02 2.04 2.04" aria-hidden="true">${facetPolys(opts)}</svg>`;
@@ -1883,14 +1883,14 @@
     const top = x => { for (let k = 1; k < profile.length; k++) if (x <= profile[k][0]) { const [x0, y0] = profile[k - 1], [x1, y1] = profile[k]; return y0 + (y1 - y0) * (x - x0) / (x1 - x0); } return profile[profile.length - 1][1]; };
     const xs = Array.from({ length: cols + 1 }, (_, c) => c === 0 || c === cols ? c / cols : (c + (rnd() - .5) * .6) / cols);
     const grid = Array.from({ length: rows + 1 }, (_, r) => xs.map(x => {
-      const y0 = top(x), t = Math.pow(r / rows, 1.5), jitter = r > 0 && r < rows ? (rnd() - .5) * .05 : 0;
-      return [x * w, (y0 + (1 - y0) * t + jitter) * h];
+      const y0 = top(x), depth = Math.pow(r / rows, 1.5), jitter = r > 0 && r < rows ? (rnd() - .5) * .05 : 0;
+      return [x * w, (y0 + (1 - y0) * depth + jitter) * h];
     }));
     let out = '';
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const a = grid[r][c], b = grid[r][c + 1], d = grid[r + 1][c], e = grid[r + 1][c + 1];
       const pair = (r + c) % 2 ? [[a, b, e], [a, e, d]] : [[a, b, d], [b, e, d]];
-      pair.forEach((t, k) => { out += poly(t, pick(ramp, .78 - r / rows * .5 + (k ? -.12 : .1) + (rnd() - .5) * .22)); });
+      pair.forEach((tri, k) => { out += poly(tri, pick(ramp, .78 - r / rows * .5 + (k ? -.12 : .1) + (rnd() - .5) * .22)); });
     }
     return `<g stroke-width=".25" stroke-linejoin="round">${out}</g>`;
   }
@@ -1963,7 +1963,7 @@
   function orbitRings() {
     const ring = (r, n) => `<polygon points="${Array.from({ length: n }, (_, k) => { const a = k / n * Math.PI * 2; return (50 + r * Math.cos(a)).toFixed(2) + ',' + (50 + r * Math.sin(a)).toFixed(2); }).join(' ')}"/>`;
     const r1 = 26, r2 = 38.5, e = (r2 - r1) / (r2 + r1), p = (r1 + r2) / 2 * (1 - e * e), th0 = 200 * Math.PI / 180;
-    const transfer = Array.from({ length: 11 }, (_, k) => { const t = k / 10 * Math.PI, r = p / (1 + e * Math.cos(t)); return (50 + r * Math.cos(th0 + t)).toFixed(2) + ',' + (50 - r * Math.sin(th0 + t)).toFixed(2); }).join(' ');
+    const transfer = Array.from({ length: 11 }, (_, k) => { const angle = k / 10 * Math.PI, r = p / (1 + e * Math.cos(angle)); return (50 + r * Math.cos(th0 + angle)).toFixed(2) + ',' + (50 - r * Math.sin(th0 + angle)).toFixed(2); }).join(' ');
     return `<svg class="orbit-rings" viewBox="0 0 100 100" aria-hidden="true">${ring(13.5, 14)}${ring(26, 20)}${ring(38.5, 26)}${ring(50, 32)}<polyline class="transfer" points="${transfer}"/></svg>`;
   }
   function paintArt() {
@@ -2056,11 +2056,21 @@
     const tankLabel = () => flight.step === 3 ? t('cockpit.descentTank') : !flight.ascent ? t('cockpit.propellant')
       : flight.step === 0 ? t('cockpit.stage1Tank') : t('cockpit.stageTank', { stage: stageName(flight.ascent.top.key) });
     const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.ceil(Math.max(0, seconds) % 60)).padStart(2, '0')}`;
+    // Geiger counter on the surface (docs/audio.md): the generated clicks, never synthesized. The numbers are the
+    // `geiger` block of assets/audio/manifest.json, copied here because file:// cannot fetch the manifest.
+    const GEIGER = {
+      files: ['geiger_click_1.wav', 'geiger_click_2.wav', 'geiger_click_3.wav', 'geiger_click_4.wav'],
+      quietDoseUgyDay: 115.7, // real: quiet-window median, Curiosity RAD detector B (references/datasets/msl-rad)
+      clicksPerSAtQuiet: 0.5, // game-balance (manifest)
+      maxClicksPerS: 30, // game-balance (manifest)
+      volume: 0.3, // game-balance: under the surface bed (0.35)
+    };
     const radAudio = {
       muted: false,
       bed: null,
       ctx: null,
       geigerTimer: null,
+      clicks: null,
       ensureCtx() {
         if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
           this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2091,12 +2101,35 @@
           }
           this.bed.play().catch(() => {});
         } catch { /* file:// or autoplay policy fallback */ }
-        clearInterval(this.geigerTimer);
-        this.geigerTimer = setInterval(() => {
-          if (!this.muted && state.screen === 'surface' && Math.random() < 0.38) {
-            this.tone(1400 + Math.random() * 500, 0.015, 'square', 0.018);
-          }
-        }, 420);
+        this.startGeiger(GEIGER.quietDoseUgyDay); // the surface is a quiet sol: no storm reaches it
+      },
+      // Rate = clicksPerSAtQuiet × dose / quietDoseUgyDay, capped; random (exponential) intervals, like a real counter.
+      // Off the surface (Settings, a minigame screen) it keeps its timer but stays silent; stopAll() ends it.
+      startGeiger(doseUgyDay) {
+        clearTimeout(this.geigerTimer);
+        const rate = Math.min(GEIGER.maxClicksPerS, GEIGER.clicksPerSAtQuiet * doseUgyDay / GEIGER.quietDoseUgyDay);
+        if (!(rate > 0)) return;
+        const next = () => {
+          this.geigerTimer = setTimeout(() => {
+            if (!this.muted && state.screen === 'surface') this.click();
+            next();
+          }, (-Math.log(1 - Math.random()) / rate) * 1000);
+        };
+        next();
+      },
+      click() {
+        try {
+          this.clicks ||= GEIGER.files.map(file => {
+            const clip = new Audio(`assets/audio/${file}`);
+            clip.preload = 'auto';
+            return clip;
+          });
+          const pick = this.clicks[Math.floor(Math.random() * this.clicks.length)];
+          const clip = pick.paused || pick.ended ? pick : pick.cloneNode(); // overlapping clicks at high rates
+          clip.volume = GEIGER.volume;
+          clip.currentTime = 0;
+          clip.play().catch(() => {});
+        } catch { /* autoplay policy */ }
       },
       storm() {
         if (this.muted) return;
@@ -2110,7 +2143,8 @@
       stopAll() {
         if (this.bed) { this.bed.pause(); this.bed.currentTime = 0; }
         if (this.stormClip) this.stormClip.pause();
-        clearInterval(this.geigerTimer);
+        clearTimeout(this.geigerTimer);
+        this.geigerTimer = null;
       },
       toggleMute() {
         this.muted = !this.muted;
@@ -2463,11 +2497,11 @@
       return createKeepInRange({
         axes: 2, duration, band: LIFTOFF.band, limit: LIFTOFF.limit,
         authority: LIFTOFF.authority * (d.hasCockpitUpgrade ? 1.25 : 1),
-        drift: t => {
-          const u = t / duration, k = gust * (u > LIFTOFF.maxQ[0] && u < LIFTOFF.maxQ[1] ? 2.4 : 1); // gusts peak around Max-Q
-          const pogo = d.overweight && u > CONSEQUENCE.pogo.from ? CONSEQUENCE.pogo.amp * Math.sin(t * CONSEQUENCE.pogo.rate) : 0;
-          return [k * (3.2 * Math.sin(t * 0.9 + s1) + 2.6 * Math.sin(t * 2.3 + s1 * 1.7) + 1) + pogo,
-            k * (2.8 * Math.sin(t * 1.1 + s2) + 2.2 * Math.sin(t * 1.9 + s2 * 1.3))];
+        drift: time => {
+          const u = time / duration, k = gust * (u > LIFTOFF.maxQ[0] && u < LIFTOFF.maxQ[1] ? 2.4 : 1); // gusts peak around Max-Q
+          const pogo = d.overweight && u > CONSEQUENCE.pogo.from ? CONSEQUENCE.pogo.amp * Math.sin(time * CONSEQUENCE.pogo.rate) : 0;
+          return [k * (3.2 * Math.sin(time * 0.9 + s1) + 2.6 * Math.sin(time * 2.3 + s1 * 1.7) + 1) + pogo,
+            k * (2.8 * Math.sin(time * 1.1 + s2) + 2.2 * Math.sin(time * 1.9 + s2 * 1.3))];
         },
       });
     }
@@ -2684,9 +2718,9 @@
       const consequence = flight.liftoffStars < 2 || !flight.stageSeparated ? 1.35 : 1;
       return createKeepInRange({
         axes: 2, ...DOCKING,
-        drift: t => [
-          consequence * (.36 * Math.sin(t * 1.35 + s1) + .18 * Math.sin(t * 2.8 + s1 * .7)),
-          consequence * (.32 * Math.sin(t * 1.1 + s2) + .16 * Math.sin(t * 2.4 + s2 * 1.2)),
+        drift: time => [
+          consequence * (.36 * Math.sin(time * 1.35 + s1) + .18 * Math.sin(time * 2.8 + s1 * .7)),
+          consequence * (.32 * Math.sin(time * 1.1 + s2) + .16 * Math.sin(time * 2.4 + s2 * 1.2)),
         ],
       });
     }
@@ -2708,9 +2742,9 @@
       const transferPenalty = flight.docking?.stars() < 2 ? 1.25 : 1;
       return createKeepInRange({
         axes: 2, ...MARS_BURN,
-        drift: t => [
-          transferPenalty * (2.6 * Math.sin(t * .82 + s1) + 1.9 * Math.sin(t * 2.1 + s1 * 1.4)),
-          transferPenalty * (2.2 * Math.sin(t * 1.16 + s2) + 1.7 * Math.sin(t * 2.5 + s2 * .8)),
+        drift: time => [
+          transferPenalty * (2.6 * Math.sin(time * .82 + s1) + 1.9 * Math.sin(time * 2.1 + s1 * 1.4)),
+          transferPenalty * (2.2 * Math.sin(time * 1.16 + s2) + 1.7 * Math.sin(time * 2.5 + s2 * .8)),
         ],
       });
     }

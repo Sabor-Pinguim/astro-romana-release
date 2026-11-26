@@ -148,7 +148,7 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
   - `-- minor`: **features grandes** / entregas significativas; zera o patch. Ex.: `1.3.2` → `1.4.0`.
   - `-- major`: só quando o time pedir explicitamente.
 
-  O script grava a versão em `package.json`, `package-lock.json`, `index.html` e `web/locales/{en,pt,es}.js`; `npm run version:check` confere se todos batem.
+  O script grava a versão em `package.json`, `package-lock.json` e `web/version.js` (o menu lê dali); `npm run version:check` confere se todos batem. Não ponha a versão em outro arquivo.
 - **Versão do servidor de salas:** própria, em `multiplayer/package.json` (aparece no `/health`). Mudou um `.mjs` de `multiplayer/` ou as dependências dele: `npm run version:bump:server -- patch`. A VM puxa o `main` a cada minuto e reinicia o servidor quando essa versão muda, assim que não houver sala aberta (no máximo 60 min); o jogo atualiza na hora. Mudança em `multiplayer/deploy/` ainda pede `setup-v2.sh` à mão ([multiplayer/README.md](multiplayer/README.md#the-v2-vm-automatic-updates)).
 - **Gancho de pré-commit (`.githooks/pre-commit`, ligado pelo `npm install`):** barra o commit cujos arquivos mantêm a versão do último commit, discordam entre si, não têm a seção da nova versão preenchida no CHANGELOG ou mudam o servidor de salas sem subir a versão dele. Não confere merge, rebase nem cherry-pick. `--no-verify` só para o `--amend` do commit que já subiu a versão.
 - **Changelog obrigatório:** o `version:bump` abre no topo do [CHANGELOG.md](CHANGELOG.md) a seção `## [X.Y.Z] - YYYY-MM-DD`; liste nela, de forma clara, o que foi adicionado, alterado ou corrigido.
@@ -162,7 +162,9 @@ multiplayer/            servidor de salas (Node + ws), cliente RoomClient, pági
 ## 11. Checklist antes de concluir uma tarefa
 
 - [ ] O gerador que você tocou passa sem ✘: `npm run models` (e o visualizador abre sem erros), `npm run audio`, `npm run terrain`.
-- [ ] A página abre sem erros no console nos tamanhos da seção 4 (`npm run web:audit:mobile`), se você tocou nela.
+- [ ] `npm run check` passa (lint só de bugs, imports das ferramentas, versão e traduções). O CI (`.github/workflows/ci.yml`) roda o mesmo a cada push, mais os testes do servidor e o `npm run web:smoke`.
+- [ ] Se tocou na página: `npm run web:smoke` (uma missão de ponta a ponta, sem erros) e `npm run web:audit:mobile` (os tamanhos da seção 4).
+- [ ] Nunca chame um local de `t` num script da página: ele esconde o helper de tradução (a regra `astro/no-shadow-t` do lint barra).
 - [ ] `npm run i18n:check` passa, se você tocou em textos vistos pelo jogador.
 - [ ] Nenhum número apresentado como real ficou sem fonte.
 - [ ] Versão e changelog (seção 10): `npm run version:check` passa e a seção da nova versão está preenchida.
@@ -178,6 +180,8 @@ npm run models                 # modelos 3D: gera tudo, valida e empacota (os de
 npm run audio                  # paisagem sonora: gera e valida (tools/audio/AGENTS.md)
 npm run terrain                # terrenos reais de Marte (tools/terrain/AGENTS.md)
 npm run web:sites              # fotos HiRISE dos locais de pouso (assets/sites; rede: NODE_OPTIONS=--use-system-ca)
+npm run check                  # lint + imports + versão + traduções (o mesmo que o CI roda)
+npm run web:smoke              # uma missão de ponta a ponta no Chrome/Edge headless; falha com qualquer erro
 npm run web:audit:mobile       # a página nos tamanhos da seção 4 (--lang pt|es, --pseudo)
 npm run i18n:check             # valida as traduções (i18n:audit: nas telas, com pseudo-localização)
 npm run version:bump -- patch  # sobe a versão em todos os lugares (version:check só confere)

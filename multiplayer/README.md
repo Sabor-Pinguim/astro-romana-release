@@ -69,7 +69,7 @@ JSON messages. `create`, `join` and `resume` carry `v: 1`. Every error comes bac
 | `closed {reason}` | `host-left`, `expired`, `server` or `replaced` (the same seat was resumed on another connection) |
 | `left` | Confirms the `leave` |
 
-**Error codes:** `bad-version`, `bad-message`, `already-in-room`, `not-in-room`, `room-not-found`, `room-full`, `in-progress`, `seat-taken`, `bad-seat`, `bad-token`, `not-host`, `not-guest`, `host-offline`, `peer-not-found`, `too-many-rooms`, `too-many-keys`, `rate-limited`, `too-large`.
+**Error codes:** `bad-version`, `bad-message`, `already-in-room`, `not-in-room`, `room-not-found`, `room-full`, `in-progress`, `seat-taken`, `bad-seat`, `bad-token`, `not-host`, `not-guest`, `host-offline`, `peer-not-found`, `too-many-rooms`, `too-many-keys`, `rate-limited`, `too-large`. A message that makes the server fail closes only that socket (code 1011); the server and the other rooms carry on.
 
 ### Lifecycle
 - The room code has 4 characters and avoids the ones that get confused (no 0/O or 1/I/L).
@@ -93,9 +93,19 @@ The defaults are in [config.mjs](config.mjs). The main ones:
 | `MAX_PEERS` | 4 | — |
 | `MAX_ROOMS` | 500 | — |
 | `MAX_MESSAGE_BYTES` | 16384 | — |
+| `MAX_JSON_DEPTH` | 32 | Deeper nesting in one message gets `bad-message` |
+| `MAX_ROOM_STATE_BYTES` | 131072 | What a room keeps of `state`, as JSON text; above it a `state` gets `too-large` |
+| `MAX_BUFFERED_BYTES` | 1048576 | Unsent bytes for one socket; above it the socket is dropped (its player may resume) |
 | `RATE_PER_SEC` / `RATE_BURST` | 60 / 120 | — |
+| `MAX_CONNECTIONS` | 2500 | Open WebSockets on the whole server; above it the upgrade gets HTTP 429 |
+| `MAX_CONNECTIONS_PER_IP` | 32 | Per client IP; above it the upgrade gets HTTP 429 |
+| `MAX_ROOMS_PER_IP` / `ROOM_CREATES_PER_IP_PER_MIN` | 8 / 12 | Open rooms created from one IP (a dropped host's room counts during its grace) and rooms created per minute; above them `create` gets `too-many-rooms` |
 | `RESUME_GRACE_MS` | 30000 | — |
 | `ROOM_TTL_MS` | 4 h | — |
+
+| `TRUSTED_PROXIES` | `127.0.0.1,::1,::ffff:127.0.0.1` | Peers whose `X-Forwarded-For` is trusted; `*` = any (Cloud Run) |
+
+**Client IP:** the socket's address, or, when the connection comes from a trusted proxy (the VM's Caddy on loopback), the rightmost `X-Forwarded-For` entry. The per-IP limits are generous because a Space Apps venue puts many players behind one NAT; `0` turns one off. The leaderboard POST limit (`API_RATE_PER_MIN`) uses the same IP.
 
 ## Client (`client/room-client.js`)
 
@@ -188,8 +198,10 @@ Only the room server, with automatic HTTPS on `*.run.app`. The game is hosted so
 ```bash
 gcloud run deploy astro-romana-rooms --source multiplayer --region southamerica-east1 \
   --allow-unauthenticated --max-instances 1 --concurrency 1000 --timeout 3600 \
-  --set-env-vars "^;^ALLOWED_ORIGINS=https://<game-origin>,null"
+  --set-env-vars "^;^ALLOWED_ORIGINS=https://<game-origin>,null;TRUSTED_PROXIES=*"
 ```
+
+- `TRUSTED_PROXIES=*`: on Cloud Run every connection arrives from Google's front end, so the client IP comes from its `X-Forwarded-For`. Without it, all players would share one IP and its per-IP limits.
 
 - `--max-instances 1`: rooms live in the memory of a single instance. With two, players in the same room could land on different instances.
 - `--concurrency 1000`: each open WebSocket counts as a request. The default of 80 would limit it to 20 full rooms.
