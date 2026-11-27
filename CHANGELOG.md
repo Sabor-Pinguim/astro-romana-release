@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.11] - 2026-11-27
+
+### Fixed
+- Hide the minigame stage when the completion card is shown on mobile so the completion dialog does not scroll (`web/minigames.css`).
+- Fit the completion/failure dialog height to its content (`height: fit-content`) instead of stretching to full viewport height (`web/minigames.css`).
+- Allow dismissing the minigame completion dialog by clicking its backdrop (`web/experiment-run.js`).
+
+## [1.10.10] - 2026-11-27
+
 ## [1.10.9] - 2026-11-27
 
 ### Fixed

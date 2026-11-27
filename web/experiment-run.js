@@ -215,6 +215,12 @@
       // The close event arrives a moment after dialog.close(). If another experiment opened the dialog in the
       // meantime (orbit window closing straight into the H-S2 descent), it is not the one to stop: play() already
       // closed the previous minigame.
+      dialog.addEventListener('click', ev => {
+        if (ev.target === dialog && dialog.classList.contains('is-complete')) {
+          clearTimeout(autoClose);
+          dialog.close();
+        }
+      });
       dialog.addEventListener('close', () => {
         if (dialog.open) return;
         clearTimeout(autoClose); close(); dialog.classList.remove('is-complete');
