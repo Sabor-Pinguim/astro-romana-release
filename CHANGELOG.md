@@ -11,6 +11,12 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.0] - 2026-11-27
+
+### Added
+- First-time broken starter rocket (`brokenStarterRocket`) vs returning-player Mars-ready rocket (`readyStarterRocket`) persisted via `astro-romana-rocket-built` once a rocket is launched or completed in the wizard.
+- Step-by-step failure diagnosis in Dr. Nancy Roman's wizard (`booster`, `staging`, `mars`, `bays`, `cabin`, `launch`), step health pips (`.has-issue`), fix-celebration pulse + Nancy wave/salute, and mobile catalog auto-switch on wizard action.
+
 ## [1.10.15] - 2026-11-27
 
 ### Added

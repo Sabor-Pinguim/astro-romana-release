@@ -572,7 +572,7 @@
           nancyAria: 'Dr. Nancy Grace Roman 3D instructor — click to gesture',
           narratorName: 'Dr. Nancy Roman',
           promptTitle: 'FIRST ACCESS · RECOMMENDED',
-          promptBody: 'New to rocket assembly? Dr. Nancy Grace Roman can guide you through the essentials in 7 quick steps. You can reopen this guide anytime.',
+          promptBody: 'This starter rocket is not flight-ready yet. Dr. Nancy Grace Roman can walk you through fixing each system in 7 quick steps.',
           promptStart: 'Start guide →',
           promptDismiss: 'Not now',
           stepsAria: 'Rocket wizard lessons',

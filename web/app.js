@@ -118,7 +118,18 @@
     return null;
   }
   const budgetOf = level => rule('defaultBudgetM',250)*difficulty[level].factor;
-  const defaultRocket=()=>({booster:{engine:'merlin-1d',fins:'fins-small',tank:'falcon-9-stage-1-tank'},stages:[{item:'power-rosa-solar'},{item:null}],cabin:[]});
+  const ROCKET_BUILT_KEY = 'astro-romana-rocket-built';
+  const hasBuiltRocket = () => { try { return localStorage.getItem(ROCKET_BUILT_KEY) === '1'; } catch { return false; } };
+  const markRocketBuilt = () => { try { localStorage.setItem(ROCKET_BUILT_KEY, '1'); } catch {} };
+  // First-time players start with an intentionally non-functional rocket (propellant mismatch, no upper booster, no power, empty cabin)
+  // so Dr. Nancy Roman's wizard walks them through fixing each system. Returning players start with a Mars-ready rocket.
+  const brokenStarterRocket = () => ({ booster: { engine: 'rl10', fins: null, tank: 'falcon-9-stage-1-tank' }, stages: [{ item: null }], cabin: [] });
+  const readyStarterRocket = () => ({
+    booster: { engine: 'merlin-1d', fins: 'fins-small', tank: 'falcon-9-stage-1-tank' },
+    stages: [{ type: 'booster', engine: 'rl10', tank: 'centaur-iii-tank' }, { item: 'power-rosa-solar' }],
+    cabin: ['cabin-storm-shelter'],
+  });
+  const defaultRocket = () => (hasBuiltRocket() ? readyStarterRocket() : brokenStarterRocket());
   const state={screen:'menu',lobbyStep:'mode',difficulty:'normal',site:'jezero',detail:{kind:'crew',id:'helena'},rocket:defaultRocket(),sel:{kind:'booster'},tab:'engine'};
   const money = n => U.money(n);
   const number = (n, opts) => U.number(n, opts);
@@ -1252,25 +1263,38 @@
   // Rocket Construction Wizard — Dr. Nancy Grace Roman + Compact Chalkboard (Lousa)
   // Recommends the wizard on the user's first access to #planner only; can be reopened anytime via #wizard-toggle.
   const WIZARD_SEEN_KEY = 'astro-romana-wizard-seen';
-  const wizardState = { open: false, promptOpen: false, step: 0, seen: false, blinkDismissed: false };
+  const wizardState = { open: false, promptOpen: false, step: 0, seen: false, blinkDismissed: false, lastStepDone: null };
   try { wizardState.seen = localStorage.getItem(WIZARD_SEEN_KEY) === '1'; } catch {}
+  const openCatalogTab = (key, tab) => {
+    selectModule(key, tab);
+    if (window.innerWidth <= 640) {
+      const planner = $('#planner');
+      if (planner) planner.dataset.mobileTab = 'catalog';
+    }
+  };
   const WIZARD_STEPS = [
     {
       id: 'welcome',
       targets: () => [$('#planner .blueprint')].filter(Boolean),
       clip: 'wave',
       check: () => ({ done: true, vars: {} }),
-      action: () => selectModule('booster', 'engine'),
+      action: () => openCatalogTab('booster', 'engine'),
     },
     {
       id: 'booster',
       targets: () => [$('#planner .catalog')].filter(Boolean),
       clip: 'action_loop',
-      check: m => ({
-        done: Boolean(m?.ready && m.twr >= TWR_MIN()),
-        vars: { twr: m?.ready ? U.decimal(m.twr, 2) : '—' },
-      }),
-      action: () => selectModule('booster', 'engine'),
+      check: m => {
+        const b = state.rocket.booster;
+        const done = Boolean(m?.ready && m.twr >= TWR_MIN());
+        const reason = !b.engine ? 'noEngine' : !b.tank ? 'noTank' : !m?.ready ? 'mismatch' : m.twr < TWR_MIN() ? 'lowTwr' : 'ready';
+        return {
+          done,
+          reason,
+          vars: { twr: m?.ready ? U.decimal(m.twr, 2) : '—' },
+        };
+      },
+      action: () => openCatalogTab('booster', state.rocket.booster.engine && !state.rocket.booster.tank ? 'tank' : 'engine'),
     },
     {
       id: 'staging',
@@ -1281,12 +1305,13 @@
       clip: 'action_loop',
       check: m => ({
         done: Boolean(m?.orbit),
+        reason: !m?.ready ? 'fixStage1' : !m.orbit ? 'lowDv' : 'ready',
         vars: { dv: m?.ready ? U.velocityMs(m.dv) : '—', leo: U.velocityMs(m?.leo ?? rule('earthOrbitDeltaVMs', 9400)) },
       }),
       action: () => {
         const idx = state.rocket.stages.findIndex(s => s.type === 'booster');
-        if (idx >= 0) { selectModule(`stage-${idx}`, 'engine'); return; }
-        if (state.rocket.stages.length > 0) { selectModule('stage-0'); return; }
+        if (idx >= 0) { openCatalogTab(`stage-${idx}`, 'engine'); return; }
+        if (state.rocket.stages.length > 0) { openCatalogTab('stage-0', 'power'); return; }
         addStage(0);
       },
     },
@@ -1296,6 +1321,7 @@
       clip: 'action_loop',
       check: m => ({
         done: Boolean(m?.marsOk),
+        reason: !m?.orbit ? 'fixOrbit' : !m.marsOk ? 'lowMars' : 'ready',
         vars: {
           marsDv: m?.orbit ? U.velocityMs(m.marsDv) : '—',
           transfer: U.velocityMs(m?.transfer ?? rule('marsTransferDeltaVMs', 4300)),
@@ -1303,7 +1329,7 @@
       }),
       action: () => {
         const m = DATA ? metrics() : null;
-        selectModule(m?.refuelStage?.key || 'booster', 'tank');
+        openCatalogTab(m?.refuelStage?.key || 'booster', 'tank');
       },
     },
     {
@@ -1312,11 +1338,12 @@
       clip: 'action_loop',
       check: m => ({
         done: Boolean(m && m.gen >= m.draw),
+        reason: m && m.gen < m.draw ? 'deficit' : 'ready',
         vars: { gen: number(m?.gen ?? 0), draw: number(m?.draw ?? 0) },
       }),
       action: () => {
         const bayIdx = state.rocket.stages.findIndex(s => s.type !== 'booster');
-        if (bayIdx >= 0) selectModule(`stage-${bayIdx}`, 'power');
+        if (bayIdx >= 0) openCatalogTab(`stage-${bayIdx}`, 'power');
         else if (state.rocket.stages.length < MAX_STAGES()) addStage(state.rocket.stages.length);
       },
     },
@@ -1329,16 +1356,17 @@
       clip: 'action_loop',
       check: () => ({
         done: state.rocket.cabin.length > 0,
+        reason: state.rocket.cabin.length > 0 ? 'ready' : 'empty',
         vars: { used: state.rocket.cabin.length, total: CABIN_SLOTS() },
       }),
-      action: () => selectModule('cabin', 'helena'),
+      action: () => openCatalogTab('cabin', 'helena'),
     },
     {
       id: 'launch',
       targets: () => [$('#budget-readout'), $('#launch-button')].filter(Boolean),
       clip: 'salute',
       check: m => {
-        if (!m) return { done: false, vars: { cost: '—', budget: '—', issues: 1 } };
+        if (!m) return { done: false, reason: 'issues', vars: { cost: '—', budget: '—', issues: 1 } };
         let issues = 0;
         if (!m.ready || m.twr < TWR_MIN()) issues++;
         if (!m.orbit) issues++;
@@ -1347,10 +1375,17 @@
         if (m.gen < m.draw) issues++;
         return {
           done: issues === 0,
+          reason: issues === 0 ? 'ready' : m.cost > m.budget ? 'overBudget' : 'issues',
           vars: { cost: money(m.cost), budget: money(m.budget), issues },
         };
       },
-      action: () => showLaunch(),
+      action: () => {
+        const m = DATA ? metrics() : null;
+        const firstBad = WIZARD_STEPS.findIndex((s, i) => i > 0 && i < WIZARD_STEPS.length - 1 && !s.check(m).done);
+        if (firstBad > 0) { setWizardStep(firstBad); return; }
+        markRocketBuilt();
+        showLaunch();
+      },
     },
   ];
   let activeBlinkTargets = [];
@@ -1377,13 +1412,14 @@
   function setWizardStep(step) {
     wizardState.step = Math.max(0, Math.min(WIZARD_STEPS.length - 1, step));
     wizardState.blinkDismissed = false;
+    wizardState.lastStepDone = null;
     renderWizard({ gesture: true });
   }
   function setWizardOpen(open, { step = null, gesture = true } = {}) {
     wizardState.open = !!open;
     wizardState.promptOpen = false;
     if (typeof step === 'number' && step >= 0 && step < WIZARD_STEPS.length) wizardState.step = step;
-    if (wizardState.open) wizardState.blinkDismissed = false;
+    if (wizardState.open) { wizardState.blinkDismissed = false; wizardState.lastStepDone = null; }
     markWizardSeen();
     renderWizard({ gesture });
   }
@@ -1419,15 +1455,30 @@
     if (formulaEl) formulaEl.textContent = t(`${baseKey}.formula`, status.vars);
     const checkEl = $('#wizard-check');
     if (checkEl) {
-      const checkText = t(status.done ? `${baseKey}.checkReady` : `${baseKey}.checkPending`, status.vars);
+      const reasonKey = status.reason ? `${baseKey}.reasons.${status.reason}` : null;
+      const reasonText = reasonKey ? t(reasonKey, status.vars) : '';
+      const checkText = (reasonText && reasonText !== reasonKey)
+        ? reasonText
+        : t(status.done ? `${baseKey}.checkReady` : `${baseKey}.checkPending`, status.vars);
       checkEl.textContent = t(status.done ? 'planner.wizard.checkDone' : 'planner.wizard.checkPending', { text: checkText });
       checkEl.classList.toggle('is-done', status.done);
+    }
+    const justFixed = wizardState.lastStepDone === false && status.done === true;
+    wizardState.lastStepDone = status.done;
+    if (justFixed) {
+      if (checkEl) {
+        checkEl.classList.remove('just-fixed');
+        void checkEl.offsetWidth;
+        checkEl.classList.add('just-fixed');
+      }
+      if (def.id === 'launch') markRocketBuilt();
     }
     const nav = $('#wizard-steps-nav');
     if (nav) {
       nav.innerHTML = WIZARD_STEPS.map((s, i) => {
         const done = i > 0 && s.check(m).done;
-        return `<button type="button" class="chalk-step-pip${i === idx ? ' active' : ''}${done ? ' done' : ''}" role="tab" aria-selected="${i === idx}" data-wizard-step="${i}" title="${esc(t(`planner.wizard.steps.${s.id}.title`))}">${i + 1}</button>`;
+        const issue = i > 0 && !done;
+        return `<button type="button" class="chalk-step-pip${i === idx ? ' active' : ''}${done ? ' done' : ''}${issue ? ' has-issue' : ''}" role="tab" aria-selected="${i === idx}" data-wizard-step="${i}" title="${esc(t(`planner.wizard.steps.${s.id}.title`))}">${i + 1}</button>`;
       }).join('');
       $$('[data-wizard-step]', nav).forEach(b => b.addEventListener('click', () => setWizardStep(+b.dataset.wizardStep)));
     }
@@ -1439,10 +1490,13 @@
     }
     const prevBtn = $('#wizard-prev'), nextBtn = $('#wizard-next');
     if (prevBtn) prevBtn.disabled = idx === 0;
-    if (nextBtn) nextBtn.textContent = t(idx === WIZARD_STEPS.length - 1 ? 'planner.wizard.finishBtn' : 'planner.wizard.nextBtn');
+    if (nextBtn) {
+      nextBtn.textContent = t(idx === WIZARD_STEPS.length - 1 ? 'planner.wizard.finishBtn' : 'planner.wizard.nextBtn');
+      nextBtn.classList.toggle('is-ready-next', status.done && idx < WIZARD_STEPS.length - 1);
+    }
     applyWizardBlink(def);
-    const clip = def.id === 'launch' ? (status.done ? 'salute' : 'action_loop') : def.clip;
-    window.dispatchEvent(new CustomEvent('astro:wizard', { detail: { open: true, step: idx, id: def.id, clip: gesture ? clip : null } }));
+    const clip = justFixed ? (def.id === 'launch' ? 'salute' : 'wave') : (def.id === 'launch' ? (status.done ? 'salute' : 'action_loop') : def.clip);
+    window.dispatchEvent(new CustomEvent('astro:wizard', { detail: { open: true, step: idx, id: def.id, clip: (gesture || justFixed) ? clip : null } }));
   }
   // Stop blinking as soon as the user clicks the suggested element on screen, keeping the solid yellow border.
   $('#planner')?.addEventListener('pointerdown', e => {
@@ -2280,6 +2334,7 @@
     }
 
     function startFlight({ preview = false, orbitalPreview = null } = {}) {
+      if (!preview) markRocketBuilt();
       flight.design = captureDesign();
       flight.missionId = 'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
       flightLog.length = 0; remoteInput.clear();
