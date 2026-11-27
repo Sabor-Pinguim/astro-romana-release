@@ -11,6 +11,7 @@ const art = window.ASTRO_ART, system = document.querySelector('.orbit-system');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { renderer = null; }
 if (art && system && renderer) {
+  renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, 1, .1, 120);
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));

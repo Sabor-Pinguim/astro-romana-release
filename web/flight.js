@@ -41,6 +41,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
 
   function makeViewport(container, { fov = 50, clearColor = 0x050912, clearAlpha = 1 } = {}) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: clearAlpha < 1, powerPreference: 'high-performance' });
+    renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
@@ -54,7 +55,8 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
 
     const scene = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
     scene.environmentIntensity = 0.55;
     pmrem.dispose();
 
@@ -69,13 +71,24 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
         camera.updateProjectionMatrix();
       }
     };
+    let ro = null;
     if (window.ResizeObserver) {
-      new ResizeObserver(resize).observe(container);
+      ro = new ResizeObserver(resize);
+      ro.observe(container);
     } else {
       window.addEventListener('resize', resize);
     }
     container.classList.add('is-3d');
-    return { renderer, scene, camera, resize };
+    const dispose = () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', resize);
+      envTex?.dispose?.();
+      renderer.dispose();
+      renderer.forceContextLoss?.();
+      renderer.domElement.remove();
+      container.classList.remove('is-3d');
+    };
+    return { renderer, scene, camera, resize, dispose };
   }
 
   function addStandardStudioLights(scene, { warmRim = 0xff7038 } = {}) {
@@ -170,7 +183,8 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const container = document.getElementById('cockpit-viewport');
     if (!section || !container) return;
 
-    const { renderer, scene, camera } = makeViewport(container, { fov: 62, clearColor: 0x030710 });
+    const vp = makeViewport(container, { fov: 62, clearColor: 0x030710 });
+    const { renderer, scene, camera } = vp;
     addStandardStudioLights(scene, { warmRim: 0x5aaeff });
     const consoleGlow = new THREE.PointLight(0x52d6ff, 1.4, 3.5);
     consoleGlow.position.set(0, 1.45, 0.35); // under the overhead panel, lighting its face
@@ -1088,7 +1102,8 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     const container = document.getElementById('podium-viewport');
     if (!section || !container) return;
 
-    const { renderer, scene, camera } = makeViewport(container, { fov: 44, clearColor: 0x0b1019 });
+    const vp = makeViewport(container, { fov: 44, clearColor: 0x0b1019 });
+    const { renderer, scene, camera } = vp;
     addStandardStudioLights(scene, { warmRim: 0xf6b73c });
 
     // Slot coordinates for 1st, 2nd, 3rd, 4th places (x, height, z)
@@ -1234,12 +1249,21 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
 
     let lastT = performance.now();
     let angle = 0;
+    let wasActive = section.classList.contains('active');
     function frame(now) {
-      requestAnimationFrame(frame);
-      if (!section.classList.contains('active')) {
+      const active = section.classList.contains('active');
+      if (!active) {
+        if (wasActive) {
+          vp.dispose();
+          podiumReady = false;
+          return;
+        }
+        requestAnimationFrame(frame);
         lastT = now;
         return;
       }
+      wasActive = true;
+      requestAnimationFrame(frame);
       const dt = Math.min((now - lastT) / 1000, 0.05);
       lastT = now;
       for (const id of CREW_IDS) {
@@ -1264,13 +1288,20 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
     requestAnimationFrame(frame);
   }
 
+  let cockpitReady = false;
+  const ensureCockpit = () => {
+    if (cockpitReady) return;
+    cockpitReady = true;
+    initCockpit().catch(err => console.warn('3D cockpit fallback active:', err));
+  };
   let podiumReady = false;
   const ensurePodium = () => {
     if (podiumReady) return;
     podiumReady = true;
     initPodium().catch(err => console.warn('3D podium fallback active:', err));
   };
-  initCockpit().catch(err => console.warn('3D cockpit fallback active:', err));
+  window.addEventListener('astro:cockpit', ensureCockpit);
+  if (document.getElementById('cockpit')?.classList.contains('active')) ensureCockpit();
   window.addEventListener('astro:results', ensurePodium);
   if (document.getElementById('results')?.classList.contains('active')) ensurePodium();
 })();

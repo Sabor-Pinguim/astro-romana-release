@@ -20,8 +20,20 @@ const STATUS = [[10, 'launch.pad.status10'], [7, 'launch.pad.status7'], [5, 'lau
 let renderer = null;
 function ensureRenderer() {
   if (renderer) return renderer;
-  try { renderer = new THREE.WebGLRenderer({ antialias: true }); } catch { renderer = null; }
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
+  } catch { renderer = null; }
   return renderer;
+}
+function releaseRenderer() {
+  if (!renderer) return;
+  renderer.dispose();
+  renderer.forceContextLoss?.();
+  renderer.domElement.remove();
+  renderer = null;
+  view = null;
+  seaView = null;
 }
 const flat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .85, flatShading: true, ...extra });
 let view = null;
@@ -209,7 +221,7 @@ window.ASTRO_LAUNCHPAD = (lift = { ok: true, accel: 1 }) => new Promise(async re
     if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
     finish();
   };
-  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
+  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(() => { releaseRenderer(); resolve(); }, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
   addEventListener('keydown', onKey);
 
@@ -389,7 +401,7 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
     if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
     finish();
   };
-  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(resolve, reduce ? 0 : 350); };
+  const finish = () => { if (done) return; done = true; removeEventListener('keydown', onKey); $id('launchpad-fade').classList.add('on'); setTimeout(() => { releaseRenderer(); resolve(); }, reduce ? 0 : 350); };
   $id('launchpad-skip').onclick = finish;
   addEventListener('keydown', onKey);
   const end = SPLASH.fall + SPLASH.hold;

@@ -23,16 +23,20 @@ const loadGLB = path => loadGLTF(path).then(gltf => gltf.scene.clone(true));
 function makeView(container, { fov = 30, append = false } = {}) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { return null; }
+  renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(fov, 1, .05, 400);
   scene.add(new THREE.AmbientLight(0xb48cf0, .9));
   // Soft room reflections so metallic parts (engines, structure) are not black.
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+  pmrem.dispose();
+  scene.environment = envTex;
   scene.environmentIntensity = .5;
   const key = new THREE.DirectionalLight(0xfce8a6, 2.4); key.position.set(-4, 6, 5); scene.add(key);
   const rim = new THREE.DirectionalLight(0xe04f26, 1.8); rim.position.set(5, 1, -4); scene.add(rim);
   container[append ? 'append' : 'prepend'](renderer.domElement);
-  const view = { renderer, scene, camera, key, width: 0, height: 0, onResize: null };
+  const view = { renderer, scene, camera, key, width: 0, height: 0, onResize: null, dispose: null };
   const syncSize = () => {
     view.width = container.clientWidth; view.height = container.clientHeight;
     if (!view.width || !view.height) return;
@@ -41,8 +45,16 @@ function makeView(container, { fov = 30, append = false } = {}) {
     view.onResize?.();
   };
   syncSize();
-  new ResizeObserver(syncSize).observe(container);
+  const ro = new ResizeObserver(syncSize);
+  ro.observe(container);
   view.syncSize = syncSize;
+  view.dispose = () => {
+    ro.disconnect();
+    envTex?.dispose?.();
+    renderer.dispose();
+    renderer.forceContextLoss?.();
+    renderer.domElement.remove();
+  };
   return view;
 }
 const isActive = id => document.getElementById(id)?.classList.contains('active');
@@ -522,19 +534,21 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 // Plays wave on welcome, action_loop (tapping her wooden ruler on her palm like a teacher) on lessons, and salute when ready.
 (async () => {
   const box = document.getElementById('wizard-nancy-view');
-  const view = box && makeView(box, { fov: 26 });
-  if (!view) return;
-  const { scene, camera, renderer } = view;
-  const holder = new THREE.Group();
-  scene.add(holder);
-  let loaded = false, loading = false, mixer = null, clips = {}, activeClip = null, holdTimer = 0, last = performance.now();
+  if (!box) return;
+  let view = null;
+  let loaded = false, loading = false, mixer = null, clips = {}, activeClip = null, holdTimer = 0, last = performance.now(), rafId = 0;
 
-  view.onResize = () => {
-    const aspect = Math.max(0.65, camera.aspect || 1);
-    const d = 1.28 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.05, aspect * 1.05);
-    camera.position.set(0.05, 1.38, d);
-    camera.lookAt(0, 1.24, 0);
-  };
+  function disposeView() {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+    view?.dispose?.();
+    view = null;
+    loaded = false;
+    mixer = null;
+    clips = {};
+    activeClip = null;
+    box.classList.remove('is-3d');
+  }
 
   function playGesture(name) {
     if (!mixer || !clips.idle_loop) return;
@@ -571,6 +585,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     try {
       const gltf = await loadGLTF('characters/nancy.glb');
       const model = gltf.scene.clone(true);
+      const holder = view.scene.getObjectByName('nancy_holder') || (() => { const g = new THREE.Group(); g.name = 'nancy_holder'; view.scene.add(g); return g; })();
       holder.clear();
       holder.add(model);
       mixer = new THREE.AnimationMixer(model);
@@ -600,8 +615,23 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   }
 
   window.addEventListener('astro:wizard', e => {
-    if (!e.detail?.open) return;
+    if (!e.detail?.open) { disposeView(); return; }
+    if (!view) {
+      view = makeView(box, { fov: 26 });
+      if (!view) return;
+      view.onResize = () => {
+        const aspect = Math.max(0.65, view.camera.aspect || 1);
+        const d = 1.28 / Math.tan(THREE.MathUtils.degToRad(view.camera.fov / 2)) / Math.min(1.05, aspect * 1.05);
+        view.camera.position.set(0.05, 1.38, d);
+        view.camera.lookAt(0, 1.24, 0);
+      };
+      view.onResize();
+    }
+    const holder = view.scene.getObjectByName('nancy_holder') || (() => { const g = new THREE.Group(); g.name = 'nancy_holder'; view.scene.add(g); return g; })();
+    void holder;
     ensureLoaded(e.detail.clip || null);
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(frame);
   });
   window.addEventListener('astro:wizard-gesture', e => {
     if (!loaded) ensureLoaded(e.detail?.clip || 'action_loop');
@@ -609,11 +639,13 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   });
 
   function frame(now) {
-    requestAnimationFrame(frame);
+    if (!view) return;
+    rafId = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const dock = document.getElementById('rocket-wizard');
     if (!loaded || !isActive('planner') || !dock || dock.hidden || !view.width) return;
+    const holder = view.scene.getObjectByName('nancy_holder');
     if (!reduce) {
       if (holdTimer > 0) {
         holdTimer -= dt;
@@ -624,12 +656,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         }
       }
       mixer?.update(dt);
-      holder.rotation.y = -0.18 + Math.sin(now / 2600) * 0.22;
+      if (holder) holder.rotation.y = -0.18 + Math.sin(now / 2600) * 0.22;
     }
-    renderer.render(scene, camera);
+    view.renderer.render(view.scene, view.camera);
   }
-  view.onResize();
-  requestAnimationFrame(frame);
 })().catch(err => console.warn('Nancy wizard view disabled:', err));
 
 // Menu easter egg: full-body Dr. Nancy Grace Roman 3D notice (characters/nancy.glb) when the Saturn V is broken.
@@ -661,10 +691,14 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       loaded = true;
       view.syncSize?.();
       function tick(now) {
+        if (!view || notice.hidden) {
+          if (view && notice.hidden) { view.dispose?.(); view = null; loaded = false; actions = null; mixer = null; }
+          return;
+        }
         requestAnimationFrame(tick);
         const dt = Math.min(.05, Math.max(0, (now - last) / 1000));
         last = now;
-        if (notice.hidden || !view.width) return;
+        if (!view.width) return;
         if (!reduce && mixer) mixer.update(dt);
         view.renderer.render(scene, camera);
       }
@@ -1298,10 +1332,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       requestAnimationFrame(frame);
     }
     function frame(now) {
+      if (!view || !isActive('cockpit')) {
+        if (view && !isActive('cockpit')) {
+          view.dispose?.();
+          view = null; tanker = null; ship = null; earth = null;
+        }
+        return;
+      }
       requestAnimationFrame(frame);
       const dt = Math.min(.05, (now - lastFrame) / 1000);
       lastFrame = now;
-      if (!view || host.hidden || !isActive('cockpit') || !ship || !state) return;
+      if (host.hidden || !ship || !state) return;
       const g = state.docking;
       const refuel = state.cutscene?.kind === 'refuel' ? state.cutscene : null;
       const emergencyApproach = state.orbitalEmergency;
@@ -1660,6 +1701,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       if (!active) {
         mActive = false;
         cancelAnimationFrame(mRaf);
+        mView?.dispose?.();
+        mView = null; earthGrp = null; marsSystem = null; upperGrp = null; lowerGrp = null;
         return;
       }
       mKind = e.detail?.kind || 'mars';

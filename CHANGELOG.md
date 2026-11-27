@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.8] - 2026-11-26
+
+### Fixed
+- Prevent 3D canvases from turning white due to WebGL context limit eviction by lazily creating and disposing temporary/off-screen renderers (`web/views.js`, `web/flight.js`, `web/launch.js`), disposing `PMREMGenerator` in `makeView()`, and handling `webglcontextlost` across 3D views.
+
 ## [1.10.7] - 2026-11-26
 
 ### Changed
