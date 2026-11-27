@@ -1,6 +1,6 @@
 {
   "name": "astro-romana-tools",
-  "version": "1.10.11",
+  "version": "1.10.12",
   "private": true,
   "description": "Tooling for the astro-romana game: procedural low-poly avatar, rocket-part, planet and Mars terrain generators, data-driven audio generator and their validators.",
   "type": "module",

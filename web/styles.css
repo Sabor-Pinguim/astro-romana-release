@@ -222,6 +222,8 @@
     .setup-card::before{content:"";position:absolute;top:0;left:0;width:44%;height:4px;background:var(--amethyst)}
     .setup-card[data-mode-card="solo"]::before{background:#D7263D}
     .setup-card[data-mode-card="multiplayer"]::before{background:var(--solar-amber)}
+    .setup-card[data-mode-card="solo"],.setup-card[data-mode-card="multiplayer"]:has(> .mode-card-foot:empty){grid-template-rows:auto minmax(0,1fr) auto}
+    .setup-card[data-mode-card="multiplayer"]:has(> .mode-card-foot:not(:empty)){grid-template-rows:auto minmax(0,1fr) auto auto}
     .setup-card.selected{background:linear-gradient(155deg,color-mix(in srgb,var(--solar-amber) 24%,var(--f2)) 0 26%,color-mix(in srgb,var(--solar-amber) 12%,var(--f0)) 26%);box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .setup-card[data-mode-card="solo"].selected{background:linear-gradient(155deg,color-mix(in srgb,#D7263D 26%,var(--f2)) 0 26%,color-mix(in srgb,#D7263D 14%,var(--f0)) 26%);box-shadow:inset 0 0 0 2px #D7263D}
     .mode-card-top{display:flex;flex-direction:column;gap:4px}
@@ -253,9 +255,11 @@
     .mode-join-row input:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--solar-amber)}
     .mode-join-row input:disabled{opacity:.45;cursor:not-allowed}
     .mode-join-row .button{min-height:36px;padding:.45rem .95rem;font-size:.7rem}
-    .mode-room-active{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-void);clip-path:var(--chamfer)}
-    .mode-room-active .button{min-height:34px;padding:.4rem .8rem;font-size:.66rem}
-    .mode-room-active .mode-leave-btn{margin-left:auto;padding-inline:1.05rem}
+    .mode-room-active{flex:1;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-void);clip-path:var(--chamfer)}
+    .mode-room-active>:not(.mode-leave-btn){flex-shrink:0;white-space:nowrap}
+    .mode-room-active .tag{flex:0 1 auto;min-width:0;max-width:26%;overflow:hidden;text-overflow:ellipsis}
+    .mode-room-active .button{min-height:34px;padding:.35rem .45rem;font-size:.58rem}
+    .mode-room-active .mode-leave-btn{flex:none;margin-left:auto;padding-inline:.55rem}
     /* Room Browser, Player Name & Private/Password creation inside Multiplayer card */
     .mode-visual.is-expanded{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:10px;padding:12px 14px;overflow:visible}
     .mp-expanded-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:flex-start;gap:8px 14px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid #ffffff14}
@@ -423,6 +427,13 @@
       #lobby-step-crew .room-panel{margin-top:auto}
     }
     .room-panel[hidden]{display:none}
+    #lobby-step-crew .room-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+    #lobby-step-crew .room-panel[hidden]{display:none}
+    #lobby-step-crew .room-head{grid-column:1;min-width:0;flex-wrap:nowrap;overflow:hidden}
+    #lobby-step-crew .room-head>:is(.tag,.button){flex-shrink:0;white-space:nowrap}
+    #lobby-step-crew .room-head .tag{flex:0 1 auto;min-width:0;max-width:28%;overflow:hidden;text-overflow:ellipsis}
+    #lobby-step-crew .room-leave-btn{grid-column:2;grid-row:1;align-self:center;width:auto;white-space:nowrap}
+    #lobby-step-crew .room-panel>:not(.room-head):not(.room-leave-btn){grid-column:1/-1}
     .room-head{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem .6rem}
     .room-panel .button{min-height:38px;padding:.55rem 1.05rem;font-size:.68rem}
     .room-code{font:700 1.3rem var(--heading);letter-spacing:.22em;color:var(--solar-amber)}
@@ -1672,7 +1683,7 @@
       #lobby-step-crew .room-head{gap:3px 5px}
       #lobby-step-crew .room-code{font-size:1rem}
       #lobby-step-crew .room-panel .button{min-height:32px;padding:.28rem .6rem;font-size:.58rem}
-      #lobby-step-crew .room-leave-btn{width:auto;align-self:flex-end}
+      #lobby-step-crew .room-leave-btn{width:auto;align-self:center}
       #lobby-step-crew .room-note,#lobby-step-crew .room-players{display:none}
       #lobby-step-crew .specialty-icon{font-size:.57rem}
       #lobby-step-crew .detail-view{height:clamp(180px,calc(100dvh - 185px),250px)}
