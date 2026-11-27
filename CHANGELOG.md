@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.9] - 2026-11-27
+
+### Fixed
+- Center and neatly group the H-S2 Precision Landing directional pad and primary action button on mobile portrait and landscape viewports (`web/minigames/h-s2.css`).
+
 ## [1.10.8] - 2026-11-26
 
 ### Fixed
