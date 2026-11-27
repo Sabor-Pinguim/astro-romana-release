@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.14] - 2026-11-27
+
+### Fixed
+- Let completed and failed minigame dialogs fit their content on mobile instead of forcing full viewport height.
+
 ## [1.10.13] - 2026-11-27
 
 ### Added

@@ -1552,7 +1552,7 @@
       .chat-toggle{width:40px;height:40px}
       .surface-prompt{bottom:calc(114px + env(safe-area-inset-bottom,0px))}
       .surface-jump{bottom:calc(62px + env(safe-area-inset-bottom,0px));right:10px;width:60px;height:60px}
-      #minigame-dialog,#dev-exp-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0}
+      #minigame-dialog:not(.is-complete):not(.is-failed),#dev-exp-dialog:not(.is-complete):not(.is-failed){width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0}
       .dialog-inner{padding:16px 14px;gap:.5rem}
       #launch-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
       #launch-dialog .dialog-inner{padding:12px 14px;gap:.45rem}
@@ -1837,7 +1837,7 @@
       .results-card{min-height:0;overflow-y:auto;padding:10px 12px;gap:8px}
       .rank-banner{padding:10px 14px}
       .rank-letter{min-width:64px;height:58px;font-size:2rem}
-      #minigame-dialog,#dev-exp-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0}
+      #minigame-dialog:not(.is-complete):not(.is-failed),#dev-exp-dialog:not(.is-complete):not(.is-failed){width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0}
       #minigame-dialog .dialog-inner,#dev-exp-dialog .dialog-inner{padding:10px 14px;gap:5px}
       #minigame-dialog h3,#dev-exp-dialog h3{font-size:1.05rem}
       #minigame-summary,#dev-exp-summary{display:none}
