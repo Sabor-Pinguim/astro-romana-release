@@ -146,7 +146,7 @@ function addTechnologyPark(scene) {
 }
 
 function initScene() {
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5));
   host.prepend(renderer.domElement);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, .1, 2000);
   // Faceted daytime sky inspired by the supplied park photographs.
@@ -421,7 +421,7 @@ window.ASTRO_SPLASHDOWN = (info = {}) => new Promise(async resolve => {
     tick(); return;
   }
   const v = seaView, { camera } = v;
-  if (!renderer.domElement.parentNode) { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); host.prepend(renderer.domElement); }
+  if (!renderer.domElement.parentNode) { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5)); host.prepend(renderer.domElement); }
   renderer.localClippingEnabled = true;
   // The configured cabin: the top module of the stack the crew built (views.js), closed. Its materials are cloned so the
   // clipping plane that removes the abort tower only touches this copy.

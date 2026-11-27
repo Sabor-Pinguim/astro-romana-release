@@ -749,6 +749,8 @@
         alertNominal: 'ALL SYSTEMS NOMINAL',
         alertActive: 'C&W MATRIX ALERT ACTIVE',
         viewTag: '1ST PERSON FLIGHT DECK',
+        landingModeAuto: 'AUTO LANDING',
+        landingModeManual: 'MANUAL LANDING',
         screens: {
           dockingCamera: 'DOCKING CAMERA',
           hardDock: 'HARD-DOCK',
@@ -1315,7 +1317,8 @@
         btnLabel: '?',
         btnAria: 'How to solve this minigame',
         closeAria: 'Close guide',
-        gotIt: 'Got it',
+        clickOutside: 'Click outside to close',
+        clickOutsideWait: 'Click outside to close ({{s}}s)',
         previewTag: 'DEMO CLIP',
         mechanics: {
           keep: 'Tip: push gently before drifting past the edge — momentum carries the marker.',

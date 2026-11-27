@@ -14,7 +14,7 @@ if (art && system && renderer) {
   renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, 1, .1, 120);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1 : 1.25));
   system.prepend(renderer.domElement);
   system.classList.add('is-3d');
   scene.add(new THREE.AmbientLight(0xb48cf0, 1.1));

@@ -7,6 +7,7 @@ const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
 const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
 const loader = new GLTFLoader(), cache = new Map();
 function loadGLTF(path) {
   if (!cache.has(path)) cache.set(path, (async () => {
@@ -24,7 +25,7 @@ function makeView(container, { fov = 30, append = false } = {}) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { return null; }
   renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, coarse ? 1.25 : 1.5));
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(fov, 1, .05, 400);
   scene.add(new THREE.AmbientLight(0xb48cf0, .9));
   // Soft room reflections so metallic parts (engines, structure) are not black.
@@ -1239,7 +1240,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const pilotView = () => {
       if (state?.orbitalPreview === 'spectator') return false;
       const net = window.ASTRO_NET;
-      return !net || net.mode === 'solo' || net.seat === 'helena';
+      return !net || net.mode === 'solo' || net.isHost;
     };
     const mat = (color, metalness = .2) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: .68, metalness });
     const hull = mat(0xd9e3e1), shadow = mat(0x25394b), foil = mat(0xd7aa54), steel = mat(0x81929e, .65);
@@ -1909,8 +1910,10 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function initWorld() {
     let renderer;
     // Logarithmic depth: the horizon ring reaches 100 km while the suit is 5 cm from the eye.
-    try { renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true }); } catch { return null; }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    try { renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' }); } catch { return null; }
+    renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
+    const baseDpr = Math.min(devicePixelRatio || 1, touch ? 1.25 : 1.5);
+    renderer.setPixelRatio(baseDpr);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
     viewEl.prepend(renderer.domElement);
     const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(72, 1, .05, NO_RING_FAR);
@@ -1989,7 +1992,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const hemi = new THREE.HemisphereLight(0xf3c9a0, 0x4a2418, 1.25);
     scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xfff0dc, 2.1);
-    sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.normalBias = .03;
+    const shadowRes = touch ? 512 : 1024;
+    sun.castShadow = true; sun.shadow.mapSize.set(shadowRes, shadowRes); sun.shadow.normalBias = .03;
     Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 180 });
     scene.add(sun, sun.target);
 
@@ -2011,6 +2015,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       phobosMesh, phobosMat, deimosMesh, deimosMat, headlamp, landerLight, skirt, lander,
       sunDir: new THREE.Vector3(0, 1, 0), phobosDir: new THREE.Vector3(0, 1, 0), deimosDir: new THREE.Vector3(0, 1, 0),
       lastSkyState: null, rSun: 853, rPhobos: 838, rDeimos: 847, rStars: 856,
+      baseDpr, curDpr: baseDpr, drsAvg: 1 / 60, drsClock: 0,
       skyCache: { el: 999, az: 999, dayF: -1, twiF: -1 },
       terrain: null, hf: null, blocks: [], colliders: [], avatars: new Map(), avatar: null, width: 0, height: 0 };
     new ResizeObserver(() => {
@@ -2179,7 +2184,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       }
       grain = new THREE.DataTexture(data, N, N);
       grain.wrapS = grain.wrapT = THREE.RepeatWrapping; grain.magFilter = THREE.LinearFilter; grain.minFilter = THREE.LinearMipmapLinearFilter;
-      grain.generateMipmaps = true; grain.anisotropy = world.renderer.capabilities.getMaxAnisotropy(); grain.needsUpdate = true;
+      grain.generateMipmaps = true; grain.anisotropy = Math.min(4, world.renderer.capabilities.getMaxAnisotropy()); grain.needsUpdate = true;
     }
     material.onBeforeCompile = shader => {
       radialFog(shader);
@@ -2192,7 +2197,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
   function scatterRocks(hf, seedText) {
     let seed = [...seedText].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
     const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-    const COUNT = 900, rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), flat(0xffffff, .95), COUNT);
+    const COUNT = touch ? 450 : 900, rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), flat(0xffffff, .95), COUNT);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), lim = hf.half - 6;
     for (let i = 0; i < COUNT; i++) {
       const size = rand() < .06 ? .5 + rand() * .7 : .06 + Math.pow(rand(), 2) * .35;
@@ -2201,7 +2206,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       rocks.setMatrixAt(i, m.compose(p, q.setFromEuler(e.set(rand() * .6, rand() * Math.PI * 2, rand() * .6)), sc));
       rocks.setColorAt(i, c.setRGB(.2 + rand() * .1, .1 + rand() * .05, .06 + rand() * .03));
     }
-    rocks.castShadow = rocks.receiveShadow = true;
+    rocks.castShadow = false;
+    rocks.receiveShadow = true;
     return rocks;
   }
   // Ground height by bilinear lookup in the mesh grid: row-major from the north-west corner,
@@ -3149,6 +3155,19 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     // Leaving the surface (timer, results) must give the mouse back.
     if (world && document.pointerLockElement === world.renderer.domElement && !isActive('surface')) document.exitPointerLock();
     if (!world || !s.ready || !world.avatar || !isActive('surface') || !world.width) return;
+    if (!reduce && !s.departing && dt > 0.002 && dt < 0.095) {
+      world.drsAvg += (dt - world.drsAvg) * 0.08;
+      if ((world.drsClock += dt) > 1.2) {
+        world.drsClock = 0;
+        if (world.drsAvg > 0.028 && world.curDpr > 0.85) {
+          world.curDpr = Math.max(0.85, +(world.curDpr - 0.15).toFixed(2));
+          world.renderer.setPixelRatio(world.curDpr);
+        } else if (world.drsAvg < 0.019 && world.curDpr < world.baseDpr) {
+          world.curDpr = Math.min(world.baseDpr, +(world.curDpr + 0.1).toFixed(2));
+          world.renderer.setPixelRatio(world.curDpr);
+        }
+      }
+    }
     updateSky();
     if (s.departing) {
       const d = s.departing;

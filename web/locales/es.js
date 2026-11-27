@@ -749,6 +749,8 @@
         alertNominal: 'TODOS LOS SISTEMAS NOMINALES',
         alertActive: 'ALERTA ACTIVA EN MATRIZ C&W',
         viewTag: 'CABINA 1.ª PERSONA',
+        landingModeAuto: 'ATERRIZAJE AUTOMÁTICO',
+        landingModeManual: 'ATERRIZAJE MANUAL',
         screens: {
           dockingCamera: 'CÁMARA DE ACOPLAMIENTO',
           hardDock: 'ACOPLADO',
@@ -1315,7 +1317,8 @@
         btnLabel: '?',
         btnAria: 'Cómo resolver este minijuego',
         closeAria: 'Cerrar guía',
-        gotIt: 'Entendido',
+        clickOutside: 'Haz clic fuera para cerrar',
+        clickOutsideWait: 'Haz clic fuera para cerrar ({{s}}s)',
         previewTag: 'CLIP DEMO',
         mechanics: {
           keep: 'Consejo: corrige suave antes de salir del borde; la inercia sigue moviendo el indicador.',

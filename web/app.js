@@ -3357,9 +3357,20 @@
       }
 
       const guideBtn = $('#cockpit-guide-toggle');
-      const guideId = state.screen === 'cockpit' && flight.orbitalPreview !== 'spectator' && !orbitOn && !flight.cutscene && (!flight.orbitalEmergency || flight.orbitalEmergency.stage === 'control') && flight.step === flight.emergencyStep && (flight.active || guestFlight)
+      const guideId = !net.isGuest && state.screen === 'cockpit' && flight.orbitalPreview !== 'spectator' && !orbitOn && !flight.cutscene && (!flight.orbitalEmergency || flight.orbitalEmergency.stage === 'control') && flight.step === flight.emergencyStep && flight.active
         ? (['cockpit-ascent', 'cockpit-cabin-dock', 'cockpit-orbital-dock', 'cockpit-landing'][flight.step] || null)
         : null;
+      const landModeEl = $('#cockpit-landing-mode');
+      if (landModeEl) {
+        const showLandMode = !net.isGuest && (flight.step === 3 || orbitOn || flight.cutscene?.kind === 'landing');
+        landModeEl.hidden = !showLandMode;
+        if (showLandMode) {
+          const isManual = flight.emergencyStep === 3;
+          landModeEl.textContent = t(isManual ? 'cockpit.landingModeManual' : 'cockpit.landingModeAuto');
+          landModeEl.classList.toggle('is-manual', isManual);
+          landModeEl.classList.toggle('is-auto', !isManual);
+        }
+      }
       if (guideBtn) guideBtn.hidden = !guideId;
       if (guideId !== lastCockpitGuideId) {
         lastCockpitGuideId = guideId;

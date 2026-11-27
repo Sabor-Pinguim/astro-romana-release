@@ -749,6 +749,8 @@
         alertNominal: 'TODOS OS SISTEMAS NOMINAIS',
         alertActive: 'ALERTA NA MATRIZ C&W ATIVO',
         viewTag: 'CABINE 1ª PESSOA',
+        landingModeAuto: 'POUSO AUTOMÁTICO',
+        landingModeManual: 'POUSO MANUAL',
         screens: {
           dockingCamera: 'CÂMERA DE ACOPLAGEM',
           hardDock: 'ACOPLADO',
@@ -1315,7 +1317,8 @@
         btnLabel: '?',
         btnAria: 'Como resolver este minigame',
         closeAria: 'Fechar guia',
-        gotIt: 'Entendi',
+        clickOutside: 'Clique fora para fechar',
+        clickOutsideWait: 'Clique fora para fechar ({{s}}s)',
         previewTag: 'CLIPE DEMO',
         mechanics: {
           keep: 'Dica: corrija antes de passar da borda — a inércia continua puxando o marcador.',

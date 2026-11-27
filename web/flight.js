@@ -42,7 +42,7 @@ const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironm
   function makeViewport(container, { fov = 50, clearColor = 0x050912, clearAlpha = 1 } = {}) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: clearAlpha < 1, powerPreference: 'high-performance' });
     renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault(), false);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.outputColorSpace = THREE.SRGBColorSpace;

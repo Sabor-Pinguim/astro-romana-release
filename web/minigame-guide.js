@@ -177,10 +177,12 @@
 
   const slots = new Map();
   const boundButtons = new WeakMap();
+  const AUTO_LOCK_MS = 3000;
+  const COLLAPSE_MS = 320;
 
   function ensureSlot(slot) {
     if (!slots.has(slot)) {
-      slots.set(slot, { slot, guideId: null, container: null, button: null, pop: null, open: false });
+      slots.set(slot, { slot, guideId: null, container: null, button: null, backdrop: null, pop: null, open: false, unlockAt: 0, lockTimer: 0, collapseTimer: 0 });
     }
     return slots.get(slot);
   }
@@ -194,11 +196,32 @@
     state.button.textContent = t('guide.btnLabel');
   }
 
+  function syncDismissHint(state) {
+    const r = state.pop?._refs;
+    if (!r) return;
+    const remMs = Math.max(0, state.unlockAt - performance.now());
+    const ready = remMs <= 0;
+    state.backdrop?.classList.toggle('is-ready', ready);
+    r.dismissHint.classList.toggle('is-ready', ready);
+    r.dismissHint.textContent = ready
+      ? t('guide.clickOutside')
+      : t('guide.clickOutsideWait', { s: Math.ceil(remMs / 1000) });
+  }
+
   function createPopupNode(state) {
+    const backdrop = el('div', 'mg-guide-backdrop');
+    backdrop.dataset.guideSlot = state.slot;
+    backdrop.setAttribute('role', 'presentation');
+    backdrop.hidden = true;
+    backdrop.addEventListener('click', e => {
+      if (e.target !== backdrop) return;
+      if (performance.now() < state.unlockAt) return;
+      close(state.slot);
+    });
+
     const pop = el('aside', 'mg-guide-pop');
     pop.dataset.guideSlot = state.slot;
     pop.setAttribute('role', 'region');
-    pop.hidden = true;
 
     const head = el('div', 'mg-guide-head');
     const titleWrap = el('div', 'mg-guide-title-wrap');
@@ -208,10 +231,7 @@
 
     const actions = el('div', 'mg-guide-head-right');
     const mechBadge = el('span', 'tag mg-guide-mech');
-    const closeBtn = el('button', 'mg-guide-close', '✕');
-    closeBtn.type = 'button';
-    closeBtn.addEventListener('click', () => close(state.slot));
-    actions.append(mechBadge, closeBtn);
+    actions.append(mechBadge);
     head.append(titleWrap, actions);
 
     const stage = el('div', 'mg-guide-stage');
@@ -237,13 +257,13 @@
     const tip = el('p', 'mg-guide-tip');
 
     const foot = el('div', 'mg-guide-foot');
-    const okBtn = el('button', 'button primary mg-guide-ok');
-    okBtn.type = 'button';
-    okBtn.addEventListener('click', () => close(state.slot));
-    foot.append(okBtn);
+    const dismissHint = el('span', 'mg-guide-dismiss-hint');
+    foot.append(dismissHint);
 
     pop.append(head, stage, desc, tip, foot);
-    pop._refs = { eyebrow, title, mechBadge, closeBtn, stage, img, still, playBtn, anim, previewTag, desc, tip, okBtn };
+    backdrop.append(pop);
+    pop._refs = { eyebrow, title, mechBadge, stage, img, still, playBtn, anim, previewTag, desc, tip, dismissHint };
+    state.backdrop = backdrop;
     return pop;
   }
 
@@ -252,10 +272,16 @@
     if (!data || !state.container) return;
 
     let pop = state.pop;
-    if (!pop || pop.parentElement !== state.container) {
-      pop = state.container.querySelector(`.mg-guide-pop[data-guide-slot="${state.slot}"]`) || pop || createPopupNode(state);
+    if (!pop || state.backdrop?.parentElement !== state.container) {
+      const existingBackdrop = state.container.querySelector(`.mg-guide-backdrop[data-guide-slot="${state.slot}"]`);
+      if (existingBackdrop) {
+        state.backdrop = existingBackdrop;
+        pop = existingBackdrop.querySelector('.mg-guide-pop') || createPopupNode(state);
+      } else {
+        pop = pop || createPopupNode(state);
+      }
       state.pop = pop;
-      state.container.append(pop);
+      state.container.append(state.backdrop);
     }
 
     const r = pop._refs;
@@ -266,16 +292,15 @@
     pop.dataset.guideClip = clipKey;
     pop.dataset.mech = data.mechanic;
     pop.setAttribute('aria-label', `${t('guide.eyebrow')}: ${data.title}`);
+    state.backdrop?.setAttribute('aria-label', t('guide.closeAria'));
 
     r.eyebrow.textContent = t('guide.eyebrow');
     r.title.textContent = data.title;
     r.mechBadge.textContent = data.mechLabel;
-    r.closeBtn.setAttribute('aria-label', t('guide.closeAria'));
-    r.closeBtn.title = t('guide.closeAria');
     r.previewTag.textContent = t('guide.previewTag');
     r.desc.textContent = data.desc;
     r.tip.textContent = data.tip;
-    r.okBtn.textContent = t('guide.gotIt');
+    syncDismissHint(state);
 
     if (r.anim.dataset.mech !== data.mechanic || !r.anim.firstChild) {
       r.anim.dataset.mech = data.mechanic;
@@ -320,18 +345,73 @@
     }
   }
 
-  function setOpen(slot, nextOpen) {
+  function setOpen(slot, nextOpen, { lockMs = 0, animate = true } = {}) {
     const state = ensureSlot(slot);
+    clearInterval(state.lockTimer);
+    state.lockTimer = 0;
     if (nextOpen) {
       if (!state.guideId || !state.container || !resolveGuide(state.guideId)) return false;
+      clearTimeout(state.collapseTimer);
+      state.collapseTimer = 0;
       // Avoid stacking two floating guide cards when opening an experiment dialog during cockpit orbit.
-      for (const other of slots.keys()) if (other !== slot) setOpen(other, false);
+      for (const other of slots.keys()) if (other !== slot) setOpen(other, false, { animate: false });
+      state.unlockAt = lockMs > 0 ? performance.now() + lockMs : 0;
       renderPopup(state);
       state.open = true;
-      if (state.pop) state.pop.hidden = false;
+      if (state.backdrop) {
+        state.backdrop.classList.remove('is-collapsing');
+        state.backdrop.hidden = false;
+      }
+      if (state.pop) {
+        state.pop.style.removeProperty('--collapse-x');
+        state.pop.style.removeProperty('--collapse-y');
+      }
+      if (lockMs > 0) {
+        state.lockTimer = setInterval(() => {
+          syncDismissHint(state);
+          if (performance.now() >= state.unlockAt) {
+            clearInterval(state.lockTimer);
+            state.lockTimer = 0;
+          }
+        }, 200);
+      }
     } else {
+      const wasOpen = state.open;
       state.open = false;
-      if (state.pop) state.pop.hidden = true;
+      state.unlockAt = 0;
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (wasOpen && animate && !reduce && state.backdrop && !state.backdrop.hidden && state.pop) {
+        const popRect = state.pop.getBoundingClientRect();
+        const btnRect = state.button?.getBoundingClientRect?.();
+        if (btnRect && btnRect.width > 0 && popRect.width > 0) {
+          const dx = (btnRect.left + btnRect.width / 2) - (popRect.left + popRect.width / 2);
+          const dy = (btnRect.top + btnRect.height / 2) - (popRect.top + popRect.height / 2);
+          state.pop.style.setProperty('--collapse-x', `${Math.round(dx)}px`);
+          state.pop.style.setProperty('--collapse-y', `${Math.round(dy)}px`);
+        }
+        state.backdrop.classList.add('is-collapsing');
+        clearTimeout(state.collapseTimer);
+        state.collapseTimer = setTimeout(() => {
+          state.collapseTimer = 0;
+          if (state.backdrop) {
+            state.backdrop.hidden = true;
+            state.backdrop.classList.remove('is-collapsing');
+          }
+          state.pop?.style.removeProperty('--collapse-x');
+          state.pop?.style.removeProperty('--collapse-y');
+          if (state.button) {
+            state.button.classList.remove('mg-guide-btn-pulse');
+            void state.button.offsetWidth;
+            state.button.classList.add('mg-guide-btn-pulse');
+            setTimeout(() => state.button?.classList.remove('mg-guide-btn-pulse'), 520);
+          }
+        }, COLLAPSE_MS);
+      } else if (state.backdrop) {
+        clearTimeout(state.collapseTimer);
+        state.collapseTimer = 0;
+        state.backdrop.classList.remove('is-collapsing');
+        state.backdrop.hidden = true;
+      }
     }
     syncButton(state);
     return state.open;
@@ -356,7 +436,7 @@
       state.button = button;
       bindButton(button, slot);
     }
-    setOpen(slot, false);
+    setOpen(slot, false, { animate: false });
     if (!id || !resolveGuide(id)) {
       syncButton(state);
       return false;
@@ -365,7 +445,7 @@
     if (firstTime) {
       seenSet.add(id);
       saveSeen();
-      setOpen(slot, true);
+      setOpen(slot, true, { lockMs: AUTO_LOCK_MS });
     } else {
       syncButton(state);
     }
@@ -425,7 +505,10 @@
     if (e.code !== 'Escape' || !isOpen()) return;
     e.preventDefault();
     e.stopPropagation();
-    close();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const s of slots.values()) {
+      if (s.open && (reduce || performance.now() >= s.unlockAt)) close(s.slot);
+    }
   }, true);
 
   document.addEventListener('cancel', e => {

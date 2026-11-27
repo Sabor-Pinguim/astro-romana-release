@@ -1904,6 +1904,9 @@
     .dev-sky-bar .button{min-height:32px;padding:.3rem .65rem;font-size:.62rem}
     .dev-sky-status{margin-top:4px;font:600 .68rem/1.2 var(--heading);letter-spacing:.06em;color:var(--safe);font-variant-numeric:tabular-nums}
 
+    .cockpit-landing-mode.is-auto{color:var(--safe);border-color:var(--safe)}
+    .cockpit-landing-mode.is-manual{color:var(--bg-void);background:var(--solar-amber);border-color:var(--solar-amber)}
+
     /* Mobile portrait -> landscape prompt overlay */
     .rotate-overlay{display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center;padding:20px;background:rgba(17,7,31,.92);backdrop-filter:blur(6px)}
     .rotate-card{max-width:320px;width:100%;padding:22px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}

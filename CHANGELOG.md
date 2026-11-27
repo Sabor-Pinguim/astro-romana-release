@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.15] - 2026-11-27
+
+### Added
+- Host-only cockpit landing mode indicator (`AUTO LANDING` / `MANUAL LANDING` in EN/PT/ES) and dynamic resolution scaling (DRS) on Mars surface.
+
+### Changed
+- Optimize 3D performance across all scenes: cap DPR (`1.5` desktop / `1.25` mobile, `1.0` mobile background orbit), reduce Mars surface shadow map (`1024` desktop / `512` mobile), disable shadow casting on instanced rocks, and halve mobile rock count.
+- Center the minigame guide popup on screen with a 3-second click-outside cooldown on auto-open and a smooth collapse animation into the `?` button.
+- Restrict big cockpit warning banners (`#orbital-emergency`) and the cockpit guide popup to the host (and solo) only.
+
 ## [1.10.14] - 2026-11-27
 
 ### Fixed
