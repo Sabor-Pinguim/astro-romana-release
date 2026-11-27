@@ -766,6 +766,9 @@
         },
         mainBoosterSep: 'MAIN BOOSTER SEP',
         cutscene: {
+          earthTransferEyebrow: 'EARTH · ASCENT TO ORBIT',
+          earthTransferTitle: 'Leaving Earth',
+          earthTransferBody: 'The spacecraft separates from the launch vehicle and approaches its orbital refuelling point.',
           propLabel: 'ORBITAL PROPELLANT',
           refuelEyebrow: 'EARTH ORBIT · REFUEL',
           refuelTitle: 'Orbital Refuelling',

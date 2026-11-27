@@ -766,6 +766,9 @@
         },
         mainBoosterSep: 'SEP. PROPULSOR',
         cutscene: {
+          earthTransferEyebrow: 'TIERRA · ASCENSO A ÓRBITA',
+          earthTransferTitle: 'Dejando la Tierra',
+          earthTransferBody: 'La nave se separa del lanzador y se acerca al punto de repostaje orbital.',
           propLabel: 'PROPELENTE ORBITAL',
           refuelEyebrow: 'ÓRBITA TERRESTRE · REPOSTAJE',
           refuelTitle: 'Repostaje en Órbita',

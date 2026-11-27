@@ -1437,8 +1437,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const lookRefuel = new THREE.Vector3(0, -0.45, -2.5);
     const camStart = new THREE.Vector3(0, 0.85, 11);
     const lookStart = new THREE.Vector3(0.25, -0.25, -2);
-    const camEnd = new THREE.Vector3(-0.55, 0.95, 8);
-    const lookEnd = new THREE.Vector3(0.05, 0.2, -2);
+    const camEnd = new THREE.Vector3();
+    const lookEnd = new THREE.Vector3();
+    const cabinBounds = new THREE.Box3();
     const curCam = new THREE.Vector3(), curLook = new THREE.Vector3();
 
     function buildEtherealSpace(scene) {
@@ -1567,23 +1568,25 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 
     async function ensureEarth(scene) {
       if (earthGrp) return earthGrp;
-      earthGrp = new THREE.Group();
+      const group = new THREE.Group();
       const model = await loadGLB('bodies/earth.glb');
+      if (!mActive || mView?.scene !== scene) return null;
       const box = new THREE.Box3().setFromObject(model);
       const radius = Math.max(0.001, box.getSize(new THREE.Vector3()).y / 2);
       const targetR = 16.5; // large radius so only the sweeping horizon curve spans the full bottom edge
       model.scale.setScalar(targetR / radius);
       model.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(targetR / radius));
-      earthGrp.add(model);
+      group.add(model);
       // Crisp glowing cyan-blue atmospheric limb hugging the horizon
-      earthGrp.add(new THREE.Mesh(
+      group.add(new THREE.Mesh(
         new THREE.IcosahedronGeometry(targetR * 1.032, 3),
         new THREE.MeshBasicMaterial({ color: 0x45caff, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide })
       ));
-      earthGrp.position.set(0, -17.4, -5.2);
-      earthGrp.rotation.set(0.28, -1.15, THREE.MathUtils.degToRad(14));
-      scene.add(earthGrp);
-      return earthGrp;
+      group.position.set(0, -17.4, -5.2);
+      group.rotation.set(0.28, -1.15, THREE.MathUtils.degToRad(14));
+      scene.add(group);
+      earthGrp = group;
+      return group;
     }
 
     async function populateRocket(scene) {
@@ -1657,6 +1660,21 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         if (earthGrp) earthGrp.rotation.y = -1.15 + elapsed * 0.035;
         mView.camera.position.copy(camRefuel);
         mView.camera.lookAt(lookRefuel);
+      } else if (mKind === 'earthTransfer') {
+        if (earthGrp) earthGrp.rotation.y = -1.15 + elapsed * 0.035;
+        if (upperGrp) {
+          upperGrp.position.set(-2.8 + p * 4.1, 0.8 + Math.sin(p * Math.PI) * 0.35, 0.4);
+          upperGrp.rotation.z = -1.18 + p * 0.3;
+        }
+        mView.camera.position.copy(camStart);
+        mView.camera.lookAt(lookStart);
+      } else if (mKind === 'mars' && p < 6 / 21) {
+        const travel = p * 21 / 6;
+        if (marsSystem) marsSystem.scale.setScalar(0.18 + travel * 0.82);
+        if (marsMesh) marsMesh.rotation.y = elapsed * 0.09;
+        if (upperGrp) upperGrp.position.set(-3 + travel * 1.35, 0.56, 0.4);
+        mView.camera.position.copy(camStart);
+        mView.camera.lookAt(lookStart);
       } else if (mKind === 'landing') {
         if (marsMesh) marsMesh.rotation.y = elapsed * 0.035;
         if (upperGrp) {
@@ -1667,16 +1685,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         mView.camera.position.copy(camStart);
         mView.camera.lookAt(lookStart);
       } else {
+        const arrival = mKind === 'mars' ? (p - 6 / 21) / (15 / 21) : p;
         if (marsMesh) marsMesh.rotation.y = elapsed * 0.09;
         if (upperGrp) {
-          upperGrp.position.x = -1.65 + p * 0.32;
-          upperGrp.position.y = 0.56 + Math.sin(elapsed * 1.4) * 0.04 + p * 0.08;
+          upperGrp.position.x = -1.65 + arrival * 0.32;
+          upperGrp.position.y = 0.56 + Math.sin(elapsed * 1.4) * 0.04 + arrival * 0.08;
           upperGrp.rotation.x = 0.18 + Math.sin(elapsed * 0.9) * 0.05;
         }
         if (lowerGrp) {
-          lowerGrp.position.x = -3.1 - p * 0.58;
-          lowerGrp.position.y = 0.15 - p * 0.28;
-          lowerGrp.rotation.z = -1.32 - elapsed * 0.18;
+          lowerGrp.position.x = -3.1 - arrival * 0.58;
+          lowerGrp.position.y = 0.15 - arrival * 0.28;
+          lowerGrp.rotation.z = -1.32 - arrival * 2.7;
         }
         for (const ring of signalRings) {
           const ph = (ring.userData.phase + elapsed * 0.65) % 1;
@@ -1685,9 +1704,16 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
           ring.position.y = (ring.userData.baseY ?? (ring.userData.baseY = ring.position.y)) + ph * 1.8;
           ring.material.opacity = (1 - ph) * 0.85;
         }
-        // Smooth zoom-in toward the detached spacecraft in the final 42% of the cutscene
-        const zRaw = Math.max(0, Math.min(1, (p - 0.58) / 0.42));
-        const zEase = reduce ? 1 : zRaw * zRaw * (3 - 2 * zRaw);
+        // End inside the cabin's world-space bounds, ready for the cockpit view.
+        if (upperGrp) {
+          upperGrp.updateWorldMatrix(true, true);
+          cabinBounds.setFromObject(upperGrp.children[0] || upperGrp);
+          cabinBounds.getCenter(camEnd);
+          camEnd.z = cabinBounds.max.z - Math.min(0.25, cabinBounds.getSize(curLook).z * 0.3);
+          lookEnd.copy(camEnd).add(new THREE.Vector3(0, 0, -2));
+        }
+        const zRaw = Math.max(0, Math.min(1, (arrival - 0.35) / 0.65));
+        const zEase = reduce ? zRaw : zRaw * zRaw * (3 - 2 * zRaw);
         curCam.lerpVectors(camStart, camEnd, zEase);
         curLook.lerpVectors(lookStart, lookEnd, zEase);
         mView.camera.position.copy(curCam);
@@ -1717,13 +1743,17 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
       }
       if (mKind === 'refuel') {
         await ensureEarth(mView.scene);
+        if (!mActive || !mView) return;
         if (earthGrp) earthGrp.visible = true;
         if (marsSystem) marsSystem.visible = false;
         if (upperGrp) upperGrp.visible = false;
         if (lowerGrp) lowerGrp.visible = false;
       } else {
-        if (earthGrp) earthGrp.visible = false;
-        if (marsSystem) marsSystem.visible = true;
+        if (mKind === 'earthTransfer') await ensureEarth(mView.scene);
+        if (!mActive || !mView) return;
+        if (earthGrp) earthGrp.visible = mKind === 'earthTransfer';
+        if (marsSystem) marsSystem.visible = mKind !== 'earthTransfer';
+        if (marsSystem) marsSystem.scale.setScalar(mKind === 'mars' ? 0.18 : 1);
         await populateRocket(mView.scene);
         if (upperGrp) upperGrp.visible = true;
         if (lowerGrp) lowerGrp.visible = mKind !== 'landing';

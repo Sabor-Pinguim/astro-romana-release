@@ -11,6 +11,15 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.10.13] - 2026-11-27
+
+### Added
+- Show a spacecraft transfer from liftoff to Earth orbital refuelling, with text in English, Portuguese, and Spanish.
+
+### Changed
+- Combine the trip to Mars, orbital arrival, and camera move into one continuous cutscene ending inside the cabin.
+- Keep the cutscene loading safe when the 3D scene closes while Earth is still loading.
+
 ## [1.10.12] - 2026-11-27
 
 ### Fixed

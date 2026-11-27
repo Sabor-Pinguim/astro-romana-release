@@ -2390,7 +2390,7 @@
         box.classList.toggle('is-mars', c.kind !== 'refuel');
       }
       if (refArt) refArt.hidden = c.kind !== 'refuel';
-      const prefix = `cockpit.cutscene.${c.kind === 'refuel' ? 'refuel' : c.kind === 'mars' ? 'mars' : 'landing'}`;
+      const prefix = `cockpit.cutscene.${c.kind}`;
       const ey = $('#cutscene-eyebrow'), ti = $('#cutscene-title'), bo = $('#cutscene-body');
       if (ey) ey.textContent = t(`${prefix}Eyebrow`);
       if (ti) ti.textContent = t(`${prefix}Title`);
@@ -2406,6 +2406,12 @@
     }
 
     function startRefuelCutscene() {
+      flight.cutscene = { kind: 'earthTransfer', t: 0, duration: 5 };
+      showFlightCutscene(flight.cutscene);
+      renderFlightUI();
+    }
+
+    function startRefuelSequence() {
       flight.completedPhases.add(0);
       flight.completedPhases.add(1);
       flight.step = 2;
@@ -2426,8 +2432,8 @@
       return Math.max(0, Math.min(1, (c.t - start) / (c.duration - start)));
     }
 
-    function startMarsArrivalCutscene() {
-      flight.cutscene = { kind: 'mars', t: 0, duration: 15.0 };
+    function startMarsArrivalCutscene(enterDescentAfter = false) {
+      flight.cutscene = { kind: 'mars', t: 0, duration: 21.0, enterDescentAfter };
       showFlightCutscene(flight.cutscene);
       radAudio.tone(520, 0.16, 'triangle', 0.05);
       renderFlightUI();
@@ -2451,8 +2457,10 @@
         flight.docked = true;
         flight.refuelDone = refuelTarget();
         toMars();
+      } else if (c.kind === 'earthTransfer') {
+        startRefuelSequence();
       } else if (c.kind === 'mars') {
-        startMarsOrbit();
+        if (c.enterDescentAfter) enterDescent(); else startMarsOrbit();
       } else if (c.kind === 'landing') {
         finishFlightAndLand();
       }
@@ -2526,7 +2534,7 @@
 
     function toMars() {
       solarStorm();
-      if (orbitExperiments().length) startMarsArrivalCutscene(); else enterDescent();
+      startMarsArrivalCutscene(!orbitExperiments().length);
     }
     // Solar storm on the cruise (game event; the sound is the real storm the Curiosity RAD measured on 2024-05-20). With
     // a storm shelter the crew rides it out; without one, one crew member (picked by the seed) takes a dose and moves

@@ -766,6 +766,9 @@
         },
         mainBoosterSep: 'SEP. ESTÁGIO PRINCIPAL',
         cutscene: {
+          earthTransferEyebrow: 'TERRA · SUBIDA À ÓRBITA',
+          earthTransferTitle: 'Deixando a Terra',
+          earthTransferBody: 'A nave se separa do lançador e se aproxima do ponto de reabastecimento orbital.',
           propLabel: 'PROPELENTE ORBITAL',
           refuelEyebrow: 'ÓRBITA DA TERRA · REABASTECIMENTO',
           refuelTitle: 'Reabastecimento em Órbita',
