@@ -11,6 +11,14 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.2] - 2026-11-28
+
+### Added
+- **GitHub Pages preview:** Publish one static site from `main` at the project root and `dev` at `/dev/` on pushes to either branch.
+
+### Changed
+- **CI:** Run checks on pushes to `dev` as well as `main`.
+
 ## [1.11.1] - 2026-11-28
 
 ### Changed

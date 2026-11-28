@@ -1,11 +1,11 @@
-# Every push to main and every pull request: the same checks as `npm run check`, the room server tests and the
+# Every push to main or dev and every pull request: the same checks as `npm run check`, the room server tests and the
 # smoke test (a mission end to end in headless Chrome). AUDITORIA.md REPO-01: three bugs that broke every mission
 # reached main in one commit because nothing ran. The VM still pulls main on its own; a red run here is the alarm.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 permissions:

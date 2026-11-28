@@ -1,0 +1,61 @@
+# GitHub Pages serves main at / and dev at /dev/ from one deployment.
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Check out official site
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: main
+          persist-credentials: false
+      - name: Check out preview site
+        uses: actions/checkout@v5
+        with:
+          ref: dev
+          path: dev
+          persist-credentials: false
+      - name: Assemble both sites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/dev
+          copy_site() {
+            local source=$1 destination=$2
+            cp "$source/index.html" "$source/manifest.webmanifest" "$destination/"
+            cp "$source"/index.*.js "$destination/"
+            cp -a "$source/web" "$source/assets" "$destination/"
+            mkdir -p "$destination/multiplayer"
+            cp -a "$source/multiplayer/client" "$destination/multiplayer/"
+            test -s "$destination/index.html"
+            test -s "$destination/index.models.js"
+          }
+          copy_site main site
+          copy_site dev site/dev
+          touch site/.nojekyll
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+      - name: Publish GitHub Pages
+        id: publish
+        uses: actions/deploy-pages@v4
