@@ -435,9 +435,7 @@
               <p class="chalk-text" id="wizard-step-body"></p>
             </div>
             <div class="chalkboard-foot">
-              <div class="chalk-foot-left">
-                <button class="chalk-btn is-accent" id="wizard-action" type="button" hidden></button>
-              </div>
+              <div class="chalk-foot-left"></div>
               <div class="chalk-foot-right">
                 <button class="chalk-btn" id="wizard-prev" type="button" data-i18n="planner.wizard.prevBtn">← Back</button>
                 <button class="chalk-btn is-primary" id="wizard-next" type="button" data-i18n="planner.wizard.nextBtn">Next →</button>
@@ -539,6 +537,13 @@
         <div class="dock-outcome" id="port-dock-outcome" role="status" aria-live="polite" hidden></div>
         <div class="flight-cutscene" id="flight-cutscene" hidden>
           <div class="cutscene-stage" id="mars-cutscene-stage" aria-hidden="true"></div>
+          <ol class="flight-stepper cutscene-stepper" id="cutscene-stepper" aria-label="Flight operation phases" data-i18n-aria="a11y.flightPhases">
+            <li class="flight-phase active" data-fstep="0" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">01</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.0">Liftoff &amp; Max-Q</span><small data-phase-time>00:15</small></span></li>
+            <li class="flight-phase" data-fstep="1" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">02</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.1">Cabin docking</span><small data-phase-time>01:00</small></span></li>
+            <li class="flight-phase" data-fstep="2" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">03</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.2">Orbital docking</span><small data-phase-time>00:32</small></span></li>
+            <li class="flight-phase" data-fstep="orbit" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">04</span><span class="flight-phase-copy"><span data-i18n="experiments.orbit.step">Mars orbit</span><small data-phase-time>02:30</small></span></li>
+            <li class="flight-phase" data-fstep="3" style="--phase-fill:0%"><span class="flight-phase-fill"></span><span class="flight-phase-num">05</span><span class="flight-phase-copy"><span data-i18n="cockpit.stepper.3">Mars landing</span><small data-phase-time>00:15</small></span></li>
+          </ol>
           <div class="cutscene-refuel-art" id="cutscene-refuel-art" aria-hidden="true" hidden>
             <div class="cutscene-space-stars"></div>
             <div class="cutscene-earth-arc"></div>

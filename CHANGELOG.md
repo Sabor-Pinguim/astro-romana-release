@@ -11,6 +11,16 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.1] - 2026-11-28
+
+### Changed
+- **Rocket planner wizard:** Removed the left-side `#wizard-action` select button (`index.html`, `web/app.js`), automatically focused and highlighted each step's component on entry, and kept step 1 (`welcome`) zoomed out.
+- **Flight & Mars cutscenes:** Assembled the player's actual rocket as a single continuous vehicle in `web/views.js`, stopped the Mars arrival camera outside the cabin exterior to avoid clipping into the hollow hull, and included the Earth departure (`earthTransfer`) staging scene.
+- **Styles & docs:** Updated `web/styles.css` and `docs/visual-identity.md`.
+
+### Fixed
+- **Cockpit 3D model:** Eliminated pedestal Z-fighting in `tools/modeling/parts/cockpit.mjs` by seating the top plate cleanly above the column (`PED_Y - PED_TOP`), and rebuilt/bundled models (`assets/models/`, `index.models.js`).
+
 ## [1.11.0] - 2026-11-27
 
 ### Added

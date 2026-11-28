@@ -1278,7 +1278,7 @@
       targets: () => [$('#planner .blueprint')].filter(Boolean),
       clip: 'wave',
       check: () => ({ done: true, vars: {} }),
-      action: () => openCatalogTab('booster', 'engine'),
+      focus: () => window.dispatchEvent(new CustomEvent('astro:focus-module', { detail: null })),
     },
     {
       id: 'booster',
@@ -1294,7 +1294,7 @@
           vars: { twr: m?.ready ? U.decimal(m.twr, 2) : '—' },
         };
       },
-      action: () => openCatalogTab('booster', state.rocket.booster.engine && !state.rocket.booster.tank ? 'tank' : 'engine'),
+      focus: () => openCatalogTab('booster', state.rocket.booster.engine && !state.rocket.booster.tank ? 'tank' : 'engine'),
     },
     {
       id: 'staging',
@@ -1308,11 +1308,10 @@
         reason: !m?.ready ? 'fixStage1' : !m.orbit ? 'lowDv' : 'ready',
         vars: { dv: m?.ready ? U.velocityMs(m.dv) : '—', leo: U.velocityMs(m?.leo ?? rule('earthOrbitDeltaVMs', 9400)) },
       }),
-      action: () => {
+      focus: () => {
         const idx = state.rocket.stages.findIndex(s => s.type === 'booster');
         if (idx >= 0) { openCatalogTab(`stage-${idx}`, 'engine'); return; }
-        if (state.rocket.stages.length > 0) { openCatalogTab('stage-0', 'power'); return; }
-        addStage(0);
+        if (state.rocket.stages.length > 0) openCatalogTab('stage-0', 'power');
       },
     },
     {
@@ -1327,7 +1326,7 @@
           transfer: U.velocityMs(m?.transfer ?? rule('marsTransferDeltaVMs', 4300)),
         },
       }),
-      action: () => {
+      focus: () => {
         const m = DATA ? metrics() : null;
         openCatalogTab(m?.refuelStage?.key || 'booster', 'tank');
       },
@@ -1341,10 +1340,9 @@
         reason: m && m.gen < m.draw ? 'deficit' : 'ready',
         vars: { gen: number(m?.gen ?? 0), draw: number(m?.draw ?? 0) },
       }),
-      action: () => {
+      focus: () => {
         const bayIdx = state.rocket.stages.findIndex(s => s.type !== 'booster');
         if (bayIdx >= 0) openCatalogTab(`stage-${bayIdx}`, 'power');
-        else if (state.rocket.stages.length < MAX_STAGES()) addStage(state.rocket.stages.length);
       },
     },
     {
@@ -1359,7 +1357,7 @@
         reason: state.rocket.cabin.length > 0 ? 'ready' : 'empty',
         vars: { used: state.rocket.cabin.length, total: CABIN_SLOTS() },
       }),
-      action: () => openCatalogTab('cabin', 'helena'),
+      focus: () => openCatalogTab('cabin', 'helena'),
     },
     {
       id: 'launch',
@@ -1378,13 +1376,6 @@
           reason: issues === 0 ? 'ready' : m.cost > m.budget ? 'overBudget' : 'issues',
           vars: { cost: money(m.cost), budget: money(m.budget), issues },
         };
-      },
-      action: () => {
-        const m = DATA ? metrics() : null;
-        const firstBad = WIZARD_STEPS.findIndex((s, i) => i > 0 && i < WIZARD_STEPS.length - 1 && !s.check(m).done);
-        if (firstBad > 0) { setWizardStep(firstBad); return; }
-        markRocketBuilt();
-        showLaunch();
       },
     },
   ];
@@ -1409,17 +1400,26 @@
       if (!wizardState.blinkDismissed) el.classList.add('wizard-blink');
     });
   }
+  function focusWizardStep(stepIdx) {
+    if (!DATA) return;
+    WIZARD_STEPS[stepIdx]?.focus?.();
+  }
   function setWizardStep(step) {
     wizardState.step = Math.max(0, Math.min(WIZARD_STEPS.length - 1, step));
     wizardState.blinkDismissed = false;
     wizardState.lastStepDone = null;
+    focusWizardStep(wizardState.step);
     renderWizard({ gesture: true });
   }
   function setWizardOpen(open, { step = null, gesture = true } = {}) {
     wizardState.open = !!open;
     wizardState.promptOpen = false;
     if (typeof step === 'number' && step >= 0 && step < WIZARD_STEPS.length) wizardState.step = step;
-    if (wizardState.open) { wizardState.blinkDismissed = false; wizardState.lastStepDone = null; }
+    if (wizardState.open) {
+      wizardState.blinkDismissed = false;
+      wizardState.lastStepDone = null;
+      focusWizardStep(wizardState.step);
+    }
     markWizardSeen();
     renderWizard({ gesture });
   }
@@ -1482,12 +1482,6 @@
       }).join('');
       $$('[data-wizard-step]', nav).forEach(b => b.addEventListener('click', () => setWizardStep(+b.dataset.wizardStep)));
     }
-    const actBtn = $('#wizard-action');
-    if (actBtn) {
-      const actLabel = t(`${baseKey}.action`);
-      actBtn.hidden = !actLabel || actLabel === `${baseKey}.action`;
-      actBtn.textContent = actLabel;
-    }
     const prevBtn = $('#wizard-prev'), nextBtn = $('#wizard-next');
     if (prevBtn) prevBtn.disabled = idx === 0;
     if (nextBtn) {
@@ -1515,11 +1509,6 @@
   $('#wizard-next')?.addEventListener('click', () => {
     if (wizardState.step < WIZARD_STEPS.length - 1) setWizardStep(wizardState.step + 1);
     else setWizardOpen(false);
-  });
-  $('#wizard-action')?.addEventListener('click', () => {
-    wizardState.blinkDismissed = true;
-    stopWizardBlinkOnly();
-    WIZARD_STEPS[wizardState.step]?.action?.();
   });
   $('#wizard-nancy-view')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('astro:wizard-gesture', { detail: { clip: 'action_loop' } }));
@@ -3264,7 +3253,7 @@
     // Steps come from data-fstep: the 4 flight steps (0–3) plus "orbit", the Mars orbit stage between 2 and 3.
     function updateFlightStepper() {
       const orbitOn = !!flight.orbit?.active, orbitPassed = !!flight.orbit?.done || flight.step >= 3;
-      $$('#flight-stepper .flight-phase').forEach(el => {
+      $$('#flight-stepper .flight-phase, #cutscene-stepper .flight-phase').forEach(el => {
         let active, done, total, left;
         if (el.dataset.fstep === 'orbit') {
           total = ORBIT_WINDOW_S; active = orbitOn; done = !orbitOn && orbitPassed;

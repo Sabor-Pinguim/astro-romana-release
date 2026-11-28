@@ -1432,8 +1432,64 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
     const host = document.getElementById('mars-cutscene-stage');
     if (!host) return;
     let mView = null, mActive = false, mKind = 'mars', mStart = 0, mDur = 15, mRaf = 0;
-    let marsMesh = null, marsSystem = null, moonOrbits = [], earthGrp = null, upperGrp = null, lowerGrp = null, nebulaGrp = null;
+    let marsMesh = null, marsSystem = null, moonOrbits = [], earthGrp = null, upperGrp = null, cabinGrp = null, nebulaGrp = null;
     let signalRings = [], starLayers = [], sparkles = [];
+    // 'earthTransfer' (leaving Earth): the rocket starts small at the bottom left with its engines lit, drops stage 1
+    // on the way and climbs to the right, growing as it nears the camera. The path is in screen space (NDC x, y) with
+    // the distance from the camera as the third value, so it frames the same on any screen. Cinematic, not physics.
+    const ASCENT = {
+      // Distances stay short enough that the rocket is always in front of the Earth's limb.
+      path: new THREE.CatmullRomCurve3([[-0.58, -0.66, 9.5], [-0.50, -0.38, 9.2], [-0.32, -0.12, 8.8], [-0.02, 0.03, 8.3], [0.26, 0.08, 7.9], [0.44, 0.10, 7.5]]
+        .map(([x, y, d]) => new THREE.Vector3(x, y, d))),
+      length: [0.42, 1.9], // the whole stack's length in world units, start → end: it grows as it comes closer
+      tilt: [88, 50], // nose elevation above the horizon in degrees, start → end
+      roll: -0.5, // turn about its own axis so the side of the stack shows
+      sep: 0.38, // share of the climb where stage 1 drops away
+      relight: 0.05, // the flame stays off this much longer after the separation, then the next stage lights
+    };
+    let stackGroups = [], stackBottoms = [], stackHeight = 1, flameGrp = null, dropped = null;
+    const tmpV = new THREE.Vector3(), tmpW = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), rollQ = new THREE.Quaternion();
+    const AXIS_Y = new THREE.Vector3(0, 1, 0), AXIS_Z = new THREE.Vector3(0, 0, 1);
+    const mix = ([a, b], k) => a + (b - a) * k;
+    // Engine flame: an amber outer cone and a cream core pointing down (−Y) from y = 0, additive and unlit.
+    function makeFlame(radius, length) {
+      const g = new THREE.Group();
+      const cone = (r, h, color, opacity) => {
+        const geo = new THREE.ConeGeometry(r, h, 7, 1, true);
+        geo.rotateX(Math.PI); geo.translate(0, -h / 2, 0);
+        return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      };
+      g.add(cone(radius, length, 0xf59e0b, 0.85), cone(radius * 0.55, length * 0.6, 0xfff7e6, 0.95));
+      return g;
+    }
+    // One frame of the climb; p is the share of the cutscene played (0..1).
+    function ascent(p, elapsed) {
+      const cam = mView.camera;
+      cam.updateMatrixWorld();
+      const e = Math.min(1, p * (0.55 + 0.45 * p)); // slow off the pad, faster higher up
+      const at = k => { const s = ASCENT.path.getPoint(Math.min(1, Math.max(0, k))); return tmpV.set(s.x, s.y, 0.5).unproject(cam).sub(cam.position).normalize().multiplyScalar(s.z).add(cam.position); };
+      if (!dropped && e >= ASCENT.sep && stackGroups.length > 1) {
+        const ahead = at(e + 0.02).clone(), here = at(e).clone(), stage1 = stackGroups[0];
+        mView.scene.attach(stage1); // leaves the stack where it is, in world space
+        dropped = { obj: stage1, t0: elapsed, p0: stage1.position.clone(), q0: stage1.quaternion.clone(), dir: ahead.sub(here).normalize() };
+      }
+      upperGrp.position.copy(at(e));
+      upperGrp.scale.setScalar(mix(ASCENT.length, e) / stackHeight);
+      // Nose up and to the right: a roll about the rocket's own axis (Y), then the tilt in the screen plane (Z).
+      upperGrp.quaternion.setFromAxisAngle(AXIS_Z, THREE.MathUtils.degToRad(mix(ASCENT.tilt, e)) - Math.PI / 2)
+        .multiply(rollQ.setFromAxisAngle(AXIS_Y, ASCENT.roll));
+      if (dropped) { // slower than the rocket, pulled down and away from the camera, tumbling
+        const since = elapsed - dropped.t0;
+        dropped.obj.position.copy(dropped.p0).addScaledVector(dropped.dir, 0.9 * since).add(tmpW.set(-0.35 * since, -0.9 * since * since, -1.6 * since));
+        dropped.obj.quaternion.copy(dropped.q0).multiply(tmpQ.setFromAxisAngle(AXIS_Z, -1.4 * since));
+      }
+      if (flameGrp) {
+        flameGrp.visible = !dropped || e >= ASCENT.sep + ASCENT.relight;
+        flameGrp.position.y = stackBottoms[Math.min(dropped ? 1 : 0, stackBottoms.length - 1)];
+        const flick = reduce ? 1 : 1 + 0.12 * Math.sin(elapsed * 38) + 0.08 * (Math.random() - 0.5), k = dropped ? 0.8 : 1;
+        flameGrp.scale.set(k, k * flick, k);
+      }
+    }
     const camRefuel = new THREE.Vector3(0, 0.35, 9.2);
     const lookRefuel = new THREE.Vector3(0, -0.45, -2.5);
     const camStart = new THREE.Vector3(0, 0.85, 11);
@@ -1592,49 +1648,50 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
 
     async function populateRocket(scene) {
       if (upperGrp) { scene.remove(upperGrp); upperGrp = null; }
-      if (lowerGrp) { scene.remove(lowerGrp); lowerGrp = null; }
+      if (dropped) { dropped.obj.parent?.remove(dropped.obj); dropped = null; }
+      cabinGrp = null; flameGrp = null;
       signalRings = [];
       const data = ui.data();
       if (!data) return;
       const r = ui.state.rocket;
       const groups = await Promise.all([booster(r, data.parts), ...r.stages.map((_, i) => stage(r, i, data.parts, true)), cabin(r, data.parts, true)]);
 
-      // Detached lower booster/stages vs upper spacecraft + cabin
-      lowerGrp = new THREE.Group();
       upperGrp = new THREE.Group();
-      const splitIdx = Math.max(1, groups.length - 1);
-      let yLow = 0, yUp = 0;
-      groups.forEach((g, i) => {
+      let y = 0;
+      groups.forEach(g => {
         const top = g.userData.top || 1;
-        if (i < splitIdx) {
-          g.position.y = yLow; lowerGrp.add(g); yLow += top + GAP * 0.4;
-        } else {
-          g.position.y = yUp; upperGrp.add(g); yUp += top + GAP * 0.4;
-        }
+        g.position.y = y;
+        upperGrp.add(g);
+        y += top;
       });
+      groups.forEach(g => { g.position.y -= y / 2; });
+      cabinGrp = groups[groups.length - 1] || null;
+      // The bottom of each module in the stack's own units (where the flame sits), measured before any scaling.
+      upperGrp.updateMatrixWorld(true);
+      stackGroups = groups; stackHeight = Math.max(1e-3, y);
+      stackBottoms = groups.map(g => new THREE.Box3().setFromObject(g).min.y);
+      flameGrp = makeFlame(new THREE.Box3().setFromObject(groups[0]).getSize(tmpW).x * 0.42, y * 0.34);
+      flameGrp.visible = false;
+      upperGrp.add(flameGrp);
 
-      const scale = 0.21;
+      const scale = Math.min(0.24, 2.5 / Math.max(1, y));
       upperGrp.scale.setScalar(scale);
       upperGrp.position.set(-1.45, 0.62, 0.4);
       upperGrp.rotation.set(0.18, -0.55, -1.18);
 
-      lowerGrp.scale.setScalar(scale * 0.92);
-      lowerGrp.position.set(-3.1, 0.15, -0.35);
-      lowerGrp.rotation.set(0.32, -0.35, -1.32);
-
-      // Pulsing telemetry signal rings radiating from the detached upper module
+      // Pulsing telemetry signal rings radiating from the nose/cabin
       for (let i = 0; i < 4; i++) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(0.16, 0.21, 24),
           new THREE.MeshBasicMaterial({ color: i % 2 ? 0xf2a900 : 0x1fa2ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
         );
-        ring.position.set(0, yUp * 0.72, 0);
+        ring.position.set(0, y / 2 - (cabinGrp?.userData.top || 1) * 0.25, 0);
         ring.rotation.x = Math.PI / 2;
         ring.userData.phase = i / 4;
         upperGrp.add(ring);
         signalRings.push(ring);
       }
-      scene.add(lowerGrp, upperGrp);
+      scene.add(upperGrp);
     }
 
     function tick(now) {
@@ -1663,12 +1720,9 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         mView.camera.lookAt(lookRefuel);
       } else if (mKind === 'earthTransfer') {
         if (earthGrp) earthGrp.rotation.y = -1.15 + elapsed * 0.035;
-        if (upperGrp) {
-          upperGrp.position.set(-2.8 + p * 4.1, 0.8 + Math.sin(p * Math.PI) * 0.35, 0.4);
-          upperGrp.rotation.z = -1.18 + p * 0.3;
-        }
         mView.camera.position.copy(camStart);
         mView.camera.lookAt(lookStart);
+        if (upperGrp) ascent(p, elapsed);
       } else if (mKind === 'mars' && p < 6 / 21) {
         const travel = p * 21 / 6;
         if (marsSystem) marsSystem.scale.setScalar(0.18 + travel * 0.82);
@@ -1693,11 +1747,6 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
           upperGrp.position.y = 0.56 + Math.sin(elapsed * 1.4) * 0.04 + arrival * 0.08;
           upperGrp.rotation.x = 0.18 + Math.sin(elapsed * 0.9) * 0.05;
         }
-        if (lowerGrp) {
-          lowerGrp.position.x = -3.1 - arrival * 0.58;
-          lowerGrp.position.y = 0.15 - arrival * 0.28;
-          lowerGrp.rotation.z = -1.32 - arrival * 2.7;
-        }
         for (const ring of signalRings) {
           const ph = (ring.userData.phase + elapsed * 0.65) % 1;
           const sc = 1 + ph * 8.5;
@@ -1705,13 +1754,14 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
           ring.position.y = (ring.userData.baseY ?? (ring.userData.baseY = ring.position.y)) + ph * 1.8;
           ring.material.opacity = (1 - ph) * 0.85;
         }
-        // End inside the cabin's world-space bounds, ready for the cockpit view.
+        // Stop outside the cabin exterior so the camera never clips into the hollow model.
         if (upperGrp) {
           upperGrp.updateWorldMatrix(true, true);
-          cabinBounds.setFromObject(upperGrp.children[0] || upperGrp);
-          cabinBounds.getCenter(camEnd);
-          camEnd.z = cabinBounds.max.z - Math.min(0.25, cabinBounds.getSize(curLook).z * 0.3);
-          lookEnd.copy(camEnd).add(new THREE.Vector3(0, 0, -2));
+          cabinBounds.setFromObject(cabinGrp || upperGrp);
+          cabinBounds.getCenter(lookEnd);
+          const cabinSize = cabinBounds.getSize(curLook);
+          const standoff = Math.max(1.35, Math.max(cabinSize.x, cabinSize.y, cabinSize.z) * 2.1);
+          camEnd.set(lookEnd.x, lookEnd.y + 0.08, cabinBounds.max.z + standoff);
         }
         const zRaw = Math.max(0, Math.min(1, (arrival - 0.35) / 0.65));
         const zEase = reduce ? zRaw : zRaw * zRaw * (3 - 2 * zRaw);
@@ -1729,7 +1779,8 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         mActive = false;
         cancelAnimationFrame(mRaf);
         mView?.dispose?.();
-        mView = null; earthGrp = null; marsSystem = null; upperGrp = null; lowerGrp = null;
+        mView = null; earthGrp = null; marsSystem = null; upperGrp = null; cabinGrp = null;
+        flameGrp = null; dropped = null; stackGroups = [];
         return;
       }
       mKind = e.detail?.kind || 'mars';
@@ -1748,7 +1799,6 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         if (earthGrp) earthGrp.visible = true;
         if (marsSystem) marsSystem.visible = false;
         if (upperGrp) upperGrp.visible = false;
-        if (lowerGrp) lowerGrp.visible = false;
       } else {
         if (mKind === 'earthTransfer') await ensureEarth(mView.scene);
         if (!mActive || !mView) return;
@@ -1757,8 +1807,7 @@ const isActive = id => document.getElementById(id)?.classList.contains('active')
         if (marsSystem) marsSystem.scale.setScalar(mKind === 'mars' ? 0.18 : 1);
         await populateRocket(mView.scene);
         if (upperGrp) upperGrp.visible = true;
-        if (lowerGrp) lowerGrp.visible = mKind !== 'landing';
-        if (mKind === 'landing') signalRings.forEach(ring => { ring.visible = false; });
+        if (mKind === 'landing' || mKind === 'earthTransfer') signalRings.forEach(ring => { ring.visible = false; });
       }
       if (!mActive) return;
       mStart = performance.now();

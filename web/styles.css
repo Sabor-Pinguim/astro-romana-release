@@ -784,6 +784,13 @@
     .flight-cutscene{position:fixed;inset:0;z-index:1000;overflow:hidden;background:radial-gradient(circle at 22% 76%,#33164d 0%,#120822 48%,#06040f 100%)}
     .flight-cutscene[hidden]{display:none}
     .cutscene-stage{position:absolute;inset:0;z-index:1}
+    .cutscene-stepper{position:absolute;top:0;left:0;right:0;z-index:6;gap:2px;width:100%;margin:0;padding:12px clamp(14px,3vw,44px) 18px;pointer-events:none;background:linear-gradient(180deg,#090616e8 0%,#120822b8 62%,transparent 100%)}
+    .cutscene-stepper .flight-phase{min-height:42px;padding:.42rem 1.3rem .42rem .75rem;color:#d9d4e7;background:#171333b8;box-shadow:inset 0 0 0 1px #ffffff12,0 5px 16px #05020c40;backdrop-filter:blur(7px)}
+    .cutscene-stepper .flight-phase-fill{background:#8f241ecc}
+    .cutscene-stepper .flight-phase.done .flight-phase-fill{background:#8f241ed9}
+    .cutscene-stepper .flight-phase.active{box-shadow:inset 0 0 0 1px var(--mars-orange),0 5px 16px #05020c66}
+    .cutscene-stepper .flight-phase.active .flight-phase-fill{background:linear-gradient(115deg,#e65a43e8 0 42%,#e46832e8 42%)}
+    .cutscene-stepper .flight-phase-copy small{color:#fce8a6d9}
     .cutscene-stage:not(.is-3d){background:radial-gradient(circle at 78% 56%,#d96638 0 22%,#8e3a22 22% 28%,transparent 29%),radial-gradient(circle at 72% 36%,#1fa2ff44 0 6%,transparent 16%),radial-gradient(circle at 60% 28%,#ffffff33 1px,transparent 2px),radial-gradient(circle at 30% 20%,#fce8a644 1px,transparent 2px);background-size:100% 100%,100% 100%,90px 90px,130px 130px}
     .cutscene-refuel-art{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;background:radial-gradient(circle at 50% 120%,#1b3c7a 0%,#120b28 46%,#070512 100%)}
     .cutscene-stage.is-3d + .cutscene-refuel-art{background:transparent}
@@ -1499,6 +1506,11 @@
       #cockpit .flight-phase:not(.active) .flight-phase-copy{display:none}
       #cockpit .flight-phase.active .flight-phase-copy{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis} /* one line on every stage: no jump when it changes */
       #cockpit .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
+      .cutscene-stepper{padding:8px 10px 14px}
+      .cutscene-stepper .flight-phase{min-height:30px;padding:.2rem .55rem .2rem .42rem;font-size:.5rem}
+      .cutscene-stepper .flight-phase:not(.active) .flight-phase-copy{display:none}
+      .cutscene-stepper .flight-phase.active .flight-phase-copy{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+      .cutscene-stepper .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
       .cockpit-layout{flex:1;min-height:0;display:flex;flex-direction:column;padding:5px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:5px}
       .cockpit-viewport.slab{flex:0 0 28dvh;min-height:150px;height:28dvh}
       .cockpit-hud-bottom{display:none}
@@ -1794,6 +1806,8 @@
       .flight-stepper{margin:4px auto 0;padding:0 12px;gap:3px;grid-template-columns:repeat(4,minmax(0,1fr))}
       .flight-phase{min-height:26px;padding:.18rem .65rem .18rem .45rem;font-size:.52rem}
       .flight-phase-num{flex:0 0 18px;height:18px;font-size:.5rem}
+      .cutscene-stepper{padding:6px 12px 12px}
+      .cutscene-stepper .flight-phase{min-height:28px;padding:.18rem .55rem .18rem .4rem;font-size:.48rem}
       .cockpit-layout{flex:1;min-height:0;grid-template-columns:minmax(0,1.18fr) minmax(260px,340px);grid-template-rows:minmax(0,1fr);gap:8px;padding:4px 10px 6px}
       .cockpit-viewport.slab{min-height:0;height:100%}
       .cockpit-hud-bottom{display:none}

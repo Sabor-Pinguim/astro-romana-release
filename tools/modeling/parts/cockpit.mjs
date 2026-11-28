@@ -287,8 +287,9 @@ const cockpitPilot = {
     pin('Alarm_Caution_Amber', 'LedAmber', box(0.1, 0.04, 0.012), [0, 0, 0.006]);
 
     // 7. Pedestal between the upper seats: hand controllers, throttle, guarded switches, abort handle.
-    b.add('Root', 'HullBlack', box(0.24, PED_Y, 0.34), { p: [0, PED_Y / 2, -0.15] });
-    b.add('Root', 'Strap', box(0.3, 0.025, 0.4), { p: [0, PED_Y - 0.0125, -0.15] });
+    const PED_TOP = 0.025;
+    b.add('Root', 'HullBlack', box(0.24, PED_Y - PED_TOP, 0.34), { p: [0, (PED_Y - PED_TOP) / 2, -0.15] });
+    b.add('Root', 'Strap', box(0.3, PED_TOP, 0.4), { p: [0, PED_Y - PED_TOP / 2, -0.15] });
     b.add('Root', 'Steel', box(0.04, 0.006, 0.1), { p: [-0.09, PED_Y + 0.003, -0.05] }); // throttle gate
     pin('Joystick_RHC', 'HullBlack', cyl(0.03, 0.04, 0.03, 8), [0, 0.015, 0]);
     pin('Joystick_RHC', 'Pack', cyl(0.016, 0.02, 0.1, 8), [0, 0.08, 0]);
