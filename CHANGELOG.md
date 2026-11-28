@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.6] - 2026-11-28
+
+### Changed
+- **Official game:** Remove the Dev Mode button, dialogs and script from `main`; the `dev` preview retains developer tools.
+
 ## [1.11.5] - 2026-11-28
 
 ### Changed

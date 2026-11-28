@@ -83,6 +83,7 @@ All of them are CSS `clip-path`.
 - **Keyboard focus:** `clip-path` cuts off the `outline`. On clipped elements, focus is `box-shadow: inset 0 0 0 2px var(--solar-amber)`.
 - **Icons:** draw them with the shapes in the table above. No emoji or icon fonts.
 - **Menu actions:** stack the main actions at equal width. Each action places its icon on the left and centers its label.
+- **Developer tools:** the official `main` page has no Dev Mode button or dialogs; the `dev` preview keeps the sandbox controls.
 - **Menu contact:** place a chamfered chip with a geometric envelope beside the version; amber and orange highlight on hover and keyboard focus, with the contact email in its tooltip. Clicking opens the mail client, copies the address, and confirms the copy in a toast.
 - **Lobby back button:** use the gold button fill at rest and the orange fill on hover, keyboard focus and press.
 - **Settings shortcut:** place a borderless orange hexagonal gear at the right of each game screen header; hover, focus, and press switch its fill to starlight cream (`--starlight-cream`).
