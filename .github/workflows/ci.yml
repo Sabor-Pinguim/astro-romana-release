@@ -29,7 +29,7 @@ jobs:
             package-lock.json
             multiplayer/package-lock.json
       - run: npm ci
-      - name: Lint (bugs only: undefined names, use before define, a local t hiding the i18n helper)
+      - name: Lint for common bugs
         run: npm run lint
       - run: npm run check:imports
       - run: npm run version:check

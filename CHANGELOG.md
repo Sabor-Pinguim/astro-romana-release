@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.4] - 2026-11-28
+
+### Fixed
+- **CI workflow:** Remove a YAML-invalid colon from the lint step name so pushes to `main` and `dev` run checks and successful `dev` checks can trigger the Pages preview deploy.
+
 ## [1.11.3] - 2026-11-28
 
 ### Fixed
