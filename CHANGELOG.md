@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.5] - 2026-11-28
+
+### Changed
+- **Game fonts:** Serve Barlow and Chakra Petch WOFF2 files locally instead of requesting them from Google Fonts, with source records and SIL OFL license texts bundled in `web/fonts/`.
+
 ## [1.11.4] - 2026-11-28
 
 ### Fixed

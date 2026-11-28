@@ -54,6 +54,8 @@ Use only these tokens. The names are those of the CSS variables in `:root`.
 
 ## 3. Typography
 
+The web page loads its Latin WOFF2 font files from `web/fonts/` (with SIL OFL license texts there), so typography also works when the page is opened from disk or Google Fonts is unavailable.
+
 | Use | Font | Weight | Details |
 |---|---|---|---|
 | Titles, labels, buttons, numbers | **Chakra Petch** | 500–700 | The angular cuts of the letters match the chamfers. Titles in UPPERCASE. Numbers with `tabular-nums` |

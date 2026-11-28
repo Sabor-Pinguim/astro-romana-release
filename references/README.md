@@ -266,8 +266,8 @@ Listed in `assets/models/manifest.json`; not stored.
 | Node.js | https://nodejs.org | Runs the generators and the room server | MIT |
 | Caddy | https://caddyserver.com | HTTPS server for the game and the room server | Apache-2.0 |
 | Google Cloud Compute Engine | https://cloud.google.com/compute | Hosting VM | Service |
-| Google Fonts: Barlow | https://fonts.google.com/specimen/Barlow | Body text | SIL Open Font License 1.1 |
-| Google Fonts: Chakra Petch | https://fonts.google.com/specimen/Chakra+Petch | Headings | SIL Open Font License 1.1 |
+| Barlow (self-hosted Google Fonts WOFF2) | https://fonts.google.com/specimen/Barlow | Body text; downloaded Latin files and license in `web/fonts/` | SIL Open Font License 1.1 |
+| Chakra Petch (self-hosted Google Fonts WOFF2) | https://fonts.google.com/specimen/Chakra+Petch | Headings; downloaded Latin files and license in `web/fonts/` | SIL Open Font License 1.1 |
 | threejs-skills (CloudAI-X) | https://github.com/CloudAI-X/threejs-skills | Reference notes for the model pipeline | MIT |
 
 ---
