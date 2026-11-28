@@ -11,6 +11,11 @@ Versioning rules (per [AGENTS.md](AGENTS.md#10-git-versionamento-e-changelog)):
 
 ---
 
+## [1.11.3] - 2026-11-28
+
+### Fixed
+- **GitHub Pages preview:** Deploy after a successful `dev` CI run from the default branch, respecting the `github-pages` environment's main-only protection rule.
+
 ## [1.11.2] - 2026-11-28
 
 ### Added
